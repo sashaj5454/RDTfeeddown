@@ -1,116 +1,112 @@
 import numpy as np
 from scipy.optimize import curve_fit
+from scipy.stats import zscore
+import csv
 
-# ...existing code for getrdt_omc3, fit_BPM, write_RDTshifts...
+def filter_outliers(
+    data, 
+    threshold=3
+):
+    """
+    Filters outliers from data based on Z-scores.
+
+    Parameters
+    -  data: list of lists for RDT data
+    -  threshold: Z-score threshold for filtering outliers
+
+    Returns
+    -  filtered_data: list of lists for RDT data with outliers removed
+    """
+    data_np = np.array(data, dtype=object)
+    amp_values = data_np[:, 1].astype(float)
+    re_values = data_np[:, 2].astype(float)
+    im_values = data_np[:, 3].astype(float)
+
+    amp_zscores = zscore(amp_values)
+    re_zscores = zscore(re_values)
+    im_zscores = zscore(im_values)
+
+    filtered_data = [
+        row for i, row in enumerate(data)
+        if abs(amp_zscores[i]) < threshold and abs(re_zscores[i]) < threshold and abs(im_zscores[i]) < threshold
+    ]
+    return filtered_data
+
+def read_rdt_file(filepath):
+    """
+    Reads RDT data from a file and returns raw data.
+    """
+    raw_data = []
+    with open(filepath, 'r') as rf:
+        csv_reader = csv.reader(rf, delimiter=' ', skipinitialspace=True)
+        for row in csv_reader:
+            if row[0] in {'@', '*', '$'}:
+                continue
+            raw_data.append([str(row[0]), float(row[3]), float(row[7]), float(row[8])])
+    return raw_data
 
 def readrdtdatafile(cfile, rdt, rdt_plane, rdtfolder):
     """
     Reads RDT data from a file and removes outliers based on Z-scores.
     """
-    cdat = []
-    rf = open(cfile + f'/rdt/{rdtfolder}/f{rdt}_{rdt_plane}.tfs', 'r')
-    csvrf = csv.reader(rf, delimiter=' ', skipinitialspace=True)
-    raw_data = []
+    filepath = f'{cfile}/rdt/{rdtfolder}/f{rdt}_{rdt_plane}.tfs'
+    raw_data = read_rdt_file(filepath)
+    return filter_outliers(raw_data)
 
-    for row in csvrf:
-        if row[0] == '@' or row[0] == '*' or row[0] == '$':
-            continue
-        print(row)
-        name = str(row[0])
-        amp = float(row[3])
-        re = float(row[7])
-        im = float(row[8])
-        raw_data.append([name, amp, re, im])
+def update_bpm_data(bpmdata, data, key, knob_setting):
+    """
+    Updates BPM data dictionary with new data.
+    """
+    for entry in data:
+        name, amp, re, im = entry
+        bpmdata[name][key].append([knob_setting, amp, re, im])
 
-    rf.close()
+def getrdt_omc3(ldb, modelbpmlist, bpmdata, ref, flist, knob, outputpath, timeoffset, rdt, rdt_plane, rdtfolder):
+    """
+    Processes RDT data and updates BPM data dictionary.
+    """
+    refk = get_analysis_knobsetting(ldb, knob, ref, timeoffset)
+    refdat = readrdtdatafile(ref, rdt, rdt_plane, rdtfolder)
+    update_bpm_data(bpmdata, refdat, 'ref', refk)
 
-    # Convert raw data to a NumPy array for Z-score calculation
-    raw_data_np = np.array(raw_data, dtype=object)
-    amp_values = raw_data_np[:, 1].astype(float)
-    re_values = raw_data_np[:, 2].astype(float)
-    im_values = raw_data_np[:, 3].astype(float)
-
-    # Calculate Z-scores for amp, re, and im
-    amp_zscores = zscore(amp_values)
-    re_zscores = zscore(re_values)
-    im_zscores = zscore(im_values)
-
-    # Define a threshold for outlier detection (e.g., Z-score > 3)
-    threshold = 3
-    for i, (name, amp, re, im) in enumerate(raw_data):
-        if abs(amp_zscores[i]) < threshold and abs(re_zscores[i]) < threshold and abs(im_zscores[i]) < threshold:
-            cdat.append([name, amp, re, im])
-
-    return cdat
-###########################################################################################################################################################################
-###########################################################################################################################################################################
-def getrdt_omc3(ldb,modelbpmlist,bpmdata,ref,flist,knob,outputpath,timeoffset,rdt,rdt_plane,rdtfolder):
-    ############### add reference values to bpm dict
-    refk=get_analysis_knobsetting(ldb,knob,ref,timeoffset)
-    refdat=readrdtdatafile(ref,rdt,rdt_plane,rdtfolder)
-    for b in range(len(refdat)):
-        name=refdat[b][0]
-        amp=refdat[b][1]
-        re=refdat[b][2]
-        im=refdat[b][3]
-        bpmdata[name]['ref'].append([refk,amp,re,im])
-    ###############              append all the xing scan to bpm dict
     for f in flist:
-        ksetting=get_analysis_knobsetting(ldb,knob,f,timeoffset)
-        cdat=readrdtdatafile(f,rdt,rdt_plane,rdtfolder)
-        for b in range(len(cdat)):
-            name=cdat[b][0]
-            amp=cdat[b][1]
-            re=cdat[b][2]
-            im=cdat[b][3]
-            bpmdata[name]['data'].append([ksetting,amp,re,im])            
-    ###############           create new dict which only include bpms which present in all files and reference
-    intersectedBPMdata={}
-    for b in range(len(modelbpmlist)):
-        thisBPM=modelbpmlist[b]
-        if len(bpmdata[thisBPM]['ref'])!=1:
-            continue
-        if len(bpmdata[thisBPM]['data'])!=len(flist):
+        ksetting = get_analysis_knobsetting(ldb, knob, f, timeoffset)
+        cdat = readrdtdatafile(f, rdt, rdt_plane, rdtfolder)
+        update_bpm_data(bpmdata, cdat, 'data', ksetting)
+
+    intersectedBPMdata = {}
+    for bpm in modelbpmlist:
+        if len(bpmdata[bpm]['ref']) != 1 or len(bpmdata[bpm]['data']) != len(flist):
             continue
 
-        intersectedBPMdata[thisBPM]={}
-        
-        s=bpmdata[thisBPM]['s']
-        ref=bpmdata[thisBPM]['ref']
-        dat=bpmdata[thisBPM]['data']
+        s = bpmdata[bpm]['s']
+        ref = bpmdata[bpm]['ref']
+        dat = bpmdata[bpm]['data']
 
-        ### calculate the re and im diffs
-        diffdat=[]
-        for k in range(len(dat)):
-            kdiff=dat[k][0]-ref[0][0]
-            rediff=dat[k][2]-ref[0][2]
-            imdiff=dat[k][3]-ref[0][3]
-            diffdat.append([kdiff,rediff,imdiff])
-        diffdat=sorted(diffdat,key=lambda x: x[0])
-        
-        intersectedBPMdata[thisBPM]['s']=s
-        intersectedBPMdata[thisBPM]['diffdata']=diffdat
-    ################
+        diffdat = [
+            [dat[k][0] - ref[0][0], dat[k][2] - ref[0][2], dat[k][3] - ref[0][3]]
+            for k in range(len(dat))
+        ]
+        diffdat.sort(key=lambda x: x[0])
+
+        intersectedBPMdata[bpm] = {'s': s, 'diffdata': diffdat}
+
     return intersectedBPMdata
-###########################################################################################################################################################################
-###########################################################################################################################################################################
+
 def polyfunction(x,c,m,n):
     y=c+m*x+n*x**2
     return y
-###########################################################################################################################################################################
-###########################################################################################################################################################################
+
 def fitdata(xdata,ydata,yerrdata,fitfunction):
     popt,pcov = curve_fit(fitfunction,xdata,ydata,sigma=yerrdata,absolute_sigma=True)
     perr = np.sqrt(np.diag(pcov))
     return popt,pcov,perr
-###########################################################################################################################################################################
-###########################################################################################################################################################################
+
 def fitdatanoerrors(xdata,ydata,fitfunction):
     popt,pcov = curve_fit(fitfunction,xdata,ydata)
     perr = np.sqrt(np.diag(pcov))
     return popt,pcov,perr
-###########################################################################################################################################################################
-###########################################################################################################################################################################
+
 def fit_BPM(data):
     for bpm in data.keys():
         diffdata=data[bpm]['diffdata']
@@ -139,8 +135,7 @@ def arcBPMcheck(bpm):
         else:
             isARCbpm=False
     return isARCbpm
-###########################################################################################################################################################################
-###########################################################################################################################################################################
+
 def badBPMcheck(bpm):
     badbpmb1=['BPM.13L2.B1']
     badbpmb2=['BPM.25R3.B2','BPM.26R3.B2']
@@ -155,182 +150,72 @@ def badBPMcheck(bpm):
             break
     return badbpm
 
-def write_RDTshifts(b1data,b2data,rdt,rdt_plane):
-    #############
-    ############# LHCB1 gradients
-    #############
-    fout=f'data_b1_f{rdt}{rdt_plane}rdtgradient.csv'
-    wout=open(fout,'w')
-    csvwout=csv.writer(wout,delimiter=' ')
-    header=['#name','s',f'd(Ref{rdt}_{rdt_plane})/dknob',f'd(Imf{rdt}_{rdt_plane})/dknob','re fit error','im fit error']
-    csvwout.writerow(header)
-    for b in b1data.keys():
-        if arcBPMcheck(b)==False:
-            continue
-        if badBPMcheck(b)==True:
-            continue
-        s=b1data[b]['s']
-        dredk=b1data[b]['fitdata'][0][1]
-        dimdk=b1data[b]['fitdata'][3][1]
-        dreerr=b1data[b]['fitdata'][2][1]
-        dimerr=b1data[b]['fitdata'][5][1]
-        csvwout.writerow([b,s,dredk,dimdk,dreerr,dimerr])
-    wout.close()
-    #############
-    ############# LHCB2 gradients
-    #############
-    fout=f'data_b2_f{rdt}{rdt_plane}rdtgradient.csv'
-    wout=open(fout,'w')
-    csvwout=csv.writer(wout,delimiter=' ')
-    header=['#name','s',f'd(Ref{rdt}_{rdt_plane})/dknob',f'd(Imf{rdt}_{rdt_plane})/dknob','re fit error','im fit error']
-    csvwout.writerow(header)
-    for b in b2data.keys():
-        if arcBPMcheck(b)==False:
-            continue
-        if badBPMcheck(b)==True:
-            continue
-        s=b2data[b]['s']
-        dredk=b2data[b]['fitdata'][0][1]
-        dimdk=b2data[b]['fitdata'][3][1]
-        dreerr=b2data[b]['fitdata'][2][1]
-        dimerr=b2data[b]['fitdata'][5][1]
-        csvwout.writerow([b,s,dredk,dimdk,dreerr,dimerr])
-    wout.close()
-    #############
-    ############# LHCB1 avg re**2+im**2
-    #############
-    xing=[]  ### get the list of crossing angles measured
-    for b in b1data.keys():
-        diffdata=b1data[b]['diffdata']
-        for x in range(len(diffdata)):
-            xing.append(diffdata[x][0])
-        break
-    ######## now loop over xings
-    fout=f'data_b1_f{rdt}{rdt_plane}rdtshiftvsknob.csv'
-    wout=open(fout,'w')
-    csvwout=csv.writer(wout,delimiter=' ')
-    header=['#xing','sqrt(Dre^2+Dim^2)','std_dev over BPM']
-    csvwout.writerow(header)
-    for x in xing:
-        toavg=[]
-        for b in b1data.keys():
-            if arcBPMcheck(b)==False:
-                continue
-            if badBPMcheck(b)==True:
-                continue
-            diffdata=b1data[b]['diffdata']
-            for y in range(len(diffdata)):
-                if diffdata[y][0]==x:
-                    re=diffdata[y][1]
-                    im=diffdata[y][2]
-                    amp=np.sqrt(re**2+im**2)
-                    toavg.append(amp)
-        avgRDTshift=np.mean(np.array(toavg))
-        avgRDTshifterr=np.std(np.array(toavg))
-        csvwout.writerow([x,avgRDTshift,avgRDTshifterr])
-    wout.close()
-    #############
-    ############# LHCB2 avg re**2+im**2
-    #############
-    xing=[]  ### get the list of crossing angles measured
-    for b in b2data.keys():
-        diffdata=b2data[b]['diffdata']
-        for x in range(len(diffdata)):
-            xing.append(diffdata[x][0])
-        break
-    ######## now loop over xings
-    fout=f'data_b2_f{rdt}{rdt_plane}rdtshiftvsknob.csv'
-    wout=open(fout,'w')
-    csvwout=csv.writer(wout,delimiter=' ')
-    header=['#xing','sqrt(Dre^2+Dim^2)','std_dev over BPM']
-    csvwout.writerow(header)
-    for x in xing:
-        toavg=[]
-        for b in b2data.keys():
-            if arcBPMcheck(b)==False:
-                continue
-            if badBPMcheck(b)==True:
-                continue
-            diffdata=b2data[b]['diffdata']
-            for y in range(len(diffdata)):
-                if diffdata[y][0]==x:
-                    re=diffdata[y][1]
-                    im=diffdata[y][2]
-                    amp=np.sqrt(re**2+im**2)
-                    toavg.append(amp)
-        avgRDTshift=np.mean(np.array(toavg))
-        avgRDTshifterr=np.std(np.array(toavg))
-        csvwout.writerow([x,avgRDTshift,avgRDTshifterr])
-    wout.close()
-
-
-    #############
-    ############# LHCB1 RDT deltas
-    #############
-    ###      ### get the list of crossing angles measured
-    xing=[]  
-    for b in b1data.keys():
-        diffdata=b1data[b]['diffdata']
-        for x in range(len(diffdata)):
-            xing.append(diffdata[x][0])
-        break
-    for x in xing:
-        fout=f'data_b1_f{rdt}{rdt_plane}rdtdelta_knob_'+str(x)+'.csv'
-        wout=open(fout,'w')
-        csvwout=csv.writer(wout,delimiter=' ')
-        header=['#name','s','delta amp','delta re','delta im']
+def write_RDTshifts_for_beam(data, rdt, rdt_plane, beam):
+    """
+    Generalized function to write RDT shifts for a given beam (b1 or b2).
+    """
+    # Gradients
+    fout = f'data_{beam}_f{rdt}{rdt_plane}rdtgradient.csv'
+    with open(fout, 'w') as wout:
+        csvwout = csv.writer(wout, delimiter=' ')
+        header = ['#name', 's', f'd(Ref{rdt}_{rdt_plane})/dknob', f'd(Imf{rdt}_{rdt_plane})/dknob', 're fit error', 'im fit error']
         csvwout.writerow(header)
-        for b in b1data.keys():
-            if arcBPMcheck(b)==False:
+        for b in data.keys():
+            if not arcBPMcheck(b) or badBPMcheck(b):
                 continue
-            if badBPMcheck(b)==True:
-                continue
-            s=b1data[b]['s']
-            diffdata=b1data[b]['diffdata']
-            for y in range(len(diffdata)):
-                if diffdata[y][0]==x:
-                    re=diffdata[y][1]
-                    im=diffdata[y][2]
-                    amp=np.sqrt(re**2+im**2)
+            s = data[b]['s']
+            dredk = data[b]['fitdata'][0][1]
+            dimdk = data[b]['fitdata'][3][1]
+            dreerr = data[b]['fitdata'][2][1]
+            dimerr = data[b]['fitdata'][5][1]
+            csvwout.writerow([b, s, dredk, dimdk, dreerr, dimerr])
 
-                    csvwout.writerow([b,s,amp,re,im])
-        wout.close()
-
-    #############
-    ############# LHCB2 RDT deltas
-    #############
-    ###      ### get the list of crossing angles measured
-    xing=[]  
-    for b in b2data.keys():
-        diffdata=b2data[b]['diffdata']
-        for x in range(len(diffdata)):
-            xing.append(diffdata[x][0])
-        break
-    for x in xing:
-        fout=f'data_b2_f{rdt}{rdt_plane}rdtdelta_knob_'+str(x)+'.csv'
-        wout=open(fout,'w')
-        csvwout=csv.writer(wout,delimiter=' ')
-        header=['#name','s','delta amp','delta re','delta im']
+    # Average re**2 + im**2
+    xing = [diff[0] for diff in next(iter(data.values()))['diffdata']]
+    fout = f'data_{beam}_f{rdt}{rdt_plane}rdtshiftvsknob.csv'
+    with open(fout, 'w') as wout:
+        csvwout = csv.writer(wout, delimiter=' ')
+        header = ['#xing', 'sqrt(Dre^2+Dim^2)', 'std_dev over BPM']
         csvwout.writerow(header)
-        for b in b2data.keys():
-            if arcBPMcheck(b)==False:
-                continue
-            if badBPMcheck(b)==True:
-                continue
-            s=b2data[b]['s']
-            diffdata=b2data[b]['diffdata']
-            for y in range(len(diffdata)):
-                if diffdata[y][0]==x:
-                    re=diffdata[y][1]
-                    im=diffdata[y][2]
-                    amp=np.sqrt(re**2+im**2)
+        for x in xing:
+            toavg = []
+            for b in data.keys():
+                if not arcBPMcheck(b) or badBPMcheck(b):
+                    continue
+                diffdata = data[b]['diffdata']
+                for diff in diffdata:
+                    if diff[0] == x:
+                        re, im = diff[1], diff[2]
+                        amp = np.sqrt(re**2 + im**2)
+                        toavg.append(amp)
+            avgRDTshift = np.mean(toavg)
+            avgRDTshifterr = np.std(toavg)
+            csvwout.writerow([x, avgRDTshift, avgRDTshifterr])
 
-                    csvwout.writerow([b,s,amp,re,im])
-        wout.close()
+    # RDT deltas
+    for x in xing:
+        fout = f'data_{beam}_f{rdt}{rdt_plane}rdtdelta_knob_{x}.csv'
+        with open(fout, 'w') as wout:
+            csvwout = csv.writer(wout, delimiter=' ')
+            header = ['#name', 's', 'delta amp', 'delta re', 'delta im']
+            csvwout.writerow(header)
+            for b in data.keys():
+                if not arcBPMcheck(b) or badBPMcheck(b):
+                    continue
+                s = data[b]['s']
+                diffdata = data[b]['diffdata']
+                for diff in diffdata:
+                    if diff[0] == x:
+                        re, im = diff[1], diff[2]
+                        amp = np.sqrt(re**2 + im**2)
+                        csvwout.writerow([b, s, amp, re, im])
 
-    return
-###########################################################################################################################################################################
-###########################################################################################################################################################################
+def write_RDTshifts(data, rdt, rdt_plane, beam):
+    """
+    Writes RDT shifts for a beam
+    """
+    write_RDTshifts_for_beam(data, rdt, rdt_plane, beam)
+
 def calculate_avg_rdt_shift(data):
     """
     Calculate the average RDT shift and standard deviation over BPMs for given data.

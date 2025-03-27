@@ -66,7 +66,8 @@ def main():
     print('\n\n')
     print('----------------------------------------------------------------------------------')
     print('Writing csv data:\n')
-    write_RDTshifts(b1rdtdata, b2rdtdata, rdt, rdt_plane)
+    write_RDTshifts(b1rdtdata, rdt, rdt_plane, "b1")
+    write_RDTshifts(b2rdtdata, rdt, rdt_plane, "b2")
 
 if __name__ == "__main__":
     main()
