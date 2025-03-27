@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rdtfeeddown"
+version = "0.1.0"
+description = "RDT feed-down Analysis Package"
+authors = [
+    { name = "Sasha Horney" }
+]
+
+[project.dependencies]
+numpy = "*"
+matplotlib = "*"
+scipy = "*"
+pytimber = "*"
+
+[project.scripts]
+rdtfeeddown = "rdtfeeddown.cli:main"
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "sphinx",
+    "black",
+    "flake8"
+]
