@@ -161,10 +161,17 @@ class RDTFeeddownGUI(QMainWindow):
         self.rdt_plane_dropdown.addItems(["x", "y"])  # Add options "x" and "y"
         self.input_layout.addWidget(self.rdt_plane_dropdown)
 
+        # Knob
         self.knob_label = QLabel("Knob:")
         self.input_layout.addWidget(self.knob_label)
         self.knob_entry = QLineEdit("LHCBEAM/IP5-XING-H-MURAD")
         self.input_layout.addWidget(self.knob_entry)
+
+        knob_buttons_layout = QHBoxLayout()
+        self.validate_knob_button = QPushButton("Validate Knob")
+        self.validate_knob_button.clicked.connect(self.validate_knob_button_clicked)
+        knob_buttons_layout.addWidget(self.validate_knob_button)
+        self.input_layout.addLayout(knob_buttons_layout)
 
         # Run Button
         self.run_button = QPushButton("Run Analysis")
@@ -320,6 +327,21 @@ class RDTFeeddownGUI(QMainWindow):
         except Exception as e:
             return False, str(e)
 
+    def validate_knob_button_clicked(self):
+        """
+        Validate the knob when the "Validate Knob" button is clicked.
+        """
+        knob = self.knob_entry.text()
+        if not knob:
+            QMessageBox.critical(self, "Error", "Knob field must be filled!")
+            return
+
+        is_valid_knob, knob_message = self.validate_knob(initialize_statetracker(), knob)
+        if is_valid_knob:
+            QMessageBox.information(self, "Knob Validation", f"Knob is valid. Setting: {knob_message}")
+        else:
+            QMessageBox.critical(self, "Knob Validation", f"Invalid Knob: {knob_message}")
+
     def run_analysis(self):
         beam1_model = self.beam1_model_entry.text()
         beam2_model = self.beam2_model_entry.text()
@@ -330,7 +352,7 @@ class RDTFeeddownGUI(QMainWindow):
         rdt = self.rdt_entry.text()
         rdt_plane = self.rdt_plane_dropdown.currentText()  # Get selected value from dropdown
         knob = self.knob_entry.text()
-        output_path = self.default_output_path
+        output_path = self.default_output_path.text()
 
         # Validate inputs
         if not beam1_model and not beam2_model:
