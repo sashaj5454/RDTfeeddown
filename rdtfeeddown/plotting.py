@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
+from analysis import polyfunction, calculate_avg_rdt_shift, arcBPMcheck, badBPMcheck
 
 # ...existing code for plot_BPM, plot_RDTshifts, plot_RDT...
 def plot_BPM(BPM,data,rdt,rdt_plane,filename):

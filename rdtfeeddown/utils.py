@@ -5,6 +5,8 @@ import datetime as dt
 from optparse import OptionParser
 import pytimber
 from zoneinfo import ZoneInfo 
+import csv
+from utils import get_analysis_knobsetting
 
 # ...existing code for parse_options, initialize_statetracker, get_analysis_knobsetting, getmodelBPMs...
 def parse_options():
