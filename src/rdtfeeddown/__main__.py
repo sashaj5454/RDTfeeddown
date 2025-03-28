@@ -1,7 +1,9 @@
 import tkinter as tk
 from .gui import RDTFeeddownGUI
+from PyQt5.QtWidgets import QApplication
 
 if __name__ == "__main__":
-    root = tk.Tk()
-    app = RDTFeeddownGUI(root)
-    root.mainloop()
+    app = QApplication([])
+    window = RDTFeeddownGUI()
+    window.show()
+    app.exec_()
