@@ -2,6 +2,7 @@ import numpy as np
 from scipy.optimize import curve_fit
 from scipy.stats import zscore
 import csv
+from .utils import get_analysis_knobsetting
 
 def filter_outliers(
     data, 
