@@ -4,6 +4,7 @@ import re
 import datetime as dt
 from optparse import OptionParser
 import pytimber
+from zoneinfo import ZoneInfo 
 
 # ...existing code for parse_options, initialize_statetracker, get_analysis_knobsetting, getmodelBPMs...
 def parse_options():
@@ -133,7 +134,7 @@ def getknobsetting_statetracker(ldb,thistimestamp,requested_knob):
     knob_setting = ldb.get(statetrackerknobname,thistimestamp)[statetrackerknobname][1][0]
     return knob_setting
 
-def get_analysis_knobsetting(ldb,requested_knob,analyfile,houroffset):
+def get_analysis_knobsetting(ldb,requested_knob,analyfile):
     ############-> read the command.run file to generate a list of all the kicks used to produce this results folder
     fc=analyfile+'/command.run'
     rc=open(fc,'r')
@@ -146,7 +147,7 @@ def get_analysis_knobsetting(ldb,requested_knob,analyfile,houroffset):
     for f in flist:
         kickname=f.rpartition('/')[2]
         kicktime=convert_from_kickfilename(kickname)
-        localktime=utctolocal(kicktime,houroffset)
+        localktime=utctolocal(kicktime)
         knobsetting=getknobsetting_statetracker(ldb,localktime,requested_knob)
         knobsettings.append([kicktime,knobsetting])
 
@@ -175,10 +176,13 @@ def parse_timestamp(thistime):
     sys.tracebacklimit = 0
     raise ValueError('No appropriate input format found for start time of scan (-s).\n ---> Accepted input formats are:   '+timefmatstring)
 
-def utctolocal(dtutctime,houroffset):
-    dtlocaltime=dtutctime+dt.timedelta(hours=houroffset)
-    #print(dtutctime,dtlocaltime)
-    return dtlocaltime
+def utctolocal(
+    dtutctime, 
+    local_tz_str="Europe/Paris"
+):
+    dtutctime = dtutctime.replace(tzinfo=dt.timezone.utc)
+    local_tz = ZoneInfo(local_tz_str)
+    return dtutctime.astimezone(local_tz)
 
 def convert_from_kickfilename(kickfilename):
     if re.search('Beam1@Turn@',kickfilename):

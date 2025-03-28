@@ -61,16 +61,16 @@ def update_bpm_data(bpmdata, data, key, knob_setting):
         name, amp, re, im = entry
         bpmdata[name][key].append([knob_setting, amp, re, im])
 
-def getrdt_omc3(ldb, modelbpmlist, bpmdata, ref, flist, knob, outputpath, timeoffset, rdt, rdt_plane, rdtfolder):
+def getrdt_omc3(ldb, modelbpmlist, bpmdata, ref, flist, knob, outputpath, rdt, rdt_plane, rdtfolder):
     """
     Processes RDT data and updates BPM data dictionary.
     """
-    refk = get_analysis_knobsetting(ldb, knob, ref, timeoffset)
+    refk = get_analysis_knobsetting(ldb, knob, ref)
     refdat = readrdtdatafile(ref, rdt, rdt_plane, rdtfolder)
     update_bpm_data(bpmdata, refdat, 'ref', refk)
 
     for f in flist:
-        ksetting = get_analysis_knobsetting(ldb, knob, f, timeoffset)
+        ksetting = get_analysis_knobsetting(ldb, knob, f)
         cdat = readrdtdatafile(f, rdt, rdt_plane, rdtfolder)
         update_bpm_data(bpmdata, cdat, 'data', ksetting)
 
