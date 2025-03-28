@@ -96,23 +96,22 @@ def check_rdt(
 	j, k, l, m = [int(char) for char in rdt]
 
 	if j == 0 and l == 0:  # the RDT can't be seen on any plane
-		raise ValueError("The rdt does not exist on any plane")
+		return False, "The rdt does not exist on any plane"
 	if l+m == 0 and j !=0 and rdtplane != "x":
-		raise ValueError("The rdt does not exist on the vertical plane") 
+		return False, "The rdt does not exist on the vertical plane"
 	elif j+k == 0 and l !=0 and rdtplane != "y":
-		raise ValueError("The rdt does not exist on the horizontal plane")
+		return False, "The rdt does not exist on the horizontal plane"
 	elif j ==0 and rdtplane != "y":
-		raise ValueError("The rdt does not exist on the horizontal plane")
+		return False, "The rdt does not exist on the horizontal plane"
 	elif l ==0 and rdtplane != "x":
-		raise ValueError("The rdt does not exist on the vertical plane")
+		return False, "The rdt does not exist on the vertical plane"
 	
-
-	return j, k, l, m
+	return
 
 def rdt_to_order_and_type(
-    rdt: tuple
+    rdt: str
 ):
-    j, k, l, m = rdt 
+    j, k, l, m = list(rdt) 
     rdt_type = "normal" if (l + m) % 2 == 0 else "skew"
     orders = dict(((1, "dipole"), 
                    (2, "quadrupole"), 

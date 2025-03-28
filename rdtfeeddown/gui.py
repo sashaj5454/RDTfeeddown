@@ -15,6 +15,12 @@ class RDTFeeddownGUI:
         self.default_input_path = "/afs/cern.ch/work/s/sahorney/private/LHCoptics/2025_03_a4corr"
         self.default_output_path = "/afs/cern.ch/work/s/sahorney/private/LHCoptics/2025_03_a4corr"
 
+        # Valid RDT and RDT Plane combinations
+        self.valid_rdt_combinations = {
+            "h": ["RDT1", "RDT2", "RDT3"],  # Example RDTs for horizontal plane
+            "v": ["RDT4", "RDT5", "RDT6"],  # Example RDTs for vertical plane
+        }
+
         # Create Notebook for tabs
         self.notebook = ttk.Notebook(root)
         self.notebook.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
@@ -85,23 +91,23 @@ class RDTFeeddownGUI:
 
         # Beam 1 Folders
         self.beam1_label = ttk.Label(self.input_frame, text="Beam 1 Folders:")
-        self.beam1_label.grid(row=8, column=0, padx=5, pady=5, sticky="w")
+        self.beam1_label.grid(row=7, column=0, padx=5, pady=5, sticky="w")
         self.beam1_listbox = tk.Listbox(self.input_frame, selectmode=tk.MULTIPLE, height=5, width=50)
-        self.beam1_listbox.grid(row=8, column=1, padx=5, pady=5)
+        self.beam1_listbox.grid(row=7, column=1, padx=5, pady=5)
         self.beam1_button = ttk.Button(self.input_frame, text="Add Folders", command=self.select_beam1_folders)
-        self.beam1_button.grid(row=8, column=2, padx=5, pady=5)
+        self.beam1_button.grid(row=7, column=2, padx=5, pady=5)
         self.beam1_delete = ttk.Button(self.input_frame, text="Delete Selected", command=self.delete_beam1_folders)
-        self.beam1_delete.grid(row=8, column=3, padx=5, pady=5)
+        self.beam1_delete.grid(row=7, column=3, padx=5, pady=5)
 
         # Beam 2 Folders
         self.beam2_label = ttk.Label(self.input_frame, text="Beam 2 Folders:")
-        self.beam2_label.grid(row=9, column=0, padx=5, pady=5, sticky="w")
+        self.beam2_label.grid(row=8, column=0, padx=5, pady=5, sticky="w")
         self.beam2_listbox = tk.Listbox(self.input_frame, selectmode=tk.MULTIPLE, height=5, width=50)
-        self.beam2_listbox.grid(row=9, column=1, padx=5, pady=5)
+        self.beam2_listbox.grid(row=8, column=1, padx=5, pady=5)
         self.beam2_button = ttk.Button(self.input_frame, text="Add Folders", command=self.select_beam2_folders)
-        self.beam2_button.grid(row=9, column=2, padx=5, pady=5)
+        self.beam2_button.grid(row=8, column=2, padx=5, pady=5)
         self.beam2_delete = ttk.Button(self.input_frame, text="Delete Selected", command=self.delete_beam2_folders)
-        self.beam2_delete.grid(row=9, column=3, padx=5, pady=5)
+        self.beam2_delete.grid(row=8, column=3, padx=5, pady=5)
 
         # Parameters
         self.param_frame = ttk.LabelFrame(self.input_tab, text="Parameters")
@@ -117,10 +123,10 @@ class RDTFeeddownGUI:
         self.rdt_plane_entry = ttk.Entry(self.param_frame, width=20)
         self.rdt_plane_entry.grid(row=1, column=1, padx=5, pady=5)
 
-        self.knob_label = ttk.Label(self.input_frame, text="Knob:")
-        self.knob_label.grid(row=7, column=0, padx=5, pady=5, sticky="w")
-        self.knob_entry = ttk.Entry(self.input_frame, width=20)
-        self.knob_entry.grid(row=7, column=1, padx=5, pady=5)
+        self.knob_label = ttk.Label(self.param_frame, text="Knob:")
+        self.knob_label.grid(row=2, column=0, padx=5, pady=5, sticky="w")
+        self.knob_entry = ttk.Entry(self.param_frame, width=20)
+        self.knob_entry.grid(row=2, column=1, padx=5, pady=5)
         self.knob_entry.insert(0, "LHCBEAM/IP5-XING-H-MURAD")  # Set default knob value
 
         # Run button
@@ -209,6 +215,11 @@ class RDTFeeddownGUI:
         for index in reversed(selected):
             self.beam2_listbox.delete(index)
 
+    def validate_rdt_and_plane(self, rdt, rdt_plane):
+        """Validate the RDT and RDT Plane combination."""
+        check_rdt(rdt, rdt_plane)
+        return True, ""
+
     def run_analysis(self):
         beam1_model = self.beam1_model_entry.get()
         beam2_model = self.beam2_model_entry.get()
@@ -231,6 +242,12 @@ class RDTFeeddownGUI:
             messagebox.showerror("Error", "RDT and RDT plane fields must be filled!")
             return
 
+        # Validate RDT and RDT Plane
+        is_valid, error_message = self.validate_rdt_and_plane(rdt, rdt_plane)
+        if not is_valid:
+            messagebox.showerror("Error", error_message)
+            return
+
         if not knob:
             messagebox.showerror("Error", "Knob field must be filled!")
             return
@@ -251,6 +268,7 @@ class RDTFeeddownGUI:
             self.analysis_text.delete(1.0, tk.END)
             self.plot_ax.clear()
             ldb=initialize_statetracker()
+            rdtfolder = rdt_to_order_and_type(rdt, rdt_plane)
             if beam1_ref_folder and beam1_folders:
                 refknob_b1=get_analysis_knobsetting(ldb,knob,beam1_ref_folder)
                 b1modelbpmlist,b1bpmdata=getmodelBPMs(beam1_model)
