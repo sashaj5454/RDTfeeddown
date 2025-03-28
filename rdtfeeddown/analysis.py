@@ -2,6 +2,7 @@ import numpy as np
 from scipy.optimize import curve_fit
 from scipy.stats import zscore
 import csv
+from utils import get_analysis_knobsetting
 
 def filter_outliers(
     data, 
@@ -150,12 +151,12 @@ def badBPMcheck(bpm):
             break
     return badbpm
 
-def write_RDTshifts_for_beam(data, rdt, rdt_plane, beam):
+def write_RDTshifts_for_beam(data, rdt, rdt_plane, beam, output_path):
     """
     Generalized function to write RDT shifts for a given beam (b1 or b2).
     """
     # Gradients
-    fout = f'data_{beam}_f{rdt}{rdt_plane}rdtgradient.csv'
+    fout = f'{output_path}/data_{beam}_f{rdt}{rdt_plane}rdtgradient.csv'
     with open(fout, 'w') as wout:
         csvwout = csv.writer(wout, delimiter=' ')
         header = ['#name', 's', f'd(Ref{rdt}_{rdt_plane})/dknob', f'd(Imf{rdt}_{rdt_plane})/dknob', 're fit error', 'im fit error']
@@ -172,7 +173,7 @@ def write_RDTshifts_for_beam(data, rdt, rdt_plane, beam):
 
     # Average re**2 + im**2
     xing = [diff[0] for diff in next(iter(data.values()))['diffdata']]
-    fout = f'data_{beam}_f{rdt}{rdt_plane}rdtshiftvsknob.csv'
+    fout = f'{output_path}/data_{beam}_f{rdt}{rdt_plane}rdtshiftvsknob.csv'
     with open(fout, 'w') as wout:
         csvwout = csv.writer(wout, delimiter=' ')
         header = ['#xing', 'sqrt(Dre^2+Dim^2)', 'std_dev over BPM']
@@ -194,7 +195,7 @@ def write_RDTshifts_for_beam(data, rdt, rdt_plane, beam):
 
     # RDT deltas
     for x in xing:
-        fout = f'data_{beam}_f{rdt}{rdt_plane}rdtdelta_knob_{x}.csv'
+        fout = f'{output_path}/data_{beam}_f{rdt}{rdt_plane}rdtdelta_knob_{x}.csv'
         with open(fout, 'w') as wout:
             csvwout = csv.writer(wout, delimiter=' ')
             header = ['#name', 's', 'delta amp', 'delta re', 'delta im']
@@ -210,11 +211,11 @@ def write_RDTshifts_for_beam(data, rdt, rdt_plane, beam):
                         amp = np.sqrt(re**2 + im**2)
                         csvwout.writerow([b, s, amp, re, im])
 
-def write_RDTshifts(data, rdt, rdt_plane, beam):
+def write_RDTshifts(data, rdt, rdt_plane, beam, output_path):
     """
     Writes RDT shifts for a beam
     """
-    write_RDTshifts_for_beam(data, rdt, rdt_plane, beam)
+    write_RDTshifts_for_beam(data, rdt, rdt_plane, beam, output_path)
 
 def calculate_avg_rdt_shift(data):
     """
