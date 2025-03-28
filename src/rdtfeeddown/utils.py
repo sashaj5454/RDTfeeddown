@@ -6,7 +6,6 @@ from optparse import OptionParser
 import pytimber
 from zoneinfo import ZoneInfo 
 import csv
-from utils import get_analysis_knobsetting
 
 # ...existing code for parse_options, initialize_statetracker, get_analysis_knobsetting, getmodelBPMs...
 def parse_options():
@@ -113,8 +112,8 @@ def check_rdt(
 def rdt_to_order_and_type(
     rdt: str
 ):
-    j, k, l, m = list(rdt) 
-    rdt_type = "normal" if (l + m) % 2 == 0 else "skew"
+    rdt_j, rdt_k, rdt_l, rdt_m = list(rdt) 
+    rdt_type = "normal" if (rdt_l + rdt_m) % 2 == 0 else "skew"
     orders = dict(((1, "dipole"), 
                    (2, "quadrupole"), 
                    (3, "sextupole"), 
@@ -124,7 +123,7 @@ def rdt_to_order_and_type(
                    (7, "tetradecapole"),
                    (8, "hexadecapole"),
                  ))
-    return f"{rdt_type}_{orders[j + k + l + m]}"
+    return f"{rdt_type}_{orders[rdt_j + rdt_k + rdt_l + rdt_m]}"
 
 def initialize_statetracker():
     ldb = pytimber.LoggingDB()
