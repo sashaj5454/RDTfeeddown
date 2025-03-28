@@ -262,6 +262,8 @@ class RDTFeeddownGUI(QMainWindow):
     def run_analysis(self):
         beam1_model = self.beam1_model_entry.text()
         beam2_model = self.beam2_model_entry.text()
+        beam1_reffolder = self.beam1_reffolder_entry.text()
+        beam2_reffolder = self.beam2_reffolder_entry.text()
         beam1_folders = [self.beam1_folders_list.item(i).text() for i in range(self.beam1_folders_list.count())]
         beam2_folders = [self.beam2_folders_list.item(i).text() for i in range(self.beam2_folders_list.count())]
         rdt = self.rdt_entry.text()
@@ -303,13 +305,13 @@ class RDTFeeddownGUI(QMainWindow):
 
             if beam1_folders:
                 b1modelbpmlist, b1bpmdata = getmodelBPMs(beam1_model)
-                b1rdtdata = getrdt_omc3(ldb, b1modelbpmlist, b1bpmdata, None, beam1_folders, knob, output_path, rdt, rdt_plane, rdtfolder)
+                b1rdtdata = getrdt_omc3(ldb, b1modelbpmlist, b1bpmdata, beam1_reffolder, beam1_folders, knob, output_path, rdt, rdt_plane, rdtfolder)
                 write_RDTshifts(b1rdtdata, rdt, rdt_plane, "b1", output_path)
                 self.analysis_text.append("Beam 1 Analysis Completed Successfully.\n")
 
             if beam2_folders:
                 b2modelbpmlist, b2bpmdata = getmodelBPMs(beam2_model)
-                b2rdtdata = getrdt_omc3(ldb, b2modelbpmlist, b2bpmdata, None, beam2_folders, knob, output_path, rdt, rdt_plane, rdtfolder)
+                b2rdtdata = getrdt_omc3(ldb, b2modelbpmlist, b2bpmdata, beam2_reffolder, beam2_folders, knob, output_path, rdt, rdt_plane, rdtfolder)
                 write_RDTshifts(b2rdtdata, rdt, rdt_plane, "b2", output_path)
                 self.analysis_text.append("Beam 2 Analysis Completed Successfully.\n")
 
