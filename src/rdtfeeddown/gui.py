@@ -181,17 +181,25 @@ class RDTFeeddownGUI:
             self.beam2_ref_entry.delete(0, tk.END)
             self.beam2_ref_entry.insert(0, folderpath)
 
+    def select_multiple_folders(self, listbox):
+        """
+        Allow the user to select multiple folders and add them to the provided listbox.
+        """
+        while True:
+            folderpath = filedialog.askdirectory(
+                title="Select Folder",
+                initialdir=self.default_input_path
+            )
+            if not folderpath:
+                break  # Stop if the user cancels the dialog
+            if folderpath not in listbox.get(0, tk.END):
+                listbox.insert(tk.END, folderpath)
+
     def select_beam1_folders(self):
-        folderpath = filedialog.askdirectory(title="Select Beam 1 Measurement Folders", initialdir=self.default_input_path)
-        if folderpath:
-            if folderpath not in self.beam1_listbox.get(0, tk.END):
-                self.beam1_listbox.insert(tk.END, folderpath)
+        self.select_multiple_folders(self.beam1_listbox)
 
     def select_beam2_folders(self):
-        folderpath = filedialog.askdirectory(title="Select Beam 2 Measurement Folders", initialdir=self.default_input_path)
-        if folderpath:
-            if folderpath not in self.beam2_listbox.get(0, tk.END):
-                self.beam2_listbox.insert(tk.END, folderpath)
+        self.select_multiple_folders(self.beam2_listbox)
 
     def delete_beam1_ref_folder(self):
         self.beam1_ref_entry.delete(0, tk.END)
@@ -282,7 +290,17 @@ class RDTFeeddownGUI:
         except Exception as e:
             messagebox.showerror("Error", f"An error occurred: {e}")
 
-if __name__ == "__main__":
-    root = tk.Tk()
-    app = RDTFeeddownGUI(root)
-    root.mainloop()
+    def select_multiple_files(self):
+        """
+        Allow the user to select multiple files.
+        """
+        filepaths = filedialog.askopenfilenames(
+            title="Select Files",
+            filetypes=[("All Files", "*.*")],  # Adjust filetypes as needed
+        )
+        if filepaths:
+            print("Selected files:", filepaths)
+            # Process the selected files as needed
+            return filepaths
+        return []
+
