@@ -148,15 +148,16 @@ class RDTFeeddownGUI(QMainWindow):
         self.input_layout.addLayout(beam2_buttons_layout)
 
         # Parameters
-        self.rdt_label = QLabel("RDT:")
+        self.rdt_label = QLabel("RDT (in form of jklm):")
         self.input_layout.addWidget(self.rdt_label)
         self.rdt_entry = QLineEdit()
         self.input_layout.addWidget(self.rdt_entry)
 
         self.rdt_plane_label = QLabel("RDT Plane:")
         self.input_layout.addWidget(self.rdt_plane_label)
-        self.rdt_plane_entry = QLineEdit()
-        self.input_layout.addWidget(self.rdt_plane_entry)
+        self.rdt_plane_dropdown = QtWidgets.QComboBox()  # Change to dropdown
+        self.rdt_plane_dropdown.addItems(["x", "y"])  # Add options "x" and "y"
+        self.input_layout.addWidget(self.rdt_plane_dropdown)
 
         self.knob_label = QLabel("Knob:")
         self.input_layout.addWidget(self.knob_label)
@@ -301,7 +302,7 @@ class RDTFeeddownGUI(QMainWindow):
         beam1_folders = [self.beam1_folders_list.item(i).text() for i in range(self.beam1_folders_list.count())]
         beam2_folders = [self.beam2_folders_list.item(i).text() for i in range(self.beam2_folders_list.count())]
         rdt = self.rdt_entry.text()
-        rdt_plane = self.rdt_plane_entry.text()
+        rdt_plane = self.rdt_plane_dropdown.currentText()  # Get selected value from dropdown
         knob = self.knob_entry.text()
         output_path = self.default_output_path
 
@@ -323,7 +324,7 @@ class RDTFeeddownGUI(QMainWindow):
             self.analysis_text.clear()
             self.figure.clear()
             ldb = initialize_statetracker()
-            rdtfolder = rdt_to_order_and_type(rdt, rdt_plane)
+            rdtfolder = rdt_to_order_and_type(rdt)
 
             if beam1_model and beam1_folders:
                 b1modelbpmlist, b1bpmdata = getmodelBPMs(beam1_model)
