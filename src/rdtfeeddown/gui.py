@@ -47,6 +47,7 @@ class RDTFeeddownGUI(QMainWindow):
 
         # Beam 1 Model
         self.beam1_model_label = QLabel("Beam 1 Model:")
+        self.beam1_model_label.setStyleSheet("color: blue;")  # Set text color to blue
         self.input_layout.addWidget(self.beam1_model_label)
         self.beam1_model_entry = QLineEdit()
         self.input_layout.addWidget(self.beam1_model_entry)
@@ -56,6 +57,7 @@ class RDTFeeddownGUI(QMainWindow):
 
         # Beam 2 Model
         self.beam2_model_label = QLabel("Beam 2 Model:")
+        self.beam2_model_label.setStyleSheet("color: red;")  # Set text color to red
         self.input_layout.addWidget(self.beam2_model_label)
         self.beam2_model_entry = QLineEdit()
         self.input_layout.addWidget(self.beam2_model_entry)
@@ -65,24 +67,43 @@ class RDTFeeddownGUI(QMainWindow):
 
         # Beam 1 Reference Folder
         self.beam1_reffolder_label = QLabel("Beam 1 Reference Measurement Folder:")
+        self.beam1_reffolder_label.setStyleSheet("color: blue;")  # Set text color to blue
         self.input_layout.addWidget(self.beam1_reffolder_label)
         self.beam1_reffolder_entry = QLineEdit()
         self.input_layout.addWidget(self.beam1_reffolder_entry)
+
+        beam1_reffolder_buttons_layout = QHBoxLayout()
         self.beam1_reffolder_button = QPushButton("Select Folder")
         self.beam1_reffolder_button.clicked.connect(self.select_beam1_reffolder)
-        self.input_layout.addWidget(self.beam1_reffolder_button)
+        beam1_reffolder_buttons_layout.addWidget(self.beam1_reffolder_button)
+
+        self.beam1_reffolder_remove_button = QPushButton("Remove File")
+        self.beam1_reffolder_remove_button.clicked.connect(self.remove_beam1_reffolder)
+        beam1_reffolder_buttons_layout.addWidget(self.beam1_reffolder_remove_button)
+
+        self.input_layout.addLayout(beam1_reffolder_buttons_layout)
 
         # Beam 2 Reference Folder
         self.beam2_reffolder_label = QLabel("Beam 2 Reference Measurement Folder:")
+        self.beam2_reffolder_label.setStyleSheet("color: red;")  # Set text color to red
         self.input_layout.addWidget(self.beam2_reffolder_label)
         self.beam2_reffolder_entry = QLineEdit()
         self.input_layout.addWidget(self.beam2_reffolder_entry)
+
+        beam2_reffolder_buttons_layout = QHBoxLayout()
         self.beam2_reffolder_button = QPushButton("Select Folder")
         self.beam2_reffolder_button.clicked.connect(self.select_beam2_reffolder)
-        self.input_layout.addWidget(self.beam2_reffolder_button)
+        beam2_reffolder_buttons_layout.addWidget(self.beam2_reffolder_button)
+
+        self.beam2_reffolder_remove_button = QPushButton("Remove File")
+        self.beam2_reffolder_remove_button.clicked.connect(self.remove_beam2_reffolder)
+        beam2_reffolder_buttons_layout.addWidget(self.beam2_reffolder_remove_button)
+
+        self.input_layout.addLayout(beam2_reffolder_buttons_layout)
 
         # Beam 1 Folders
         self.beam1_folders_label = QLabel("Beam 1 Measurement Folders:")
+        self.beam1_folders_label.setStyleSheet("color: blue;")  # Set text color to blue
         self.input_layout.addWidget(self.beam1_folders_label)
         self.beam1_folders_list = QListWidget()
         self.beam1_folders_list.setSelectionMode(QListWidget.MultiSelection)  # Allow multiple selection
@@ -105,6 +126,7 @@ class RDTFeeddownGUI(QMainWindow):
 
         # Beam 2 Folders
         self.beam2_folders_label = QLabel("Beam 2 Measurement Folders:")
+        self.beam2_folders_label.setStyleSheet("color: red;")  # Set text color to red
         self.input_layout.addWidget(self.beam2_folders_label)
         self.beam2_folders_list = QListWidget()
         self.beam2_folders_list.setSelectionMode(QListWidget.MultiSelection)  # Allow multiple selection
@@ -203,6 +225,18 @@ class RDTFeeddownGUI(QMainWindow):
         if folderpath:
             self.beam2_reffolder_entry.setText(folderpath)
 
+    def remove_beam1_reffolder(self):
+        """
+        Clear the Beam 1 reference folder entry.
+        """
+        self.beam1_reffolder_entry.clear()
+
+    def remove_beam2_reffolder(self):
+        """
+        Clear the Beam 2 reference folder entry.
+        """
+        self.beam2_reffolder_entry.clear()
+
     def select_multiple_directories(self, list_widget):
         """
         Allow the user to select multiple directories and add them to the provided list widget.
@@ -272,27 +306,15 @@ class RDTFeeddownGUI(QMainWindow):
         output_path = self.default_output_path
 
         # Validate inputs
-        if not beam1_model:
-            QMessageBox.critical(self, "Error", "Beam 1 model must be selected!")
-            return
-        if not beam2_model:
-            QMessageBox.critical(self, "Error", "Beam 2 model must be selected!")
+        if not beam1_model and not beam2_model:
+            QMessageBox.critical(self, "Error", "At least one beam model must be selected!")
             return
         if not rdt or not rdt_plane:
             QMessageBox.critical(self, "Error", "RDT and RDT plane fields must be filled!")
             return
-
-        # Validate RDT and RDT Plane
-        try:
-            check_rdt(rdt, rdt_plane)
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"Invalid RDT or RDT Plane: {e}")
-            return
-
         if not knob:
             QMessageBox.critical(self, "Error", "Knob field must be filled!")
             return
-
         if not beam1_folders and not beam2_folders:
             QMessageBox.critical(self, "Error", "At least one set of measurement folders must be provided!")
             return
@@ -303,13 +325,13 @@ class RDTFeeddownGUI(QMainWindow):
             ldb = initialize_statetracker()
             rdtfolder = rdt_to_order_and_type(rdt, rdt_plane)
 
-            if beam1_folders:
+            if beam1_model and beam1_folders:
                 b1modelbpmlist, b1bpmdata = getmodelBPMs(beam1_model)
                 b1rdtdata = getrdt_omc3(ldb, b1modelbpmlist, b1bpmdata, beam1_reffolder, beam1_folders, knob, output_path, rdt, rdt_plane, rdtfolder)
                 write_RDTshifts(b1rdtdata, rdt, rdt_plane, "b1", output_path)
                 self.analysis_text.append("Beam 1 Analysis Completed Successfully.\n")
 
-            if beam2_folders:
+            if beam2_model and beam2_folders:
                 b2modelbpmlist, b2bpmdata = getmodelBPMs(beam2_model)
                 b2rdtdata = getrdt_omc3(ldb, b2modelbpmlist, b2bpmdata, beam2_reffolder, beam2_folders, knob, output_path, rdt, rdt_plane, rdtfolder)
                 write_RDTshifts(b2rdtdata, rdt, rdt_plane, "b2", output_path)
