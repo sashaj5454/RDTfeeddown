@@ -62,7 +62,7 @@ class RDTFeeddownGUI(QMainWindow):
         self.input_layout.addWidget(self.beam2_model_button)
 
         # Beam 1 Folders
-        self.beam1_folders_label = QLabel("Beam 1 Folders:")
+        self.beam1_folders_label = QLabel("Beam 1 Measurement Folders:")
         self.input_layout.addWidget(self.beam1_folders_label)
         self.beam1_folders_list = QListWidget()
         self.input_layout.addWidget(self.beam1_folders_list)
@@ -71,7 +71,7 @@ class RDTFeeddownGUI(QMainWindow):
         self.input_layout.addWidget(self.beam1_folders_button)
 
         # Beam 2 Folders
-        self.beam2_folders_label = QLabel("Beam 2 Folders:")
+        self.beam2_folders_label = QLabel("Beam 2 Measurement Folders:")
         self.input_layout.addWidget(self.beam2_folders_label)
         self.beam2_folders_list = QListWidget()
         self.input_layout.addWidget(self.beam2_folders_list)
