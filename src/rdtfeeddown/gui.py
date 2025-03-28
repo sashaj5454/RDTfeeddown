@@ -282,7 +282,4 @@ class RDTFeeddownGUI:
         except Exception as e:
             messagebox.showerror("Error", f"An error occurred: {e}")
 
-if __name__ == "__main__":
-    root = tk.Tk()
-    app = RDTFeeddownGUI(root)
-    root.mainloop()
+
