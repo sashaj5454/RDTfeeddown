@@ -1,8 +1,8 @@
 import tkinter as tk
 from tkinter import filedialog, messagebox
 from tkinter import ttk
-from utils import check_rdt, initialize_statetracker, rdt_to_order_and_type, get_analysis_knobsetting, getmodelBPMs, getrdt_omc3
-from analysis import write_RDTshifts
+from .utils import check_rdt, initialize_statetracker, rdt_to_order_and_type, getmodelBPMs, getrdt_omc3
+from .analysis import write_RDTshifts
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.pyplot as plt
 
