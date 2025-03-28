@@ -1,8 +1,8 @@
 import tkinter as tk
 from tkinter import filedialog, messagebox
 from tkinter import ttk
-from .utils import check_rdt, initialize_statetracker, rdt_to_order_and_type, getmodelBPMs, getrdt_omc3
-from .analysis import write_RDTshifts
+from .utils import check_rdt, initialize_statetracker, rdt_to_order_and_type, getmodelBPMs
+from .analysis import write_RDTshifts, getrdt_omc3
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.pyplot as plt
 
@@ -152,7 +152,7 @@ class RDTFeeddownGUI:
             self.default_output_path_label.config(text=f"Default Output Path: {self.default_output_path}")
 
     def select_beam1_model(self):
-        modelpath = filedialog.askopenfilename(title="Select Beam 1 Model", initialdir=self.default_input_path)
+        modelpath = filedialog.askdirectory(title="Select Beam 1 Model", initialdir=self.default_input_path)
         if modelpath:
             self.beam1_model_entry.delete(0, tk.END)
             self.beam1_model_entry.insert(0, modelpath)
@@ -161,7 +161,7 @@ class RDTFeeddownGUI:
         self.beam1_model_entry.delete(0, tk.END)
 
     def select_beam2_model(self):
-        modelpath = filedialog.askopenfilename(title="Select Beam 2 Model", initialdir=self.default_input_path)
+        modelpath = filedialog.askdirectory(title="Select Beam 2 Model", initialdir=self.default_input_path)
         if modelpath:
             self.beam2_model_entry.delete(0, tk.END)
             self.beam2_model_entry.insert(0, modelpath)
