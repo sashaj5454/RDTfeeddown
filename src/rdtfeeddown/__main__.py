@@ -1,4 +1,3 @@
-import tkinter as tk
 from .gui import RDTFeeddownGUI
 from PyQt5.QtWidgets import QApplication
 

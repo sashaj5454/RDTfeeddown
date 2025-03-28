@@ -352,6 +352,7 @@ class RDTFeeddownGUI(QMainWindow):
         beam2_reffolder = self.beam2_reffolder_entry.text()
         beam1_folders = [self.beam1_folders_list.item(i).text() for i in range(self.beam1_folders_list.count())]
         beam2_folders = [self.beam2_folders_list.item(i).text() for i in range(self.beam2_folders_list.count())]
+        print(beam1_folders)
         rdt = self.rdt_entry.text()
         rdt_plane = self.rdt_plane_dropdown.currentText()  # Get selected value from dropdown
         knob = self.knob_entry.text()
