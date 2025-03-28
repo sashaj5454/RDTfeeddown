@@ -14,13 +14,7 @@ class RDTFeeddownGUI:
         # Default input and output paths
         self.default_input_path = "/afs/cern.ch/work/s/sahorney/private/LHCoptics/2025_03_a4corr"
         self.default_output_path = "/afs/cern.ch/work/s/sahorney/private/LHCoptics/2025_03_a4corr"
-
-        # Valid RDT and RDT Plane combinations
-        self.valid_rdt_combinations = {
-            "h": ["RDT1", "RDT2", "RDT3"],  # Example RDTs for horizontal plane
-            "v": ["RDT4", "RDT5", "RDT6"],  # Example RDTs for vertical plane
-        }
-
+        
         # Create Notebook for tabs
         self.notebook = ttk.Notebook(root)
         self.notebook.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
