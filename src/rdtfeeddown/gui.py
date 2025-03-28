@@ -330,7 +330,7 @@ class RDTFeeddownGUI(QMainWindow):
         rdt = self.rdt_entry.text()
         rdt_plane = self.rdt_plane_dropdown.currentText()  # Get selected value from dropdown
         knob = self.knob_entry.text()
-        output_path = self.default_output_path
+        output_path = self.default_output_path.text()
 
         # Validate inputs
         if not beam1_model and not beam2_model:
