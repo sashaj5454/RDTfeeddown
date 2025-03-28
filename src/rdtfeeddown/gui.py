@@ -67,18 +67,42 @@ class RDTFeeddownGUI(QMainWindow):
         self.input_layout.addWidget(self.beam1_folders_label)
         self.beam1_folders_list = QListWidget()
         self.input_layout.addWidget(self.beam1_folders_list)
+
+        beam1_buttons_layout = QHBoxLayout()
         self.beam1_folders_button = QPushButton("Add Folders")
         self.beam1_folders_button.clicked.connect(self.select_beam1_folders)
-        self.input_layout.addWidget(self.beam1_folders_button)
+        beam1_buttons_layout.addWidget(self.beam1_folders_button)
+
+        self.beam1_remove_button = QPushButton("Remove Selected")
+        self.beam1_remove_button.clicked.connect(self.remove_selected_beam1_folders)
+        beam1_buttons_layout.addWidget(self.beam1_remove_button)
+
+        self.beam1_select_all_button = QPushButton("Select All")
+        self.beam1_select_all_button.clicked.connect(self.select_all_beam1_folders)
+        beam1_buttons_layout.addWidget(self.beam1_select_all_button)
+
+        self.input_layout.addLayout(beam1_buttons_layout)
 
         # Beam 2 Folders
         self.beam2_folders_label = QLabel("Beam 2 Measurement Folders:")
         self.input_layout.addWidget(self.beam2_folders_label)
         self.beam2_folders_list = QListWidget()
         self.input_layout.addWidget(self.beam2_folders_list)
+
+        beam2_buttons_layout = QHBoxLayout()
         self.beam2_folders_button = QPushButton("Add Folders")
         self.beam2_folders_button.clicked.connect(self.select_beam2_folders)
-        self.input_layout.addWidget(self.beam2_folders_button)
+        beam2_buttons_layout.addWidget(self.beam2_folders_button)
+
+        self.beam2_remove_button = QPushButton("Remove Selected")
+        self.beam2_remove_button.clicked.connect(self.remove_selected_beam2_folders)
+        beam2_buttons_layout.addWidget(self.beam2_remove_button)
+
+        self.beam2_select_all_button = QPushButton("Select All")
+        self.beam2_select_all_button.clicked.connect(self.select_all_beam2_folders)
+        beam2_buttons_layout.addWidget(self.beam2_select_all_button)
+
+        self.input_layout.addLayout(beam2_buttons_layout)
 
         # Parameters
         self.rdt_label = QLabel("RDT:")
@@ -162,6 +186,34 @@ class RDTFeeddownGUI(QMainWindow):
 
     def select_beam2_folders(self):
         self.select_multiple_directories(self.beam2_folders_list)
+
+    def remove_selected_beam1_folders(self):
+        """
+        Remove selected items from the Beam 1 folders list.
+        """
+        for item in self.beam1_folders_list.selectedItems():
+            self.beam1_folders_list.takeItem(self.beam1_folders_list.row(item))
+
+    def remove_selected_beam2_folders(self):
+        """
+        Remove selected items from the Beam 2 folders list.
+        """
+        for item in self.beam2_folders_list.selectedItems():
+            self.beam2_folders_list.takeItem(self.beam2_folders_list.row(item))
+
+    def select_all_beam1_folders(self):
+        """
+        Select all items in the Beam 1 folders list.
+        """
+        for i in range(self.beam1_folders_list.count()):
+            self.beam1_folders_list.item(i).setSelected(True)
+
+    def select_all_beam2_folders(self):
+        """
+        Select all items in the Beam 2 folders list.
+        """
+        for i in range(self.beam2_folders_list.count()):
+            self.beam2_folders_list.item(i).setSelected(True)
 
     def run_analysis(self):
         beam1_model = self.beam1_model_entry.text()
