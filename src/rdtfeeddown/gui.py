@@ -8,6 +8,8 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from .utils import check_rdt, initialize_statetracker, rdt_to_order_and_type, getmodelBPMs
 from .analysis import write_RDTshifts, getrdt_omc3
+import time  # Import time to get the current timestamp
+import re    # Import re for regex substitution
 
 class RDTFeeddownGUI(QMainWindow):
     def __init__(self):
@@ -294,6 +296,30 @@ class RDTFeeddownGUI(QMainWindow):
         for i in range(self.beam2_folders_list.count()):
             self.beam2_folders_list.item(i).setSelected(state == Qt.Checked)
 
+    def validate_rdt_and_plane(self, rdt, rdt_plane):
+        """
+        Validate the RDT and RDT Plane combination.
+        """
+        try:
+            check_rdt(rdt, rdt_plane)
+            return True, ""
+        except Exception as e:
+            return False, str(e)
+
+    def validate_knob(self, ldb, knob):
+        """
+        Validate the knob by checking its existence in the state tracker.
+        """
+        try:
+            current_timestamp = time.time()  # Get the current timestamp
+            statetracker_knob_name = f"LhcStateTracker:{re.sub('/', ':', knob)}:value"
+            knob_setting = ldb.get(statetracker_knob_name, current_timestamp)[statetracker_knob_name][1][0]
+            return True, knob_setting
+        except KeyError:
+            return False, f"Knob '{knob}' not found in the state tracker."
+        except Exception as e:
+            return False, str(e)
+
     def run_analysis(self):
         beam1_model = self.beam1_model_entry.text()
         beam2_model = self.beam2_model_entry.text()
@@ -318,6 +344,18 @@ class RDTFeeddownGUI(QMainWindow):
             return
         if not beam1_folders and not beam2_folders:
             QMessageBox.critical(self, "Error", "At least one set of measurement folders must be provided!")
+            return
+
+        # Validate RDT and RDT Plane
+        is_valid, error_message = self.validate_rdt_and_plane(rdt, rdt_plane)
+        if not is_valid:
+            QMessageBox.critical(self, "Error", f"Invalid RDT or RDT Plane: {error_message}")
+            return
+
+        # Validate knob
+        is_valid_knob, knob_message = self.validate_knob(initialize_statetracker(), knob)
+        if not is_valid_knob:
+            QMessageBox.critical(self, "Error", f"Invalid Knob: {knob_message}")
             return
 
         try:
