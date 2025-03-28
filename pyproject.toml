@@ -9,12 +9,12 @@ description = "RDT feed-down Analysis Package"
 authors = [
     { name = "Sasha Horney" }
 ]
-
-[project.dependencies]
-numpy = "*"
-matplotlib = "*"
-scipy = "*"
-pytimber = "*"
+dependencies = [
+    "numpy",
+    "matplotlib",
+    "scipy",
+    "pytimber"
+]
 
 [project.scripts]
 rdtfeeddown = "rdtfeeddown.cli:main"
