@@ -66,6 +66,7 @@ class RDTFeeddownGUI(QMainWindow):
         self.beam1_folders_label = QLabel("Beam 1 Measurement Folders:")
         self.input_layout.addWidget(self.beam1_folders_label)
         self.beam1_folders_list = QListWidget()
+        self.beam1_folders_list.setSelectionMode(QListWidget.MultiSelection)  # Allow multiple selection
         self.input_layout.addWidget(self.beam1_folders_list)
 
         beam1_buttons_layout = QHBoxLayout()
@@ -77,9 +78,9 @@ class RDTFeeddownGUI(QMainWindow):
         self.beam1_remove_button.clicked.connect(self.remove_selected_beam1_folders)
         beam1_buttons_layout.addWidget(self.beam1_remove_button)
 
-        self.beam1_select_all_button = QPushButton("Select All")
-        self.beam1_select_all_button.clicked.connect(self.select_all_beam1_folders)
-        beam1_buttons_layout.addWidget(self.beam1_select_all_button)
+        self.beam1_select_all_checkbox = QtWidgets.QCheckBox("Select All")
+        self.beam1_select_all_checkbox.stateChanged.connect(self.toggle_select_all_beam1_folders)
+        beam1_buttons_layout.addWidget(self.beam1_select_all_checkbox)
 
         self.input_layout.addLayout(beam1_buttons_layout)
 
@@ -87,6 +88,7 @@ class RDTFeeddownGUI(QMainWindow):
         self.beam2_folders_label = QLabel("Beam 2 Measurement Folders:")
         self.input_layout.addWidget(self.beam2_folders_label)
         self.beam2_folders_list = QListWidget()
+        self.beam2_folders_list.setSelectionMode(QListWidget.MultiSelection)  # Allow multiple selection
         self.input_layout.addWidget(self.beam2_folders_list)
 
         beam2_buttons_layout = QHBoxLayout()
@@ -98,9 +100,9 @@ class RDTFeeddownGUI(QMainWindow):
         self.beam2_remove_button.clicked.connect(self.remove_selected_beam2_folders)
         beam2_buttons_layout.addWidget(self.beam2_remove_button)
 
-        self.beam2_select_all_button = QPushButton("Select All")
-        self.beam2_select_all_button.clicked.connect(self.select_all_beam2_folders)
-        beam2_buttons_layout.addWidget(self.beam2_select_all_button)
+        self.beam2_select_all_checkbox = QtWidgets.QCheckBox("Select All")
+        self.beam2_select_all_checkbox.stateChanged.connect(self.toggle_select_all_beam2_folders)
+        beam2_buttons_layout.addWidget(self.beam2_select_all_checkbox)
 
         self.input_layout.addLayout(beam2_buttons_layout)
 
@@ -201,19 +203,19 @@ class RDTFeeddownGUI(QMainWindow):
         for item in self.beam2_folders_list.selectedItems():
             self.beam2_folders_list.takeItem(self.beam2_folders_list.row(item))
 
-    def select_all_beam1_folders(self):
+    def toggle_select_all_beam1_folders(self, state):
         """
-        Select all items in the Beam 1 folders list.
+        Toggle selection for all items in the Beam 1 folders list based on the checkbox state.
         """
         for i in range(self.beam1_folders_list.count()):
-            self.beam1_folders_list.item(i).setSelected(True)
+            self.beam1_folders_list.item(i).setSelected(state == QtWidgets.QCheckBox.Checked)
 
-    def select_all_beam2_folders(self):
+    def toggle_select_all_beam2_folders(self, state):
         """
-        Select all items in the Beam 2 folders list.
+        Toggle selection for all items in the Beam 2 folders list based on the checkbox state.
         """
         for i in range(self.beam2_folders_list.count()):
-            self.beam2_folders_list.item(i).setSelected(True)
+            self.beam2_folders_list.item(i).setSelected(state == QtWidgets.QCheckBox.Checked)
 
     def run_analysis(self):
         beam1_model = self.beam1_model_entry.text()
