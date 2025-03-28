@@ -46,11 +46,20 @@ def read_rdt_file(filepath):
             raw_data.append([str(row[0]), float(row[3]), float(row[7]), float(row[8])])
     return raw_data
 
+def ensure_trailing_slash(path):
+    """
+    Ensure the given folder path ends with a "/".
+    """
+    return path if path.endswith('/') else path + '/'
+
 def readrdtdatafile(cfile, rdt, rdt_plane, rdtfolder):
     """
     Reads RDT data from a file and removes outliers based on Z-scores.
     """
-    filepath = f'{cfile}/rdt/{rdtfolder}/f{rdt}_{rdt_plane}.tfs'
+    # Ensure cfile and rdtfolder have trailing slashes
+    cfile = ensure_trailing_slash(cfile)
+    rdtfolder = ensure_trailing_slash(rdtfolder)
+    filepath = f'{cfile}rdt/{rdtfolder}f{rdt}_{rdt_plane}.tfs'
     raw_data = read_rdt_file(filepath)
     return filter_outliers(raw_data)
 
@@ -155,8 +164,10 @@ def write_RDTshifts_for_beam(data, rdt, rdt_plane, beam, output_path):
     """
     Generalized function to write RDT shifts for a given beam (b1 or b2).
     """
+    # Ensure output_path has a trailing slash.
+    output_path = ensure_trailing_slash(output_path)
     # Gradients
-    fout = f'{output_path}/data_{beam}_f{rdt}{rdt_plane}rdtgradient.csv'
+    fout = f'{output_path}data_{beam}_f{rdt}{rdt_plane}rdtgradient.csv'
     with open(fout, 'w') as wout:
         csvwout = csv.writer(wout, delimiter=' ')
         header = ['#name', 's', f'd(Ref{rdt}_{rdt_plane})/dknob', f'd(Imf{rdt}_{rdt_plane})/dknob', 're fit error', 'im fit error']
@@ -173,7 +184,7 @@ def write_RDTshifts_for_beam(data, rdt, rdt_plane, beam, output_path):
 
     # Average re**2 + im**2
     xing = [diff[0] for diff in next(iter(data.values()))['diffdata']]
-    fout = f'{output_path}/data_{beam}_f{rdt}{rdt_plane}rdtshiftvsknob.csv'
+    fout = f'{output_path}data_{beam}_f{rdt}{rdt_plane}rdtshiftvsknob.csv'
     with open(fout, 'w') as wout:
         csvwout = csv.writer(wout, delimiter=' ')
         header = ['#xing', 'sqrt(Dre^2+Dim^2)', 'std_dev over BPM']
@@ -195,7 +206,7 @@ def write_RDTshifts_for_beam(data, rdt, rdt_plane, beam, output_path):
 
     # RDT deltas
     for x in xing:
-        fout = f'{output_path}/data_{beam}_f{rdt}{rdt_plane}rdtdelta_knob_{x}.csv'
+        fout = f'{output_path}data_{beam}_f{rdt}{rdt_plane}rdtdelta_knob_{x}.csv'
         with open(fout, 'w') as wout:
             csvwout = csv.writer(wout, delimiter=' ')
             header = ['#name', 's', 'delta amp', 'delta re', 'delta im']
