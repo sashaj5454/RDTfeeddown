@@ -230,6 +230,7 @@ class RDTFeeddownGUI:
         rdt = self.rdt_entry.get()
         rdt_plane = self.rdt_plane_entry.get()
         knob = self.knob_entry.get()
+        output_path = self.default_output_path
 
         # Validate inputs
         if not beam1_model:
@@ -270,17 +271,15 @@ class RDTFeeddownGUI:
             ldb=initialize_statetracker()
             rdtfolder = rdt_to_order_and_type(rdt, rdt_plane)
             if beam1_ref_folder and beam1_folders:
-                refknob_b1=get_analysis_knobsetting(ldb,knob,beam1_ref_folder)
                 b1modelbpmlist,b1bpmdata=getmodelBPMs(beam1_model)
                 b1rdtdata=getrdt_omc3(ldb,b1modelbpmlist,b1bpmdata,beam1_ref_folder,beam1_folders,knob,output_path,rdt,rdt_plane,rdtfolder)
-                write_RDTshifts(b1rdtdata, rdt, rdt_plane, "b1", output_path=self.default_output_path)
+                write_RDTshifts(b1rdtdata, rdt, rdt_plane, "b1", output_path)
                 self.analysis_text.insert(tk.END, "Beam 1 Analysis Completed Successfully.\n")
 
             if beam2_ref_folder and beam2_folders:
-                refknob_b2=get_analysis_knobsetting(ldb,knob,beam2_ref_folder)
                 b2modelbpmlist,b2bpmdata=getmodelBPMs(beam2_model)
                 b2rdtdata=getrdt_omc3(ldb,b2modelbpmlist,b2bpmdata,beam2_ref_folder,beam2_folders,knob,output_path,rdt,rdt_plane,rdtfolder)
-                write_RDTshifts(b2rdtdata, rdt, rdt_plane, "b2", output_path=self.default_output_path)
+                write_RDTshifts(b2rdtdata, rdt, rdt_plane, "b2", output_path)
                 self.analysis_text.insert(tk.END, "Beam 2 Analysis Completed Successfully.\n")
 
             self.canvas.draw()
