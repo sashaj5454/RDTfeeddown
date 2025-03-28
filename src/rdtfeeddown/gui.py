@@ -316,15 +316,18 @@ class RDTFeeddownGUI(QMainWindow):
     def validate_knob(self, ldb, knob):
         """
         Validate the knob by checking its existence in the state tracker.
+        Returns a tuple: (True, knob_setting) if valid, otherwise (False, error_message).
         """
         try:
             current_timestamp = time.time()  # Get the current timestamp
             statetracker_knob_name = f"LhcStateTracker:{re.sub('/', ':', knob)}:value"
-            knob_setting = ldb.get(statetracker_knob_name, current_timestamp)[statetracker_knob_name][1][0]
+            knob_data = ldb.get(statetracker_knob_name, current_timestamp)
+            if statetracker_knob_name not in knob_data:
+                return False, f"Knob '{knob}' not found in the state tracker."
+            knob_setting = knob_data[statetracker_knob_name][1][0]
             return True, knob_setting
-        except KeyError:
-            return False, f"Knob '{knob}' not found in the state tracker."
         except Exception as e:
+            # Log the exception if needed, and return an error without forcing a quit.
             return False, str(e)
 
     def validate_knob_button_clicked(self):
@@ -340,7 +343,7 @@ class RDTFeeddownGUI(QMainWindow):
         if is_valid_knob:
             QMessageBox.information(self, "Knob Validation", f"Knob is valid. Setting: {knob_message}")
         else:
-            QMessageBox.critical(self, "Knob Validation", f"Invalid Knob: {knob_message}")
+            QMessageBox.critical(self, "Knob Validation", f"Invalid Knob: {knob_message.replace('%', '%%')}")
 
     def run_analysis(self):
         beam1_model = self.beam1_model_entry.text()
@@ -372,13 +375,13 @@ class RDTFeeddownGUI(QMainWindow):
         # Validate RDT and RDT Plane
         is_valid, error_message = self.validate_rdt_and_plane(rdt, rdt_plane)
         if not is_valid:
-            QMessageBox.critical(self, "Error", f"Invalid RDT or RDT Plane: {error_message}")
+            QMessageBox.critical(self, "Error", f"Invalid RDT or RDT Plane: {error_message.replace('%', '%%')}")
             return
 
         # Validate knob
         is_valid_knob, knob_message = self.validate_knob(initialize_statetracker(), knob)
         if not is_valid_knob:
-            QMessageBox.critical(self, "Error", f"Invalid Knob: {knob_message}")
+            QMessageBox.critical(self, "Error", f"Invalid Knob: {knob_message.replace('%', '%%')}")
             return
 
         try:
@@ -402,7 +405,7 @@ class RDTFeeddownGUI(QMainWindow):
             self.canvas.draw()
 
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"An error occurred: {e}")
+            QMessageBox.critical(self, "Error", f"An error occurred: {str(e).replace('%', '%%')}")
             return
 
         QMessageBox.information(self, "Run Analysis", "Analysis completed successfully!")
