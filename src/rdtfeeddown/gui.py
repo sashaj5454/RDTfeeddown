@@ -3,6 +3,7 @@ from PyQt5.QtWidgets import (
     QFileDialog, QListWidget, QTabWidget, QWidget, QTextEdit, QMessageBox
 )
 from PyQt5 import QtWidgets
+from PyQt5.QtCore import Qt  # Import Qt for the correct constants
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from .utils import check_rdt, initialize_statetracker, rdt_to_order_and_type, getmodelBPMs
@@ -153,11 +154,17 @@ class RDTFeeddownGUI(QMainWindow):
             self.output_path_label.setText(f"Default Output Path: {self.default_output_path}")
 
     def select_beam1_model(self):
+        """
+        Open a file dialog to select the Beam 1 model directory, starting from the default input path.
+        """
         modelpath = QFileDialog.getExistingDirectory(self, "Select Beam 1 Model", self.default_input_path)
         if modelpath:
             self.beam1_model_entry.setText(modelpath)
 
     def select_beam2_model(self):
+        """
+        Open a file dialog to select the Beam 2 model directory, starting from the default input path.
+        """
         modelpath = QFileDialog.getExistingDirectory(self, "Select Beam 2 Model", self.default_input_path)
         if modelpath:
             self.beam2_model_entry.setText(modelpath)
@@ -168,6 +175,7 @@ class RDTFeeddownGUI(QMainWindow):
         """
         dialog = QFileDialog(self)
         dialog.setWindowTitle('Choose Directories')
+        dialog.setDirectory(self.default_input_path)  # Set the default input path
         dialog.setOption(QFileDialog.DontUseNativeDialog, True)
         dialog.setFileMode(QFileDialog.Directory)
         dialog.setOption(QFileDialog.ShowDirsOnly, True)
@@ -208,14 +216,14 @@ class RDTFeeddownGUI(QMainWindow):
         Toggle selection for all items in the Beam 1 folders list based on the checkbox state.
         """
         for i in range(self.beam1_folders_list.count()):
-            self.beam1_folders_list.item(i).setSelected(state == QtWidgets.QCheckBox.Checked)
+            self.beam1_folders_list.item(i).setSelected(state == Qt.Checked)
 
     def toggle_select_all_beam2_folders(self, state):
         """
         Toggle selection for all items in the Beam 2 folders list based on the checkbox state.
         """
         for i in range(self.beam2_folders_list.count()):
-            self.beam2_folders_list.item(i).setSelected(state == QtWidgets.QCheckBox.Checked)
+            self.beam2_folders_list.item(i).setSelected(state == Qt.Checked)
 
     def run_analysis(self):
         beam1_model = self.beam1_model_entry.text()
