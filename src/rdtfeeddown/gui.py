@@ -2,6 +2,7 @@ from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton,
     QFileDialog, QListWidget, QTabWidget, QWidget, QTextEdit, QMessageBox
 )
+from PyQt5 import QtWidgets
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from .utils import check_rdt, initialize_statetracker, rdt_to_order_and_type, getmodelBPMs
@@ -135,15 +136,32 @@ class RDTFeeddownGUI(QMainWindow):
         if modelpath:
             self.beam2_model_entry.setText(modelpath)
 
+    def select_multiple_directories(self, list_widget):
+        """
+        Allow the user to select multiple directories and add them to the provided list widget.
+        """
+        dialog = QFileDialog(self)
+        dialog.setWindowTitle('Choose Directories')
+        dialog.setOption(QFileDialog.DontUseNativeDialog, True)
+        dialog.setFileMode(QFileDialog.Directory)
+        dialog.setOption(QFileDialog.ShowDirsOnly, True)
+
+        # Enable multiple selection in the dialog
+        for view in dialog.findChildren((QtWidgets.QListView, QtWidgets.QTreeView)):
+            if isinstance(view.model(), QtWidgets.QFileSystemModel):
+                view.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
+
+        if dialog.exec_() == QFileDialog.Accepted:
+            selected_dirs = dialog.selectedFiles()
+            for directory in selected_dirs:
+                if directory not in [list_widget.item(i).text() for i in range(list_widget.count())]:
+                    list_widget.addItem(directory)
+
     def select_beam1_folders(self):
-        folderpath = QFileDialog.getExistingDirectory(self, "Select Beam 1 Folder", self.default_input_path)
-        if folderpath and folderpath not in [self.beam1_folders_list.item(i).text() for i in range(self.beam1_folders_list.count())]:
-            self.beam1_folders_list.addItem(folderpath)
+        self.select_multiple_directories(self.beam1_folders_list)
 
     def select_beam2_folders(self):
-        folderpath = QFileDialog.getExistingDirectory(self, "Select Beam 2 Folder", self.default_input_path)
-        if folderpath and folderpath not in [self.beam2_folders_list.item(i).text() for i in range(self.beam2_folders_list.count())]:
-            self.beam2_folders_list.addItem(folderpath)
+        self.select_multiple_directories(self.beam2_folders_list)
 
     def run_analysis(self):
         beam1_model = self.beam1_model_entry.text()
