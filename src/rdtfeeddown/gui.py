@@ -424,7 +424,7 @@ class RDTFeeddownGUI(QMainWindow):
                         )
                 b1rdtdata = fit_BPM(b1rdtdata)
                 write_RDTshifts(b1rdtdata, rdt, rdt_plane, "b1", output_path)
-                self.analysis_text.append(f"Beam 1 Analysis Completed Successfully.\n")
+                self.analysis_text.append("Beam 1 Analysis Completed Successfully.\n")
 
             if beam2_model and beam2_folders:
                 b2modelbpmlist, b2bpmdata = getmodelBPMs(beam2_model)
@@ -435,7 +435,7 @@ class RDTFeeddownGUI(QMainWindow):
                         )
                 b2rdtdata = fit_BPM(b2rdtdata)
                 write_RDTshifts(b2rdtdata, rdt, rdt_plane, "b2", output_path)
-                self.analysis_text.append(f"Beam 2 Analysis Completed Successfully.\n")
+                self.analysis_text.append("Beam 2 Analysis Completed Successfully.\n")
 
             self.canvas.draw()
             # Automatically update file list after analysis run
@@ -522,5 +522,20 @@ class RDTFeeddownGUI(QMainWindow):
             # Clear previous selection and add the new file.
             self.file_list.clear()
             self.file_list.addItem(fname)
+
+    def select_multiple_files(self):
+        """
+        Allow the user to select multiple files and add them to the file list widget.
+        """
+        dialog = QFileDialog(self)
+        dialog.setWindowTitle("Select Files")
+        dialog.setDirectory(self.default_output_path)  # Use default output path, adjust if needed
+        dialog.setFileMode(QFileDialog.ExistingFiles)
+        dialog.setNameFilter("All Files (*)")
+        if dialog.exec_() == QFileDialog.Accepted:
+            selected_files = dialog.selectedFiles()
+            for file in selected_files:
+                if file not in [self.file_list.item(i).text() for i in range(self.file_list.count())]:
+                    self.file_list.addItem(file)
 
 
