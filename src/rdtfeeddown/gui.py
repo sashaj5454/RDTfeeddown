@@ -20,6 +20,9 @@ class RDTFeeddownGUI(QMainWindow):
         self.default_input_path = "/afs/cern.ch/work/s/sahorney/private/LHCoptics/2025_03_a4corr"
         self.default_output_path = "/afs/cern.ch/work/s/sahorney/private/LHCoptics/2025_03_a4corr"
 
+        # Add an attribute to store the list of analysis output files
+        self.analysis_output_files = []
+
         # Main layout
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
@@ -97,6 +100,21 @@ class RDTFeeddownGUI(QMainWindow):
         ref_layout.addWidget(self.beam1_reffolder_remove_button)
         ref_group.setLayout(ref_layout)
         folders_layout.addWidget(ref_group)
+        # Beam 2 Reference Folder (similar)
+        ref_group2 = QtWidgets.QGroupBox("Reference Folder")
+        ref_layout2 = QHBoxLayout()
+        self.beam2_reffolder_label = QLabel("Beam 2 Reference Folder:")
+        self.beam2_reffolder_label.setStyleSheet("color: red;")
+        ref_layout2.addWidget(self.beam2_reffolder_label)
+        self.beam2_reffolder_entry = QLineEdit()
+        ref_layout2.addWidget(self.beam2_reffolder_entry)
+        self.beam2_reffolder_button = QPushButton("Select Folder")
+        self.beam2_reffolder_button.clicked.connect(self.select_beam2_reffolder)
+        ref_layout2.addWidget(self.beam2_reffolder_button)
+        self.beam2_reffolder_remove_button = QPushButton("Remove File")
+        self.beam2_reffolder_remove_button.clicked.connect(self.remove_beam2_reffolder)
+        ref_layout2.addWidget(self.beam2_reffolder_remove_button)
+        ref_group2.setLayout(ref_layout2)
         # Measurement Folders for Beam 1 and Beam 2
         measure_group = QtWidgets.QGroupBox("Measurement Folders")
         measure_layout = QHBoxLayout()
@@ -195,7 +213,7 @@ class RDTFeeddownGUI(QMainWindow):
         self.canvas = FigureCanvas(self.figure)
         self.analysis_layout.addWidget(self.canvas)
 
-        # Updated: File list for analysis outputs now uses SingleSelection.
+        # Updated: File list for analysis outputs now uses MultiSelection
         self.file_list = QListWidget()
         self.file_list.setSelectionMode(QListWidget.MultiSelection)
         self.analysis_layout.addWidget(self.file_list)
@@ -217,7 +235,7 @@ class RDTFeeddownGUI(QMainWindow):
         self.analysis_layout.addLayout(button_layout)
         
         # Automatically load existing analysis files even when no analysis has been run
-        self.populate_file_list(self.default_output_path)
+        self.populate_file_list()
 
     def change_default_input_path(self):
         new_path = QFileDialog.getExistingDirectory(self, "Select Default Input Path", self.default_input_path)
@@ -441,8 +459,14 @@ class RDTFeeddownGUI(QMainWindow):
                 self.analysis_text.append("Beam 2 Analysis Completed Successfully.\n")
 
             self.canvas.draw()
-            # Automatically update file list after analysis run
-            self.populate_file_list(output_path)
+            # Instead of scanning the output folder, update self.analysis_output_files from your analysis run.
+            self.analysis_output_files = [
+                f"{output_path}/data_b1_f{rdt}{rdt_plane}rdtgradient.csv",
+                f"{output_path}/data_b1_f{rdt}{rdt_plane}rdtshiftvsknob.csv",
+                f"{output_path}/data_b2_f{rdt}{rdt_plane}rdtgradient.csv",
+                f"{output_path}/data_b2_f{rdt}{rdt_plane}rdtshiftvsknob.csv"
+            ]
+            self.populate_file_list()
 
         except Exception as e:
             QMessageBox.critical(self, "Error", "An error occurred: " + repr(e))
@@ -450,12 +474,12 @@ class RDTFeeddownGUI(QMainWindow):
 
         QMessageBox.information(self, "Run Analysis", "Analysis completed successfully!")
 
-    def populate_file_list(self, output_path):
-        import glob, os
-        pattern = os.path.join(output_path, "data_*")
-        files = glob.glob(pattern)
+    def populate_file_list(self):
+        """
+        Populate the file list using the analysis output files generated in the input tab.
+        """
         self.file_list.clear()
-        for f in files:
+        for f in self.analysis_output_files:
             self.file_list.addItem(f)
 
     # New helper: Open selected files in one multi-file dialog.
