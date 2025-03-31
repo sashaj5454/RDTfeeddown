@@ -5,7 +5,6 @@ from PyQt5.QtWidgets import QApplication
 
 if __name__ == "__main__":
     app = QApplication([])
-    qRegisterMetaType(QTextCursor, "QTextCursor")
     window = RDTFeeddownGUI()
     window.show()
     app.exec_()

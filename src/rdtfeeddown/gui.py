@@ -10,7 +10,6 @@ from .utils import check_rdt, initialize_statetracker, rdt_to_order_and_type, ge
 from .analysis import write_RDTshifts, getrdt_omc3, fit_BPM
 import time  # Import time to get the current timestamp
 import re    # Import re for regex substitution
-from PyQt5.QtGui import QTextCursor
 
 class AnalysisWorker(QThread):
     finished = pyqtSignal()
