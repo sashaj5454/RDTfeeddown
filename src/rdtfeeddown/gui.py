@@ -29,154 +29,158 @@ class RDTFeeddownGUI(QMainWindow):
         self.tabs = QTabWidget()
         self.layout.addWidget(self.tabs)
 
-        # Input Tab
+        # ===== Input Tab with separated sections =====
         self.input_tab = QWidget()
         self.tabs.addTab(self.input_tab, "Input")
         self.input_layout = QVBoxLayout(self.input_tab)
 
-        # Input and Output Paths
+        # --- Paths Group ---
+        paths_group = QtWidgets.QGroupBox("Paths")
+        paths_layout = QVBoxLayout()
         self.input_path_label = QLabel(f"Default Input Path: {self.default_input_path}")
-        self.input_layout.addWidget(self.input_path_label)
+        paths_layout.addWidget(self.input_path_label)
         self.change_input_path_button = QPushButton("Change Input Path")
         self.change_input_path_button.clicked.connect(self.change_default_input_path)
-        self.input_layout.addWidget(self.change_input_path_button)
-
+        paths_layout.addWidget(self.change_input_path_button)
         self.output_path_label = QLabel(f"Default Output Path: {self.default_output_path}")
-        self.input_layout.addWidget(self.output_path_label)
+        paths_layout.addWidget(self.output_path_label)
         self.change_output_path_button = QPushButton("Change Output Path")
         self.change_output_path_button.clicked.connect(self.change_default_output_path)
-        self.input_layout.addWidget(self.change_output_path_button)
+        paths_layout.addWidget(self.change_output_path_button)
+        paths_group.setLayout(paths_layout)
+        self.input_layout.addWidget(paths_group)
 
-        # Beam 1 Model
+        # --- Beam Models Group ---
+        beam_model_group = QtWidgets.QGroupBox("Beam Model Selection")
+        beam_model_layout = QHBoxLayout()
+        # Beam 1
+        beam1_layout = QVBoxLayout()
         self.beam1_model_label = QLabel("Beam 1 Model:")
-        self.beam1_model_label.setStyleSheet("color: blue;")  # Set text color to blue
-        self.input_layout.addWidget(self.beam1_model_label)
+        self.beam1_model_label.setStyleSheet("color: blue;")
+        beam1_layout.addWidget(self.beam1_model_label)
         self.beam1_model_entry = QLineEdit()
-        self.input_layout.addWidget(self.beam1_model_entry)
+        beam1_layout.addWidget(self.beam1_model_entry)
         self.beam1_model_button = QPushButton("Select Model")
         self.beam1_model_button.clicked.connect(self.select_beam1_model)
-        self.input_layout.addWidget(self.beam1_model_button)
-
-        # Beam 2 Model
+        beam1_layout.addWidget(self.beam1_model_button)
+        beam_model_layout.addLayout(beam1_layout)
+        # Beam 2
+        beam2_layout = QVBoxLayout()
         self.beam2_model_label = QLabel("Beam 2 Model:")
-        self.beam2_model_label.setStyleSheet("color: red;")  # Set text color to red
-        self.input_layout.addWidget(self.beam2_model_label)
+        self.beam2_model_label.setStyleSheet("color: red;")
+        beam2_layout.addWidget(self.beam2_model_label)
         self.beam2_model_entry = QLineEdit()
-        self.input_layout.addWidget(self.beam2_model_entry)
+        beam2_layout.addWidget(self.beam2_model_entry)
         self.beam2_model_button = QPushButton("Select Model")
         self.beam2_model_button.clicked.connect(self.select_beam2_model)
-        self.input_layout.addWidget(self.beam2_model_button)
+        beam2_layout.addWidget(self.beam2_model_button)
+        beam_model_layout.addLayout(beam2_layout)
+        beam_model_group.setLayout(beam_model_layout)
+        self.input_layout.addWidget(beam_model_group)
 
-        # Beam 1 Reference Folder
-        self.beam1_reffolder_label = QLabel("Beam 1 Reference Measurement Folder:")
-        self.beam1_reffolder_label.setStyleSheet("color: blue;")  # Set text color to blue
-        self.input_layout.addWidget(self.beam1_reffolder_label)
+        # --- Folders Group ---
+        folders_group = QtWidgets.QGroupBox("Reference and Measurement Folders")
+        folders_layout = QVBoxLayout()
+        # Reference Folders
+        ref_group = QtWidgets.QGroupBox("Reference Folder")
+        ref_layout = QHBoxLayout()
+        self.beam1_reffolder_label = QLabel("Beam 1 Reference Folder:")
+        self.beam1_reffolder_label.setStyleSheet("color: blue;")
+        ref_layout.addWidget(self.beam1_reffolder_label)
         self.beam1_reffolder_entry = QLineEdit()
-        self.input_layout.addWidget(self.beam1_reffolder_entry)
-
-        beam1_reffolder_buttons_layout = QHBoxLayout()
+        ref_layout.addWidget(self.beam1_reffolder_entry)
         self.beam1_reffolder_button = QPushButton("Select Folder")
         self.beam1_reffolder_button.clicked.connect(self.select_beam1_reffolder)
-        beam1_reffolder_buttons_layout.addWidget(self.beam1_reffolder_button)
-
+        ref_layout.addWidget(self.beam1_reffolder_button)
         self.beam1_reffolder_remove_button = QPushButton("Remove File")
         self.beam1_reffolder_remove_button.clicked.connect(self.remove_beam1_reffolder)
-        beam1_reffolder_buttons_layout.addWidget(self.beam1_reffolder_remove_button)
-
-        self.input_layout.addLayout(beam1_reffolder_buttons_layout)
-
-        # Beam 2 Reference Folder
-        self.beam2_reffolder_label = QLabel("Beam 2 Reference Measurement Folder:")
-        self.beam2_reffolder_label.setStyleSheet("color: red;")  # Set text color to red
-        self.input_layout.addWidget(self.beam2_reffolder_label)
-        self.beam2_reffolder_entry = QLineEdit()
-        self.input_layout.addWidget(self.beam2_reffolder_entry)
-
-        beam2_reffolder_buttons_layout = QHBoxLayout()
-        self.beam2_reffolder_button = QPushButton("Select Folder")
-        self.beam2_reffolder_button.clicked.connect(self.select_beam2_reffolder)
-        beam2_reffolder_buttons_layout.addWidget(self.beam2_reffolder_button)
-
-        self.beam2_reffolder_remove_button = QPushButton("Remove File")
-        self.beam2_reffolder_remove_button.clicked.connect(self.remove_beam2_reffolder)
-        beam2_reffolder_buttons_layout.addWidget(self.beam2_reffolder_remove_button)
-
-        self.input_layout.addLayout(beam2_reffolder_buttons_layout)
-
-        # Beam 1 Folders
+        ref_layout.addWidget(self.beam1_reffolder_remove_button)
+        ref_group.setLayout(ref_layout)
+        folders_layout.addWidget(ref_group)
+        # Measurement Folders for Beam 1 and Beam 2
+        measure_group = QtWidgets.QGroupBox("Measurement Folders")
+        measure_layout = QHBoxLayout()
+        # Beam 1 Measurement Folders
+        beam1_folders_layout = QVBoxLayout()
         self.beam1_folders_label = QLabel("Beam 1 Measurement Folders:")
-        self.beam1_folders_label.setStyleSheet("color: blue;")  # Set text color to blue
-        self.input_layout.addWidget(self.beam1_folders_label)
+        self.beam1_folders_label.setStyleSheet("color: blue;")
+        beam1_folders_layout.addWidget(self.beam1_folders_label)
         self.beam1_folders_list = QListWidget()
-        self.beam1_folders_list.setSelectionMode(QListWidget.MultiSelection)  # Allow multiple selection
-        self.input_layout.addWidget(self.beam1_folders_list)
-
+        self.beam1_folders_list.setSelectionMode(QListWidget.MultiSelection)
+        beam1_folders_layout.addWidget(self.beam1_folders_list)
         beam1_buttons_layout = QHBoxLayout()
         self.beam1_folders_button = QPushButton("Add Folders")
         self.beam1_folders_button.clicked.connect(self.select_beam1_folders)
         beam1_buttons_layout.addWidget(self.beam1_folders_button)
-
         self.beam1_remove_button = QPushButton("Remove Selected")
         self.beam1_remove_button.clicked.connect(self.remove_selected_beam1_folders)
         beam1_buttons_layout.addWidget(self.beam1_remove_button)
-
         self.beam1_select_all_checkbox = QtWidgets.QCheckBox("Select All")
         self.beam1_select_all_checkbox.stateChanged.connect(self.toggle_select_all_beam1_folders)
         beam1_buttons_layout.addWidget(self.beam1_select_all_checkbox)
-
-        self.input_layout.addLayout(beam1_buttons_layout)
-
-        # Beam 2 Folders
+        beam1_folders_layout.addLayout(beam1_buttons_layout)
+        measure_layout.addLayout(beam1_folders_layout)
+        # Beam 2 Measurement Folders (similar)
+        beam2_folders_layout = QVBoxLayout()
         self.beam2_folders_label = QLabel("Beam 2 Measurement Folders:")
-        self.beam2_folders_label.setStyleSheet("color: red;")  # Set text color to red
-        self.input_layout.addWidget(self.beam2_folders_label)
+        self.beam2_folders_label.setStyleSheet("color: red;")
+        beam2_folders_layout.addWidget(self.beam2_folders_label)
         self.beam2_folders_list = QListWidget()
-        self.beam2_folders_list.setSelectionMode(QListWidget.MultiSelection)  # Allow multiple selection
-        self.input_layout.addWidget(self.beam2_folders_list)
-
+        self.beam2_folders_list.setSelectionMode(QListWidget.MultiSelection)
+        beam2_folders_layout.addWidget(self.beam2_folders_list)
         beam2_buttons_layout = QHBoxLayout()
         self.beam2_folders_button = QPushButton("Add Folders")
         self.beam2_folders_button.clicked.connect(self.select_beam2_folders)
         beam2_buttons_layout.addWidget(self.beam2_folders_button)
-
         self.beam2_remove_button = QPushButton("Remove Selected")
         self.beam2_remove_button.clicked.connect(self.remove_selected_beam2_folders)
         beam2_buttons_layout.addWidget(self.beam2_remove_button)
-
         self.beam2_select_all_checkbox = QtWidgets.QCheckBox("Select All")
         self.beam2_select_all_checkbox.stateChanged.connect(self.toggle_select_all_beam2_folders)
         beam2_buttons_layout.addWidget(self.beam2_select_all_checkbox)
+        beam2_folders_layout.addLayout(beam2_buttons_layout)
+        measure_layout.addLayout(beam2_folders_layout)
+        measure_group.setLayout(measure_layout)
+        folders_layout.addWidget(measure_group)
+        folders_group.setLayout(folders_layout)
+        self.input_layout.addWidget(folders_group)
 
-        self.input_layout.addLayout(beam2_buttons_layout)
-
-        # Parameters
+        # --- Parameters and Knob Group ---
+        param_group = QtWidgets.QGroupBox("Parameters and Knob")
+        param_layout = QHBoxLayout()
+        # Parameters (left side)
+        param_left = QVBoxLayout()
         self.rdt_label = QLabel("RDT (in form of jklm):")
-        self.input_layout.addWidget(self.rdt_label)
+        param_left.addWidget(self.rdt_label)
         self.rdt_entry = QLineEdit()
-        self.input_layout.addWidget(self.rdt_entry)
-
+        param_left.addWidget(self.rdt_entry)
         self.rdt_plane_label = QLabel("RDT Plane:")
-        self.input_layout.addWidget(self.rdt_plane_label)
-        self.rdt_plane_dropdown = QtWidgets.QComboBox()  # Change to dropdown
-        self.rdt_plane_dropdown.addItems(["x", "y"])  # Add options "x" and "y"
-        self.input_layout.addWidget(self.rdt_plane_dropdown)
-
-        # Knob
+        param_left.addWidget(self.rdt_plane_label)
+        self.rdt_plane_dropdown = QtWidgets.QComboBox()
+        self.rdt_plane_dropdown.addItems(["x", "y"])
+        param_left.addWidget(self.rdt_plane_dropdown)
+        param_layout.addLayout(param_left)
+        # Knob (right side)
+        param_right = QVBoxLayout()
         self.knob_label = QLabel("Knob:")
-        self.input_layout.addWidget(self.knob_label)
+        param_right.addWidget(self.knob_label)
         self.knob_entry = QLineEdit("LHCBEAM/IP5-XING-H-MURAD")
-        self.input_layout.addWidget(self.knob_entry)
-
-        knob_buttons_layout = QHBoxLayout()
+        param_right.addWidget(self.knob_entry)
         self.validate_knob_button = QPushButton("Validate Knob")
         self.validate_knob_button.clicked.connect(self.validate_knob_button_clicked)
-        knob_buttons_layout.addWidget(self.validate_knob_button)
-        self.input_layout.addLayout(knob_buttons_layout)
+        param_right.addWidget(self.validate_knob_button)
+        param_layout.addLayout(param_right)
+        param_group.setLayout(param_layout)
+        self.input_layout.addWidget(param_group)
 
-        # Run Button
+        # --- Run Button Group ---
+        run_group = QtWidgets.QGroupBox("Execute Analysis")
+        run_layout = QVBoxLayout()
         self.run_button = QPushButton("Run Analysis")
         self.run_button.clicked.connect(self.run_analysis)
-        self.input_layout.addWidget(self.run_button)
+        run_layout.addWidget(self.run_button)
+        run_group.setLayout(run_layout)
+        self.input_layout.addWidget(run_group)
 
         # Analysis Tab
         self.analysis_tab = QWidget()
@@ -193,14 +197,13 @@ class RDTFeeddownGUI(QMainWindow):
 
         # Updated: File list for analysis outputs now uses SingleSelection.
         self.file_list = QListWidget()
-        self.file_list.setSelectionMode(QListWidget.SingleSelection)
-        self.file_list.itemDoubleClicked.connect(self.open_selected_files)
+        self.file_list.setSelectionMode(QListWidget.MultiSelection)
         self.analysis_layout.addWidget(self.file_list)
         
         # New buttons for file actions.
         button_layout = QHBoxLayout()
         self.open_files_button = QPushButton("Browse and Open File")
-        self.open_files_button.clicked.connect(self.browse_and_open_file)
+        self.open_files_button.clicked.connect(self.select_analysis_folders)
         button_layout.addWidget(self.open_files_button)
         
         self.plot_files_button = QPushButton("Plot Selected File")
@@ -456,27 +459,8 @@ class RDTFeeddownGUI(QMainWindow):
             self.file_list.addItem(f)
 
     # New helper: Open selected files in one multi-file dialog.
-    def open_selected_files(self):
-        from PyQt5.QtWidgets import QDialog, QVBoxLayout
-        selected_items = self.file_list.selectedItems()
-        if not selected_items:
-            return
-        dialog = QDialog(self)
-        dialog.setWindowTitle("Opened Analysis Files")
-        layout = QVBoxLayout(dialog)
-        text_edit = QTextEdit()
-        text_edit.setReadOnly(True)
-        content = ""
-        for item in selected_items:
-            try:
-                with open(item.text(), 'r') as f:
-                    content += f"File: {item.text()}\n"
-                    content += f.read() + "\n{'-'*40}\n"
-            except Exception as e:
-                content += f"Error reading {item.text()}: {e}\n"
-        text_edit.setText(content)
-        layout.addWidget(text_edit)
-        dialog.exec_()
+    def select_analysis_folders(self):
+        self.select_multiple_files(self.file_list)
 
     # New helper: Plot data from all selected analysis files together.
     def plot_selected_files(self):
@@ -515,15 +499,7 @@ class RDTFeeddownGUI(QMainWindow):
             row = self.file_list.row(item)
             self.file_list.takeItem(row)
 
-    # New helper: Browse and open a file dialog (single selection) for files.
-    def browse_and_open_file(self):
-        fname, _ = QFileDialog.getOpenFileName(self, "Select Analysis File", self.default_output_path, "All Files (*)")
-        if fname:
-            # Clear previous selection and add the new file.
-            self.file_list.clear()
-            self.file_list.addItem(fname)
-
-    def select_multiple_files(self):
+    def select_multiple_files(self, list_widget):
         """
         Allow the user to select multiple files and add them to the file list widget.
         """
@@ -532,6 +508,12 @@ class RDTFeeddownGUI(QMainWindow):
         dialog.setDirectory(self.default_output_path)  # Use default output path, adjust if needed
         dialog.setFileMode(QFileDialog.ExistingFiles)
         dialog.setNameFilter("All Files (*)")
+
+        # Enable multiple selection in the dialog
+        for view in dialog.findChildren((QtWidgets.QListView, QtWidgets.QTreeView)):
+            if isinstance(view.model(), QtWidgets.QFileSystemModel):
+                view.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
+
         if dialog.exec_() == QFileDialog.Accepted:
             selected_files = dialog.selectedFiles()
             for file in selected_files:
