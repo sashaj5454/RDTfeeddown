@@ -7,7 +7,7 @@ from PyQt5.QtCore import Qt  # Import Qt for the correct constants
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from .utils import check_rdt, initialize_statetracker, rdt_to_order_and_type, getmodelBPMs
-from .analysis import write_RDTshifts, getrdt_omc3
+from .analysis import write_RDTshifts, getrdt_omc3, fit_BPM
 import time  # Import time to get the current timestamp
 import re    # Import re for regex substitution
 
@@ -190,6 +190,31 @@ class RDTFeeddownGUI(QMainWindow):
         self.figure = Figure(figsize=(6, 4))
         self.canvas = FigureCanvas(self.figure)
         self.analysis_layout.addWidget(self.canvas)
+
+        # Updated: File list for analysis outputs now uses SingleSelection.
+        self.file_list = QListWidget()
+        self.file_list.setSelectionMode(QListWidget.SingleSelection)
+        self.file_list.itemDoubleClicked.connect(self.open_selected_files)
+        self.analysis_layout.addWidget(self.file_list)
+        
+        # New buttons for file actions.
+        button_layout = QHBoxLayout()
+        self.open_files_button = QPushButton("Browse and Open File")
+        self.open_files_button.clicked.connect(self.browse_and_open_file)
+        button_layout.addWidget(self.open_files_button)
+        
+        self.plot_files_button = QPushButton("Plot Selected File")
+        self.plot_files_button.clicked.connect(self.plot_selected_files)
+        button_layout.addWidget(self.plot_files_button)
+        
+        self.remove_files_button = QPushButton("Remove Selected File")
+        self.remove_files_button.clicked.connect(self.remove_selected_files)
+        button_layout.addWidget(self.remove_files_button)
+        
+        self.analysis_layout.addLayout(button_layout)
+        
+        # Automatically load existing analysis files even when no analysis has been run
+        self.populate_file_list(self.default_output_path)
 
     def change_default_input_path(self):
         new_path = QFileDialog.getExistingDirectory(self, "Select Default Input Path", self.default_input_path)
@@ -392,17 +417,29 @@ class RDTFeeddownGUI(QMainWindow):
 
             if beam1_model and beam1_folders:
                 b1modelbpmlist, b1bpmdata = getmodelBPMs(beam1_model)
-                b1rdtdata = getrdt_omc3(ldb, b1modelbpmlist, b1bpmdata, beam1_reffolder, beam1_folders, knob, output_path, rdt, rdt_plane, rdtfolder)
+                b1rdtdata = getrdt_omc3(
+                            ldb, b1modelbpmlist, b1bpmdata, beam1_reffolder, beam1_folders,
+                            knob, output_path, rdt, rdt_plane, rdtfolder,
+                            self.analysis_text.append
+                        )
+                b1rdtdata = fit_BPM(b1rdtdata)
                 write_RDTshifts(b1rdtdata, rdt, rdt_plane, "b1", output_path)
-                self.analysis_text.append("Beam 1 Analysis Completed Successfully.\n")
+                self.analysis_text.append(f"Beam 1 Analysis Completed Successfully.\n")
 
             if beam2_model and beam2_folders:
                 b2modelbpmlist, b2bpmdata = getmodelBPMs(beam2_model)
-                b2rdtdata = getrdt_omc3(ldb, b2modelbpmlist, b2bpmdata, beam2_reffolder, beam2_folders, knob, output_path, rdt, rdt_plane, rdtfolder)
+                b2rdtdata = getrdt_omc3(
+                            ldb, b2modelbpmlist, b2bpmdata, beam2_reffolder, beam2_folders,
+                            knob, output_path, rdt, rdt_plane, rdtfolder,
+                            self.analysis_text.append
+                        )
+                b2rdtdata = fit_BPM(b2rdtdata)
                 write_RDTshifts(b2rdtdata, rdt, rdt_plane, "b2", output_path)
-                self.analysis_text.append("Beam 2 Analysis Completed Successfully.\n")
+                self.analysis_text.append(f"Beam 2 Analysis Completed Successfully.\n")
 
             self.canvas.draw()
+            # Automatically update file list after analysis run
+            self.populate_file_list(output_path)
 
         except Exception as e:
             QMessageBox.critical(self, "Error", "An error occurred: " + repr(e))
@@ -410,9 +447,80 @@ class RDTFeeddownGUI(QMainWindow):
 
         QMessageBox.information(self, "Run Analysis", "Analysis completed successfully!")
 
-if __name__ == "__main__":
-    app = QApplication([])
-    window = RDTFeeddownGUI()
-    window.show()
-    app.exec_()
+    def populate_file_list(self, output_path):
+        import glob, os
+        pattern = os.path.join(output_path, "data_*")
+        files = glob.glob(pattern)
+        self.file_list.clear()
+        for f in files:
+            self.file_list.addItem(f)
+
+    # New helper: Open selected files in one multi-file dialog.
+    def open_selected_files(self):
+        from PyQt5.QtWidgets import QDialog, QVBoxLayout
+        selected_items = self.file_list.selectedItems()
+        if not selected_items:
+            return
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Opened Analysis Files")
+        layout = QVBoxLayout(dialog)
+        text_edit = QTextEdit()
+        text_edit.setReadOnly(True)
+        content = ""
+        for item in selected_items:
+            try:
+                with open(item.text(), 'r') as f:
+                    content += f"File: {item.text()}\n"
+                    content += f.read() + "\n{'-'*40}\n"
+            except Exception as e:
+                content += f"Error reading {item.text()}: {e}\n"
+        text_edit.setText(content)
+        layout.addWidget(text_edit)
+        dialog.exec_()
+
+    # New helper: Plot data from all selected analysis files together.
+    def plot_selected_files(self):
+        import csv
+        selected_items = self.file_list.selectedItems()
+        if not selected_items:
+            return
+        self.figure.clear()
+        ax = self.figure.add_subplot(111)
+        for item in selected_items:
+            file_path = item.text()
+            x, y = [], []
+            try:
+                with open(file_path, 'r') as f:
+                    reader = csv.reader(f, delimiter=' ')
+                    header = next(reader)
+                    for row in reader:
+                        if not row or row[0].startswith("#"):
+                            continue
+                        try:
+                            x.append(float(row[1]))
+                            y.append(float(row[2]))
+                        except Exception:
+                            continue
+                ax.plot(x, y, marker='o', label=file_path)
+            except Exception as e:
+                QMessageBox.critical(self, "Error", "Could not plot file: " + str(e))
+                return
+        ax.legend()
+        ax.set_title("Analysis Files Plot")
+        self.canvas.draw()
+
+    # New helper: Remove selected files from the list.
+    def remove_selected_files(self):
+        for item in self.file_list.selectedItems():
+            row = self.file_list.row(item)
+            self.file_list.takeItem(row)
+
+    # New helper: Browse and open a file dialog (single selection) for files.
+    def browse_and_open_file(self):
+        fname, _ = QFileDialog.getOpenFileName(self, "Select Analysis File", self.default_output_path, "All Files (*)")
+        if fname:
+            # Clear previous selection and add the new file.
+            self.file_list.clear()
+            self.file_list.addItem(fname)
+
 

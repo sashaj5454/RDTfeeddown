@@ -71,17 +71,31 @@ def update_bpm_data(bpmdata, data, key, knob_setting):
         name, amp, re, im = entry
         bpmdata[name][key].append([knob_setting, amp, re, im])
 
-def getrdt_omc3(ldb, modelbpmlist, bpmdata, ref, flist, knob, outputpath, rdt, rdt_plane, rdtfolder):
+def getrdt_omc3(ldb, modelbpmlist, bpmdata, ref, flist, knob, outputpath, rdt, rdt_plane, rdtfolder, log_func=None):
     """
     Processes RDT data and updates BPM data dictionary.
     """
     refk = get_analysis_knobsetting(ldb, knob, ref)
-    refdat = readrdtdatafile(ref, rdt, rdt_plane, rdtfolder)
+    try:
+        refdat = readrdtdatafile(ref, rdt, rdt_plane, rdtfolder)
+    except FileNotFoundError:
+        if log_func:
+            log_func(f"RDT file not found in reference folder: {ref}. Skipping reference data.")
+        else:
+            print(f"RDT file not found in reference folder: {ref}. Skipping reference data.")
+        refdat = []
     update_bpm_data(bpmdata, refdat, 'ref', refk)
 
     for f in flist:
         ksetting = get_analysis_knobsetting(ldb, knob, f)
-        cdat = readrdtdatafile(f, rdt, rdt_plane, rdtfolder)
+        try:
+            cdat = readrdtdatafile(f, rdt, rdt_plane, rdtfolder)
+        except FileNotFoundError:
+            if log_func:
+                log_func(f"RDT file not found in measurement folder: {f}. Skipping.")
+            else:
+                print(f"RDT file not found in measurement folder: {f}. Skipping.")
+            continue
         update_bpm_data(bpmdata, cdat, 'data', ksetting)
 
     intersectedBPMdata = {}

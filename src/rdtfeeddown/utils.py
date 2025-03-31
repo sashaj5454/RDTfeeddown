@@ -111,7 +111,7 @@ def check_rdt(
 def rdt_to_order_and_type(
     rdt: str
 ):
-    rdt_j, rdt_k, rdt_l, rdt_m = list(rdt) 
+    rdt_j, rdt_k, rdt_l, rdt_m = map(int, rdt)
     rdt_type = "normal" if (rdt_l + rdt_m) % 2 == 0 else "skew"
     orders = dict(((1, "dipole"), 
                    (2, "quadrupole"), 
@@ -199,7 +199,7 @@ def convert_from_kickfilename(kickfilename):
 def getmodelBPMs(modelpath):
     modelbpmlist=[]
     bpmdata={}
-    twissfile=modelpath+'twiss.dat'
+    twissfile=modelpath+'/twiss.dat'
     rt=open(twissfile,'r')
     csvrt=csv.reader(rt,delimiter=' ',skipinitialspace=True)
     for row in csvrt:
