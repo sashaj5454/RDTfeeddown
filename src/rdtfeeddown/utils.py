@@ -107,7 +107,6 @@ def check_rdt(
 	elif l ==0 and rdtplane != "x":
 		return False, "The rdt does not exist on the vertical plane"
 	
-	return
 
 def rdt_to_order_and_type(
     rdt: str
