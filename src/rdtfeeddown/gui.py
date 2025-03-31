@@ -178,12 +178,21 @@ class RDTFeeddownGUI(QMainWindow):
         # --- Parameters and Knob Group ---
         param_group = QtWidgets.QGroupBox("Parameters and Knob")
         param_layout = QVBoxLayout()
+        self.rdt_label = QLabel("RDT (in form of jklm):")
         param_layout.addWidget(self.rdt_label)       # "RDT (in form of jklm):"
+        self.rdt_entry = QLineEdit()
         param_layout.addWidget(self.rdt_entry)
+        self.rdt_plane_label = QLabel("RDT Plane:")
         param_layout.addWidget(self.rdt_plane_label)   # "RDT Plane:"
+        self.rdt_plane_dropdown = QtWidgets.QComboBox()
+        self.rdt_plane_dropdown.addItems(["x", "y"])
         param_layout.addWidget(self.rdt_plane_dropdown)
+        self.knob_label = QLabel("Knob:")
         param_layout.addWidget(self.knob_label)          # "Knob:"
+        self.knob_entry = QLineEdit("LHCBEAM/IP5-XING-H-MURAD")
         param_layout.addWidget(self.knob_entry)
+        self.validate_knob_button = QPushButton("Validate Knob")
+        self.validate_knob_button.clicked.connect(self.validate_knob_button_clicked)
         param_layout.addWidget(self.validate_knob_button)
         param_group.setLayout(param_layout)
         self.input_layout.addWidget(param_group)
