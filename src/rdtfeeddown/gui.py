@@ -455,8 +455,10 @@ class RDTFeeddownGUI(QMainWindow):
         self.populate_file_list()
 
     def run_analysis(self):
-        # Instead of running heavy processing in the main thread,
-        # start the analysis in a separate worker thread.
+        # Check if a worker is already running so that only one analysis thread is active at any time
+        if hasattr(self, 'worker') and self.worker.isRunning():
+            QMessageBox.warning(self, "Analysis Running", "Analysis is already running!")
+            return
         self.analysis_text.clear()
         self.figure.clear()
         self.worker = AnalysisWorker(self.run_analysis_thread)
