@@ -20,9 +20,6 @@ class RDTFeeddownGUI(QMainWindow):
         self.default_input_path = "/afs/cern.ch/work/s/sahorney/private/LHCoptics/2025_03_a4corr"
         self.default_output_path = "/afs/cern.ch/work/s/sahorney/private/LHCoptics/2025_03_a4corr"
 
-        # Add an attribute to store the list of analysis output files
-        self.analysis_output_files = []
-
         # Main layout
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
@@ -213,7 +210,7 @@ class RDTFeeddownGUI(QMainWindow):
         self.canvas = FigureCanvas(self.figure)
         self.analysis_layout.addWidget(self.canvas)
 
-        # Updated: File list for analysis outputs now uses MultiSelection
+        # Updated: File list for analysis outputs now uses SingleSelection.
         self.file_list = QListWidget()
         self.file_list.setSelectionMode(QListWidget.MultiSelection)
         self.analysis_layout.addWidget(self.file_list)
@@ -235,7 +232,7 @@ class RDTFeeddownGUI(QMainWindow):
         self.analysis_layout.addLayout(button_layout)
         
         # Automatically load existing analysis files even when no analysis has been run
-        self.populate_file_list()
+        self.populate_file_list(self.default_output_path)
 
     def change_default_input_path(self):
         new_path = QFileDialog.getExistingDirectory(self, "Select Default Input Path", self.default_input_path)
@@ -459,14 +456,8 @@ class RDTFeeddownGUI(QMainWindow):
                 self.analysis_text.append("Beam 2 Analysis Completed Successfully.\n")
 
             self.canvas.draw()
-            # Instead of scanning the output folder, update self.analysis_output_files from your analysis run.
-            self.analysis_output_files = [
-                f"{output_path}/data_b1_f{rdt}{rdt_plane}rdtgradient.csv",
-                f"{output_path}/data_b1_f{rdt}{rdt_plane}rdtshiftvsknob.csv",
-                f"{output_path}/data_b2_f{rdt}{rdt_plane}rdtgradient.csv",
-                f"{output_path}/data_b2_f{rdt}{rdt_plane}rdtshiftvsknob.csv"
-            ]
-            self.populate_file_list()
+            # Automatically update file list after analysis run
+            self.populate_file_list(output_path)
 
         except Exception as e:
             QMessageBox.critical(self, "Error", "An error occurred: " + repr(e))
@@ -474,12 +465,12 @@ class RDTFeeddownGUI(QMainWindow):
 
         QMessageBox.information(self, "Run Analysis", "Analysis completed successfully!")
 
-    def populate_file_list(self):
-        """
-        Populate the file list using the analysis output files generated in the input tab.
-        """
+    def populate_file_list(self, output_path):
+        import glob, os
+        pattern = os.path.join(output_path, "data_*")
+        files = glob.glob(pattern)
         self.file_list.clear()
-        for f in self.analysis_output_files:
+        for f in files:
             self.file_list.addItem(f)
 
     # New helper: Open selected files in one multi-file dialog.
