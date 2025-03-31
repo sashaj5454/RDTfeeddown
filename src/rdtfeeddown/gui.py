@@ -20,6 +20,9 @@ class RDTFeeddownGUI(QMainWindow):
         self.default_input_path = "/afs/cern.ch/work/s/sahorney/private/LHCoptics/2025_03_a4corr"
         self.default_output_path = "/afs/cern.ch/work/s/sahorney/private/LHCoptics/2025_03_a4corr"
 
+        # Add an attribute to store the list of analysis output files
+        self.analysis_output_files = []
+
         # Main layout
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
@@ -81,37 +84,49 @@ class RDTFeeddownGUI(QMainWindow):
         # --- Folders Group ---
         folders_group = QtWidgets.QGroupBox("Reference and Measurement Folders")
         folders_layout = QVBoxLayout()
-        # Reference Folders
-        ref_group = QtWidgets.QGroupBox("Reference Folder")
-        ref_layout = QHBoxLayout()
+
+        # Replace the individual reference folder groups with a combined horizontal group:
+        ref_folders_group = QtWidgets.QGroupBox("Reference Folders")
+        ref_folders_layout = QHBoxLayout()
+
+        # Beam 1 Reference Folder (vertical layout)
+        beam1_ref_layout = QVBoxLayout()
         self.beam1_reffolder_label = QLabel("Beam 1 Reference Folder:")
         self.beam1_reffolder_label.setStyleSheet("color: blue;")
-        ref_layout.addWidget(self.beam1_reffolder_label)
+        beam1_ref_layout.addWidget(self.beam1_reffolder_label)
         self.beam1_reffolder_entry = QLineEdit()
-        ref_layout.addWidget(self.beam1_reffolder_entry)
+        beam1_ref_layout.addWidget(self.beam1_reffolder_entry)
+        beam1_buttons_layout = QHBoxLayout()
         self.beam1_reffolder_button = QPushButton("Select Folder")
         self.beam1_reffolder_button.clicked.connect(self.select_beam1_reffolder)
-        ref_layout.addWidget(self.beam1_reffolder_button)
+        beam1_buttons_layout.addWidget(self.beam1_reffolder_button)
         self.beam1_reffolder_remove_button = QPushButton("Remove File")
         self.beam1_reffolder_remove_button.clicked.connect(self.remove_beam1_reffolder)
-        ref_layout.addWidget(self.beam1_reffolder_remove_button)
-        ref_group.setLayout(ref_layout)
-        folders_layout.addWidget(ref_group)
-        # Beam 2 Reference Folder (similar)
-        ref_group2 = QtWidgets.QGroupBox("Reference Folder")
-        ref_layout2 = QHBoxLayout()
+        beam1_buttons_layout.addWidget(self.beam1_reffolder_remove_button)
+        beam1_ref_layout.addLayout(beam1_buttons_layout)
+        ref_folders_layout.addLayout(beam1_ref_layout)
+
+        # Beam 2 Reference Folder (vertical layout)
+        beam2_ref_layout = QVBoxLayout()
         self.beam2_reffolder_label = QLabel("Beam 2 Reference Folder:")
         self.beam2_reffolder_label.setStyleSheet("color: red;")
-        ref_layout2.addWidget(self.beam2_reffolder_label)
+        beam2_ref_layout.addWidget(self.beam2_reffolder_label)
         self.beam2_reffolder_entry = QLineEdit()
-        ref_layout2.addWidget(self.beam2_reffolder_entry)
+        beam2_ref_layout.addWidget(self.beam2_reffolder_entry)
+        beam2_buttons_layout = QHBoxLayout()
         self.beam2_reffolder_button = QPushButton("Select Folder")
         self.beam2_reffolder_button.clicked.connect(self.select_beam2_reffolder)
-        ref_layout2.addWidget(self.beam2_reffolder_button)
+        beam2_buttons_layout.addWidget(self.beam2_reffolder_button)
         self.beam2_reffolder_remove_button = QPushButton("Remove File")
         self.beam2_reffolder_remove_button.clicked.connect(self.remove_beam2_reffolder)
-        ref_layout2.addWidget(self.beam2_reffolder_remove_button)
-        ref_group2.setLayout(ref_layout2)
+        beam2_buttons_layout.addWidget(self.beam2_reffolder_remove_button)
+        beam2_ref_layout.addLayout(beam2_buttons_layout)
+        ref_folders_layout.addLayout(beam2_ref_layout)
+
+        ref_folders_group.setLayout(ref_folders_layout)
+        # Insert the new reference folders group at the top of the folders layout.
+        folders_layout.insertWidget(0, ref_folders_group)
+
         # Measurement Folders for Beam 1 and Beam 2
         measure_group = QtWidgets.QGroupBox("Measurement Folders")
         measure_layout = QHBoxLayout()
@@ -162,29 +177,14 @@ class RDTFeeddownGUI(QMainWindow):
 
         # --- Parameters and Knob Group ---
         param_group = QtWidgets.QGroupBox("Parameters and Knob")
-        param_layout = QHBoxLayout()
-        # Parameters (left side)
-        param_left = QVBoxLayout()
-        self.rdt_label = QLabel("RDT (in form of jklm):")
-        param_left.addWidget(self.rdt_label)
-        self.rdt_entry = QLineEdit()
-        param_left.addWidget(self.rdt_entry)
-        self.rdt_plane_label = QLabel("RDT Plane:")
-        param_left.addWidget(self.rdt_plane_label)
-        self.rdt_plane_dropdown = QtWidgets.QComboBox()
-        self.rdt_plane_dropdown.addItems(["x", "y"])
-        param_left.addWidget(self.rdt_plane_dropdown)
-        param_layout.addLayout(param_left)
-        # Knob (right side)
-        param_right = QVBoxLayout()
-        self.knob_label = QLabel("Knob:")
-        param_right.addWidget(self.knob_label)
-        self.knob_entry = QLineEdit("LHCBEAM/IP5-XING-H-MURAD")
-        param_right.addWidget(self.knob_entry)
-        self.validate_knob_button = QPushButton("Validate Knob")
-        self.validate_knob_button.clicked.connect(self.validate_knob_button_clicked)
-        param_right.addWidget(self.validate_knob_button)
-        param_layout.addLayout(param_right)
+        param_layout = QVBoxLayout()
+        param_layout.addWidget(self.rdt_label)       # "RDT (in form of jklm):"
+        param_layout.addWidget(self.rdt_entry)
+        param_layout.addWidget(self.rdt_plane_label)   # "RDT Plane:"
+        param_layout.addWidget(self.rdt_plane_dropdown)
+        param_layout.addWidget(self.knob_label)          # "Knob:"
+        param_layout.addWidget(self.knob_entry)
+        param_layout.addWidget(self.validate_knob_button)
         param_group.setLayout(param_layout)
         self.input_layout.addWidget(param_group)
 
@@ -210,7 +210,7 @@ class RDTFeeddownGUI(QMainWindow):
         self.canvas = FigureCanvas(self.figure)
         self.analysis_layout.addWidget(self.canvas)
 
-        # Updated: File list for analysis outputs now uses SingleSelection.
+        # Updated: File list for analysis outputs now uses MultiSelection
         self.file_list = QListWidget()
         self.file_list.setSelectionMode(QListWidget.MultiSelection)
         self.analysis_layout.addWidget(self.file_list)
@@ -232,7 +232,7 @@ class RDTFeeddownGUI(QMainWindow):
         self.analysis_layout.addLayout(button_layout)
         
         # Automatically load existing analysis files even when no analysis has been run
-        self.populate_file_list(self.default_output_path)
+        self.populate_file_list()
 
     def change_default_input_path(self):
         new_path = QFileDialog.getExistingDirectory(self, "Select Default Input Path", self.default_input_path)
@@ -456,8 +456,14 @@ class RDTFeeddownGUI(QMainWindow):
                 self.analysis_text.append("Beam 2 Analysis Completed Successfully.\n")
 
             self.canvas.draw()
-            # Automatically update file list after analysis run
-            self.populate_file_list(output_path)
+            # Instead of scanning the output folder, update self.analysis_output_files from your analysis run.
+            self.analysis_output_files = [
+                f"{output_path}/data_b1_f{rdt}{rdt_plane}rdtgradient.csv",
+                f"{output_path}/data_b1_f{rdt}{rdt_plane}rdtshiftvsknob.csv",
+                f"{output_path}/data_b2_f{rdt}{rdt_plane}rdtgradient.csv",
+                f"{output_path}/data_b2_f{rdt}{rdt_plane}rdtshiftvsknob.csv"
+            ]
+            self.populate_file_list()
 
         except Exception as e:
             QMessageBox.critical(self, "Error", "An error occurred: " + repr(e))
@@ -465,12 +471,12 @@ class RDTFeeddownGUI(QMainWindow):
 
         QMessageBox.information(self, "Run Analysis", "Analysis completed successfully!")
 
-    def populate_file_list(self, output_path):
-        import glob, os
-        pattern = os.path.join(output_path, "data_*")
-        files = glob.glob(pattern)
+    def populate_file_list(self):
+        """
+        Populate the file list using the analysis output files generated in the input tab.
+        """
         self.file_list.clear()
-        for f in files:
+        for f in self.analysis_output_files:
             self.file_list.addItem(f)
 
     # New helper: Open selected files in one multi-file dialog.
