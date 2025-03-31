@@ -11,23 +11,6 @@ from .analysis import write_RDTshifts, getrdt_omc3, fit_BPM
 import time  # Import time to get the current timestamp
 import re    # Import re for regex substitution
 
-class AnalysisWorker(QThread):
-    finished = pyqtSignal()
-    error = pyqtSignal(str)
-    
-    def __init__(self, func, *args, **kwargs):
-        super().__init__()
-        self.func = func
-        self.args = args
-        self.kwargs = kwargs
-
-    def run(self):
-        try:
-            self.func(*self.args, **self.kwargs)
-            self.finished.emit()
-        except Exception as e:
-            self.error.emit(str(e))
-
 class RDTFeeddownGUI(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -455,16 +438,15 @@ class RDTFeeddownGUI(QMainWindow):
         self.populate_file_list()
 
     def run_analysis(self):
-        # Check if a worker is already running so that only one analysis thread is active at any time
-        if hasattr(self, 'worker') and self.worker.isRunning():
-            QMessageBox.warning(self, "Analysis Running", "Analysis is already running!")
-            return
+        # Instead of starting a worker thread, run the analysis in the main thread.
+        # This eliminates the threading error but may block the UI.
         self.analysis_text.clear()
         self.figure.clear()
-        self.worker = AnalysisWorker(self.run_analysis_thread)
-        self.worker.finished.connect(lambda: QMessageBox.information(self, "Run Analysis", "Analysis completed successfully!"))
-        self.worker.error.connect(lambda err: QMessageBox.critical(self, "Error", "An error occurred: " + err))
-        self.worker.start()
+        try:
+            self.run_analysis_thread()  # Run heavy processing directly.
+            QMessageBox.information(self, "Run Analysis", "Analysis completed successfully!")
+        except Exception as e:
+            QMessageBox.critical(self, "Error", "An error occurred: " + str(e))
 
     def populate_file_list(self):
         """
