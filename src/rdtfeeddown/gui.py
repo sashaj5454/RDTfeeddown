@@ -3,13 +3,30 @@ from PyQt5.QtWidgets import (
     QFileDialog, QListWidget, QTabWidget, QWidget, QTextEdit, QMessageBox
 )
 from PyQt5 import QtWidgets
-from PyQt5.QtCore import Qt  # Import Qt for the correct constants
+from PyQt5.QtCore import Qt, QThread, pyqtSignal  # Import Qt for the correct constants and worker thread support
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from .utils import check_rdt, initialize_statetracker, rdt_to_order_and_type, getmodelBPMs
 from .analysis import write_RDTshifts, getrdt_omc3, fit_BPM
 import time  # Import time to get the current timestamp
 import re    # Import re for regex substitution
+
+class AnalysisWorker(QThread):
+    finished = pyqtSignal()
+    error = pyqtSignal(str)
+    
+    def __init__(self, func, *args, **kwargs):
+        super().__init__()
+        self.func = func
+        self.args = args
+        self.kwargs = kwargs
+
+    def run(self):
+        try:
+            self.func(*self.args, **self.kwargs)
+            self.finished.emit()
+        except Exception as e:
+            self.error.emit(str(e))
 
 class RDTFeeddownGUI(QMainWindow):
     def __init__(self):
@@ -388,7 +405,10 @@ class RDTFeeddownGUI(QMainWindow):
         else:
             QMessageBox.critical(self, "Knob Validation", "Invalid Knob: " + repr(knob_message))
 
-    def run_analysis(self):
+    def run_analysis_thread(self):
+        # This function contains the heavy processing code previously in run_analysis.
+        ldb = initialize_statetracker()
+        rdtfolder = rdt_to_order_and_type(self.rdt_entry.text())
         beam1_model = self.beam1_model_entry.text()
         beam2_model = self.beam2_model_entry.text()
         beam1_reffolder = self.beam1_reffolder_entry.text()
@@ -396,80 +416,44 @@ class RDTFeeddownGUI(QMainWindow):
         beam1_folders = [self.beam1_folders_list.item(i).text() for i in range(self.beam1_folders_list.count())]
         beam2_folders = [self.beam2_folders_list.item(i).text() for i in range(self.beam2_folders_list.count())]
         rdt = self.rdt_entry.text()
-        rdt_plane = self.rdt_plane_dropdown.currentText()  # Get selected value from dropdown
+        rdt_plane = self.rdt_plane_dropdown.currentText()
         knob = self.knob_entry.text()
         output_path = self.default_output_path
 
+        # Optionally, inside any long loops call:
+        # QApplication.processEvents()  to allow the UI to update.
+        if beam1_model and beam1_folders:
+            b1modelbpmlist, b1bpmdata = getmodelBPMs(beam1_model)
+            b1rdtdata = getrdt_omc3(ldb, b1modelbpmlist, b1bpmdata, beam1_reffolder, beam1_folders,
+                                     knob, output_path, rdt, rdt_plane, rdtfolder, self.analysis_text.append)
+            b1rdtdata = fit_BPM(b1rdtdata)
+            write_RDTshifts(b1rdtdata, rdt, rdt_plane, "b1", output_path)
+            self.analysis_text.append("Beam 1 Analysis Completed Successfully.\n")
+        if beam2_model and beam2_folders:
+            b2modelbpmlist, b2bpmdata = getmodelBPMs(beam2_model)
+            b2rdtdata = getrdt_omc3(ldb, b2modelbpmlist, b2bpmdata, beam2_reffolder, beam2_folders,
+                                     knob, output_path, rdt, rdt_plane, rdtfolder, self.analysis_text.append)
+            b2rdtdata = fit_BPM(b2rdtdata)
+            write_RDTshifts(b2rdtdata, rdt, rdt_plane, "b2", output_path)
+            self.analysis_text.append("Beam 2 Analysis Completed Successfully.\n")
+        self.canvas.draw()
+        self.analysis_output_files = [
+            f"{output_path}/data_b1_f{rdt}{rdt_plane}rdtgradient.csv",
+            f"{output_path}/data_b1_f{rdt}{rdt_plane}rdtshiftvsknob.csv",
+            f"{output_path}/data_b2_f{rdt}{rdt_plane}rdtgradient.csv",
+            f"{output_path}/data_b2_f{rdt}{rdt_plane}rdtshiftvsknob.csv"
+        ]
+        self.populate_file_list()
 
-        # Validate inputs
-        if not beam1_model and not beam2_model:
-            QMessageBox.critical(self, "Error", "At least one beam model must be selected!")
-            return
-        if not rdt or not rdt_plane:
-            QMessageBox.critical(self, "Error", "RDT and RDT plane fields must be filled!")
-            return
-        if not knob:
-            QMessageBox.critical(self, "Error", "Knob field must be filled!")
-            return
-        if not beam1_folders and not beam2_folders:
-            QMessageBox.critical(self, "Error", "At least one set of measurement folders must be provided!")
-            return
-
-        # Validate RDT and RDT Plane
-        is_valid, error_message = self.validate_rdt_and_plane(rdt, rdt_plane)
-        if not is_valid:
-            QMessageBox.critical(self, "Error", "Invalid RDT or RDT Plane: " + repr(error_message))
-            return
-
-        # Validate knob
-        is_valid_knob, knob_message = self.validate_knob(initialize_statetracker(), knob)
-        if not is_valid_knob:
-            QMessageBox.critical(self, "Error", "Invalid Knob: " + repr(knob_message))
-            return
-
-        try:
-            self.analysis_text.clear()
-            self.figure.clear()
-            ldb = initialize_statetracker()
-            rdtfolder = rdt_to_order_and_type(rdt)
-
-            if beam1_model and beam1_folders:
-                b1modelbpmlist, b1bpmdata = getmodelBPMs(beam1_model)
-                b1rdtdata = getrdt_omc3(
-                            ldb, b1modelbpmlist, b1bpmdata, beam1_reffolder, beam1_folders,
-                            knob, output_path, rdt, rdt_plane, rdtfolder,
-                            self.analysis_text.append
-                        )
-                b1rdtdata = fit_BPM(b1rdtdata)
-                write_RDTshifts(b1rdtdata, rdt, rdt_plane, "b1", output_path)
-                self.analysis_text.append("Beam 1 Analysis Completed Successfully.\n")
-
-            if beam2_model and beam2_folders:
-                b2modelbpmlist, b2bpmdata = getmodelBPMs(beam2_model)
-                b2rdtdata = getrdt_omc3(
-                            ldb, b2modelbpmlist, b2bpmdata, beam2_reffolder, beam2_folders,
-                            knob, output_path, rdt, rdt_plane, rdtfolder,
-                            self.analysis_text.append
-                        )
-                b2rdtdata = fit_BPM(b2rdtdata)
-                write_RDTshifts(b2rdtdata, rdt, rdt_plane, "b2", output_path)
-                self.analysis_text.append("Beam 2 Analysis Completed Successfully.\n")
-
-            self.canvas.draw()
-            # Instead of scanning the output folder, update self.analysis_output_files from your analysis run.
-            self.analysis_output_files = [
-                f"{output_path}/data_b1_f{rdt}{rdt_plane}rdtgradient.csv",
-                f"{output_path}/data_b1_f{rdt}{rdt_plane}rdtshiftvsknob.csv",
-                f"{output_path}/data_b2_f{rdt}{rdt_plane}rdtgradient.csv",
-                f"{output_path}/data_b2_f{rdt}{rdt_plane}rdtshiftvsknob.csv"
-            ]
-            self.populate_file_list()
-
-        except Exception as e:
-            QMessageBox.critical(self, "Error", "An error occurred: " + repr(e))
-            return
-
-        QMessageBox.information(self, "Run Analysis", "Analysis completed successfully!")
+    def run_analysis(self):
+        # Instead of running heavy processing in the main thread,
+        # start the analysis in a separate worker thread.
+        self.analysis_text.clear()
+        self.figure.clear()
+        self.worker = AnalysisWorker(self.run_analysis_thread)
+        self.worker.finished.connect(lambda: QMessageBox.information(self, "Run Analysis", "Analysis completed successfully!"))
+        self.worker.error.connect(lambda err: QMessageBox.critical(self, "Error", "An error occurred: " + err))
+        self.worker.start()
 
     def populate_file_list(self):
         """
