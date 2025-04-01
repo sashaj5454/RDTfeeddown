@@ -210,43 +210,43 @@ class RDTFeeddownGUI(QMainWindow):
 		run_group.setLayout(run_layout)
 		self.input_layout.addWidget(run_group)
 
-		# Graph Tab
-		self.graph_tab = QWidget()
-		self.tabs.addTab(self.graph_tab, "Graphing")
-		self.graph_layout = QVBoxLayout(self.graph_tab)
+		 # Validation Tab
+		self.validation_tab = QWidget()
+		self.tabs.addTab(self.validation_tab, "Validation")
+		self.validation_layout = QVBoxLayout(self.validation_tab)
 
-		 # Keep only the new graph_files_list layout
-		graph_files_layout = QVBoxLayout()
-		self.graph_files_label = QLabel("Graph Files:")
-		graph_files_layout.addWidget(self.graph_files_label)
+		 # Keep only the new validation_files_list layout
+		validation_files_layout = QVBoxLayout()
+		self.validation_files_label = QLabel("Validation Files:")
+		validation_files_layout.addWidget(self.validation_files_label)
 
-		self.graph_files_list = QListWidget()
-		self.graph_files_list.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
-		graph_files_layout.addWidget(self.graph_files_list)
+		self.validation_files_list = QListWidget()
+		self.validation_files_list.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
+		validation_files_layout.addWidget(self.validation_files_list)
 
-		graph_buttons_layout = QHBoxLayout()
-		self.graph_files_button = QPushButton("Add Folders")
-		self.graph_files_button.clicked.connect(self.select_analysis_files)
-		graph_buttons_layout.addWidget(self.graph_files_button)
+		validation_buttons_layout = QHBoxLayout()
+		self.validation_files_button = QPushButton("Add Folders")
+		self.validation_files_button.clicked.connect(self.select_analysis_files)
+		validation_buttons_layout.addWidget(self.validation_files_button)
 
-		self.graph_files_remove_button = QPushButton("Remove Selected")
-		self.graph_files_remove_button.clicked.connect(lambda: self.remove_selected_items(self.graph_files_list))
-		graph_buttons_layout.addWidget(self.graph_files_remove_button)
+		self.validation_files_remove_button = QPushButton("Remove Selected")
+		self.validation_files_remove_button.clicked.connect(lambda: self.remove_selected_items(self.validation_files_list))
+		validation_buttons_layout.addWidget(self.validation_files_remove_button)
 
-		self.graph_select_all_checkbox = QtWidgets.QCheckBox("Select All")
-		self.graph_select_all_checkbox.stateChanged.connect(self.toggle_select_all_graph_files)
-		graph_buttons_layout.addWidget(self.graph_select_all_checkbox)
+		self.validation_select_all_checkbox = QtWidgets.QCheckBox("Select All")
+		self.validation_select_all_checkbox.stateChanged.connect(self.toggle_select_all_validation_files)
+		validation_buttons_layout.addWidget(self.validation_select_all_checkbox)
 
-		graph_files_layout.addLayout(graph_buttons_layout)
-		self.graph_layout.addLayout(graph_files_layout)
+		validation_files_layout.addLayout(validation_buttons_layout)
+		self.validation_layout.addLayout(validation_files_layout)
 
 		self.load_selected_files_button = QPushButton("Load Selected Files")
 		self.load_selected_files_button.clicked.connect(self.load_selected_files)
-		self.graph_layout.addWidget(self.load_selected_files_button)
+		self.validation_layout.addWidget(self.load_selected_files_button)
 
 		self.loaded_files_list = QListWidget()
 		self.loaded_files_list.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
-		self.graph_layout.addWidget(self.loaded_files_list)
+		self.validation_layout.addWidget(self.loaded_files_list)
 
 		# --- Replace Beam Tabs with a Beam Selector and Single Plotting Canvas ---
 		beam_selector_layout = QHBoxLayout()
@@ -256,7 +256,7 @@ class RDTFeeddownGUI(QMainWindow):
 		self.beam_selector.addItems(["Beam 1", "Beam 2"])
 		self.beam_selector.currentIndexChanged.connect(self.update_bpm_search_entry)
 		beam_selector_layout.addWidget(self.beam_selector)
-		self.graph_layout.addLayout(beam_selector_layout)
+		self.validation_layout.addLayout(beam_selector_layout)
 		
 		# Now create the BPM search entry using the updated value from the selector
 		self.bpm_search_entry = QLineEdit()
@@ -270,16 +270,16 @@ class RDTFeeddownGUI(QMainWindow):
 		self.graph_bpm_button = QPushButton("Graph BPM")
 		self.graph_bpm_button.clicked.connect(self.graph_bpm)
 		bpm_layout.addWidget(self.graph_bpm_button)
-		self.graph_layout.addLayout(bpm_layout)
+		self.validation_layout.addLayout(bpm_layout)
 
 		# BPM plotting canvas
 		self.bpm_figure = Figure(figsize=(6, 4))
 		self.bpm_canvas = FigureCanvas(self.bpm_figure)
-		self.graph_layout.addWidget(self.bpm_canvas)
+		self.validation_layout.addWidget(self.bpm_canvas)
 
 		# Add navigation toolbar for interactive zoom/pan
 		self.bpm_nav_toolbar = NavigationToolbar(self.bpm_canvas, self)
-		self.graph_layout.addWidget(self.bpm_nav_toolbar)
+		self.validation_layout.addWidget(self.bpm_nav_toolbar)
 
 	def change_default_input_path(self):
 		new_path = QFileDialog.getExistingDirectory(self, "Select Default Input Path", self.default_input_path)
@@ -489,11 +489,11 @@ class RDTFeeddownGUI(QMainWindow):
 		]
 		self.run_next_step()
 
-	def update_graph_files_widget(self):
-		# Update the graph_files_list widget with analysis_output_files
-		self.graph_files_list.clear()
+	def update_validation_files_widget(self):
+		# Update the validation_files_list widget with analysis_output_files
+		self.validation_files_list.clear()
 		for f in self.analysis_output_files:
-			self.graph_files_list.addItem(f)
+			self.validation_files_list.addItem(f)
 
 	def run_next_step(self):
 		if self.current_step < len(self.analysis_steps):
@@ -501,7 +501,7 @@ class RDTFeeddownGUI(QMainWindow):
 			self.current_step += 1
 			QTimer.singleShot(0, self.run_next_step)     # schedule next step ASAP
 		else:
-			self.update_graph_files_widget()  # show analysis output files in the widget
+			self.update_validation_files_widget()  # show analysis output files in the widget
 			QMessageBox.information(self, "Run Analysis", "Analysis completed successfully!")
 
 	def analysis_step1(self):
@@ -559,12 +559,12 @@ class RDTFeeddownGUI(QMainWindow):
 		for item in list_widget.selectedItems():
 			list_widget.takeItem(list_widget.row(item))
 
-	def toggle_select_all_graph_files(self, state):
+	def toggle_select_all_validation_files(self, state):
 		"""
-		Toggle selection for all items in the graph files list based on the checkbox state.
+		Toggle selection for all items in the validation files list based on the checkbox state.
 		"""
-		for i in range(self.graph_files_list.count()):
-			self.graph_files_list.item(i).setSelected(state == Qt.Checked)
+		for i in range(self.validation_files_list.count()):
+			self.validation_files_list.item(i).setSelected(state == Qt.Checked)
 	
 	def select_multiple_files(self, list_widget):
 		"""
@@ -588,10 +588,31 @@ class RDTFeeddownGUI(QMainWindow):
 					list_widget.item(i).text()
 					for i in range(list_widget.count())
 				]:
-					list_widget.addItem(file)
+					item = QtWidgets.QListWidgetItem(file)
+					item.setSelected(True)
+					list_widget.addItem(item)
+		return dialog.selectedFiles()
 
 	def select_analysis_files(self):
-		self.select_multiple_files(self.graph_files_list)
+		selected_files = self.select_multiple_files(self.validation_files_list)
+		if self.validation_files_list.count() > 0:
+			reply = QMessageBox.question(
+				self, 
+				"Load Files?", 
+				"Would you like to load these files now?", 
+				QMessageBox.Yes | QMessageBox.No
+			)
+			if reply == QMessageBox.Yes:
+				loaded_output_data = []
+				for file in selected_files:
+					self.loaded_files_list.addItem(file)
+					data = load_RDTdata(file)
+					loaded_output_data.append(data)
+				results = group_datasets(loaded_output_data, self.log_error)
+				if len(results) < 4:
+					QMessageBox.critical(self, "Error", "Not enough data from group_datasets.")
+					return
+				self.b1rdtdata, self.b2rdtdata, self.rdt, self.rdt_plane = results
 
 	def search_bpm(self):
 		search_term = self.bpm_search_entry.text().strip()
@@ -628,7 +649,7 @@ class RDTFeeddownGUI(QMainWindow):
 		self.bpm_figure.clear()
 		ax1 = self.bpm_figure.add_subplot(211)
 		ax2 = self.bpm_figure.add_subplot(212)
-		plot_BPM(BPM, data, self.rdt, self.rdt_plane, ax1=ax1, ax2=ax2, self.log_error)
+		plot_BPM(BPM, data, self.rdt, self.rdt_plane, ax1=ax1, ax2=ax2, log_func=self.log_error)
 		self.bpm_canvas.draw()
 	
 	def save_b1_rdtdata(self):
@@ -658,16 +679,20 @@ class RDTFeeddownGUI(QMainWindow):
 			self.analysis_output_files.append(f"{self.output_path}/{filename}")
 
 	def load_selected_files(self):
-		# Load selected file paths from the graph files list into the loaded files list
-		selected_files = [self.graph_files_list.item(i).text() for i in range(self.graph_files_list.count()) 
-						if self.graph_files_list.item(i).isSelected()]
+		# Load selected file paths from the validation files list into the loaded files list
+		selected_files = [self.validation_files_list.item(i).text() for i in range(self.validation_files_list.count()) 
+						if self.validation_files_list.item(i).isSelected()]
 		self.loaded_files_list.clear()
 		loaded_output_data = []
 		for file in selected_files:
 			self.loaded_files_list.addItem(file)
 			data = load_RDTdata(file)
 			loaded_output_data.append(data)
-		self.b1rdtdata, self.b2rdtdata, self.rdt, self.rdt_plane = group_datasets(loaded_output_data, self.log_error)
+		results = group_datasets(loaded_output_data, self.log_error)
+		if len(results) < 4:
+			QMessageBox.critical(self, "Error", "Not enough data from group_datasets.")
+			return
+		self.b1rdtdata, self.b2rdtdata, self.rdt, self.rdt_plane = results
 
 	def update_bpm_search_entry(self):
 		# Set default BPM value based on the selected beam.
@@ -675,4 +700,11 @@ class RDTFeeddownGUI(QMainWindow):
 			self.bpm_search_entry.setText("BPM.30L2.B1")
 		else:
 			self.bpm_search_entry.setText("BPM.30L1.B2")
+
+	def get_selected_validation_files(self):
+		return [
+			self.validation_files_list.item(i).text()
+			for i in range(self.validation_files_list.count())
+			if self.validation_files_list.item(i).isSelected()
+		]
 
