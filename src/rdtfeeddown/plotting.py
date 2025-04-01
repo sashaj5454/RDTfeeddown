@@ -2,10 +2,16 @@ import matplotlib.pyplot as plt
 import numpy as np
 from .analysis import polyfunction, calculate_avg_rdt_shift, arcBPMcheck, badBPMcheck
 
-def plot_BPM(BPM, data, rdt, rdt_plane, filename):
+def plot_BPM(BPM, knob_files, gradfile, shift, rdt, rdt_plane, filename):
     fig, (ax1, ax2) = plt.subplots(2, 1, sharey=False)
-    diffdata = data[BPM]['diffdata']
-    fitdata = data[BPM]['fitdata']
+    diffdfs = []
+    for f in knob_files:
+        df = pd.read_csv(f)
+        df = df[df["NAME"] == BPM]
+        df["XING"] = f.replace(".csv", "").split("_")[-1]
+        diffdfs.append(df)
+    diffdata = pd.concat(diffdfs)
+    fitdata = fitdata[fitdata["NAME"] == BPM]
     xing, re, im = [], [], []
 
     for x in range(len(diffdata)):

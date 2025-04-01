@@ -3,7 +3,11 @@ from scipy.optimize import curve_fit
 from scipy.stats import zscore
 import csv
 from .utils import get_analysis_knobsetting
-import  tfs 
+import tfs
+import glob
+import numpy as np
+import json
+
 def filter_outliers(
 	data, 
 	threshold=3
@@ -33,12 +37,20 @@ def filter_outliers(
 	]
 	return filtered_data
 
-def read_rdt_file(filepath):
+def read_rdt_file(filepath, log_func=None):
 	"""
 	Reads RDT data from a file and returns raw data.
 	"""
 	raw_data = []
-	tfs.read(filepath)
+	rt = tfs.read(filepath)
+	rt_filtered = rt[rt['NAME'].str.contains('BPM')]
+	if rt_filtered.empty:
+		if log_func:
+			log_func(f"No BPM data found in file: {filepath}")
+		else:
+			print(f"No BPM data found in file: {filepath}")
+		return None
+
 	for index, row in rt_filtered.iterrows():
 			raw_data.append([str(row["NAME"]), float(row["AMP"]), float(row["REAL"]), float(row["IMAG"])])
 	return raw_data
@@ -49,7 +61,7 @@ def ensure_trailing_slash(path):
 	"""
 	return path if path.endswith('/') else path + '/'
 
-def readrdtdatafile(cfile, rdt, rdt_plane, rdtfolder):
+def readrdtdatafile(cfile, rdt, rdt_plane, rdtfolder, log_func=None):
 	"""
 	Reads RDT data from a file and removes outliers based on Z-scores.
 	"""
@@ -74,7 +86,7 @@ def getrdt_omc3(ldb, modelbpmlist, bpmdata, ref, flist, knob, outputpath, rdt, r
 	"""
 	refk = get_analysis_knobsetting(ldb, knob, ref)
 	try:
-		refdat = readrdtdatafile(ref, rdt, rdt_plane, rdtfolder)
+		refdat = readrdtdatafile(ref, rdt, rdt_plane, rdtfolder, log_func)
 	except FileNotFoundError:
 		if log_func:
 			log_func(f"RDT file not found in reference folder: {ref}. Skipping reference data.")
@@ -86,7 +98,7 @@ def getrdt_omc3(ldb, modelbpmlist, bpmdata, ref, flist, knob, outputpath, rdt, r
 	for f in flist:
 		ksetting = get_analysis_knobsetting(ldb, knob, f)
 		try:
-			cdat = readrdtdatafile(f, rdt, rdt_plane, rdtfolder)
+			cdat = readrdtdatafile(f, rdt, rdt_plane, rdtfolder, log_func)
 		except FileNotFoundError:
 			if log_func:
 				log_func(f"RDT file not found in measurement folder: {f}. Skipping.")
@@ -277,25 +289,22 @@ def calculate_avg_rdt_shift(data):
 
 	return np.array(xing), np.array(ampdat), np.array(stddat)
 
-def recover_RDTshifts(file_path: str, log_func=None):
-	"""
-	Recover the data structure from a write_RDTshifts output file.
-	Assumes the file is a CSV with a header row.
-	
-	Returns:
-		A list of dictionaries representing each row, or None if an error occurs.
-	"""
-	data = []
-	try:
-		with open(file_path, 'r', newline='') as csvfile:
-			reader = csv.DictReader(csvfile)
-			for row in reader:
-				data.append(row)
-	except Exception as e:
-		if log_func:
-			log_func(f"Error reading {file_path}: {e}")
-		else:
-			print(f"Error reading {file_path}: {e}")
-		return None
-	return data
+def _convert_for_json(obj):
+    import numpy as np
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()
+    if isinstance(obj, tuple):
+        return list(obj)
+    raise TypeError(f"Type {type(obj)} not JSON serializable")
+
+def save_RDTdata(data, filename):
+    with open(filename, 'w') as fout:
+        json.dump(data, fout, default=_convert_for_json)
+
+def load_RDTdata(filename):
+    with open(filename, 'r') as fin:
+        return json.load(fin)
+
+
+
 

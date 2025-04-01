@@ -8,10 +8,9 @@ from PyQt5.QtWidgets import (
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt, pyqtSignal, QTimer  # Import Qt for the correct constants and QTimer
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from datetime import datetime
 from matplotlib.figure import Figure
 from .utils import load_defaults, check_rdt, initialize_statetracker, rdt_to_order_and_type, getmodelBPMs
-from .analysis import write_RDTshifts, getrdt_omc3, fit_BPM, recover_RDTshifts
+from .analysis import write_RDTshifts, getrdt_omc3, fit_BPM, save_RDTdata, load_RDTdata
 from .plotting import plot_BPM  # Assuming you have a plotting module for BPM plotting
 import time  # Import time to get the current timestamp
 import re    # Import re for regex substitution
@@ -22,7 +21,7 @@ class RDTFeeddownGUI(QMainWindow):
 		self.setWindowTitle("RDT Feeddown Analysis")
 
 		# Load defaults from the special file
-		config = load_defaults()
+		config = load_defaults(self.log_error)
 		self.default_input_path = config.get("default_input_path")
 		self.default_output_path = config.get("default_output_path")
 
@@ -217,10 +216,30 @@ class RDTFeeddownGUI(QMainWindow):
 		self.tabs.addTab(self.graph_tab, "Graphing")
 		self.graph_layout = QVBoxLayout(self.graph_tab)
 
-		 # Use QListWidget directly (removed QLineEdit conversion)
-		self.graph_files_list = QListWidget()  # was: QListWidget(self.analysis_output_files)
+		 # Keep only the new graph_files_list layout
+		graph_files_layout = QVBoxLayout()
+		self.graph_files_label = QLabel("Graph Files:")
+		graph_files_layout.addWidget(self.graph_files_label)
+
+		self.graph_files_list = QListWidget()
 		self.graph_files_list.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
-		self.graph_layout.addWidget(self.graph_files_list)
+		graph_files_layout.addWidget(self.graph_files_list)
+
+		graph_buttons_layout = QHBoxLayout()
+		self.graph_files_button = QPushButton("Add Folders")
+		self.graph_files_button.clicked.connect(self.select_analysis_files)
+		graph_buttons_layout.addWidget(self.graph_files_button)
+
+		self.graph_files_remove_button = QPushButton("Remove Selected")
+		self.graph_files_remove_button.clicked.connect(lambda: self.remove_selected_items(self.graph_files_list))
+		graph_buttons_layout.addWidget(self.graph_files_remove_button)
+
+		self.graph_select_all_checkbox = QtWidgets.QCheckBox("Select All")
+		self.graph_select_all_checkbox.stateChanged.connect(self.toggle_select_all_graph_files)
+		graph_buttons_layout.addWidget(self.graph_select_all_checkbox)
+
+		graph_files_layout.addLayout(graph_buttons_layout)
+		self.graph_layout.addLayout(graph_files_layout)
 
 		# BPM Search Group
 		bpm_search_group = QtWidgets.QGroupBox("BPM Search")
@@ -505,17 +524,15 @@ class RDTFeeddownGUI(QMainWindow):
 										  self.knob, self.output_path,
 										  self.rdt, self.rdt_plane, self.rdtfolder, self.log_error)
 			self.b2rdtdata = fit_BPM(self.b2rdtdata)
-		# Write output files (add self.log_error as in original):
+			
+		# Prompt to save Beam 1 RDT data just before calling write_RDTshifts
+		self.analysis_output_files = []
 		if self.beam1_model and self.beam1_folders:
+			self.save_b1_rdtdata()
 			write_RDTshifts(self.b1rdtdata, self.rdt, self.rdt_plane, "b1", self.output_path, self.log_error)
 		if self.beam2_model and self.beam2_folders:
+			self.save_b2_rdtdata()
 			write_RDTshifts(self.b2rdtdata, self.rdt, self.rdt_plane, "b2", self.output_path, self.log_error)
-		self.analysis_output_files = [
-			f"{self.output_path}/data_b1_f{self.rdt}{self.rdt_plane}rdtgradient.csv",
-			f"{self.output_path}/data_b1_f{self.rdt}{self.rdt_plane}rdtshiftvsknob.csv",
-			f"{self.output_path}/data_b2_f{self.rdt}{self.rdt_plane}rdtgradient.csv",
-			f"{self.output_path}/data_b2_f{self.rdt}{self.rdt_plane}rdtshiftvsknob.csv"
-		]
 
 	def log_error(self, error_msg):
 		QMessageBox.critical(self, "Error", error_msg)
@@ -585,4 +602,47 @@ class RDTFeeddownGUI(QMainWindow):
 		plot_BPM(BPM, data, rdt, rdt_plane, filename)
 		pass
 
+	def save_b1_rdtdata(self):
+		filename, _ = QFileDialog.getSaveFileName(
+			self,
+			"Save Beam 1 RDT Data",
+			self.default_output_path,
+			"JSON Files (*.json)"
+		)
+		if filename:
+			if not filename.lower().endswith(".json"):
+				filename += ".json"
+			save_RDTdata(self.b1rdtdata, filename)
 
+	def load_b1_rdtdata(self):
+		filename, _ = QFileDialog.getOpenFileName(
+			self,
+			"Load Beam 1 RDT Data",
+			self.default_output_path,
+			"JSON Files (*.json)"
+		)
+		if filename:
+			self.b1rdtdata = load_RDTdata(filename)
+
+	def save_b2_rdtdata(self):
+		filename, _ = QFileDialog.getSaveFileName(
+			self,
+			"Save Beam 2 RDT Data",
+			self.default_output_path,
+			"JSON Files (*.json)"
+		)
+		if filename:
+			if not filename.lower().endswith(".json"):
+				filename += ".json"
+			save_RDTdata(self.b2rdtdata, filename)
+			self.analysis_output_files.append(f"{self.output_path}/{filename}")
+
+	def load_b2_rdtdata(self):
+		filename, _ = QFileDialog.getOpenFileName(
+			self,
+			"Load Beam 2 RDT Data",
+			self.default_output_path,
+			"JSON Files (*.json)"
+		)
+		if filename:
+			self.b2rdtdata = load_RDTdata(filename)

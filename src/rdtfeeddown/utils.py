@@ -7,6 +7,8 @@ import pytimber
 from zoneinfo import ZoneInfo 
 import csv
 import tfs
+from datetime import datetime
+import json
 
 def check_rdt(
 	rdt:str, 
@@ -143,7 +145,7 @@ def getmodelBPMs(modelpath):
 		bpmdata[bpm]['data']=[]
 	return modelbpmlist,bpmdata
 
-def load_defaults():
+def load_defaults(log_func=None):
 	# Set built-in defaults
 	curr_time = datetime.now().strftime('%Y-%m-%d')
 	defaults = {
@@ -151,12 +153,16 @@ def load_defaults():
 		"default_output_path": f"/user/slops/data/LHC_DATA/OP_DATA/Betabeat/{curr_time}/",
 	}
 	# Use current working directory to locate the configuration file
-	config_path = os.path.join(os.getcwd(), "defaults.json")
+	config_path = f"{os.getcwd()}/defaults.json"
 	if os.path.exists(config_path):
 		try:
 			with open(config_path, "r") as cf:
+				if log_func:
+					log_func(f"Loading configuration file from: {cf}")
 				user_defaults = json.load(cf)
 				defaults.update(user_defaults)
-		except Exception:
+		except Exception as e:
+			if log_func:
+				log_func(f"Looking for configuration file at: {e}")
 			pass
 	return defaults
