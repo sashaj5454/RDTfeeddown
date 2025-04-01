@@ -1,13 +1,18 @@
+import os
+import json
+import csv
 from PyQt5.QtWidgets import (
 	QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton,
 	QFileDialog, QListWidget, QTabWidget, QWidget, QTextEdit, QMessageBox
 )
 from PyQt5 import QtWidgets
-from PyQt5.QtCore import Qt, QThread, pyqtSignal  # Import Qt for the correct constants and worker thread support
+from PyQt5.QtCore import Qt, pyqtSignal, QTimer  # Import Qt for the correct constants and QTimer
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from datetime import datetime
 from matplotlib.figure import Figure
-from .utils import check_rdt, initialize_statetracker, rdt_to_order_and_type, getmodelBPMs
-from .analysis import write_RDTshifts, getrdt_omc3, fit_BPM
+from .utils import load_defaults, check_rdt, initialize_statetracker, rdt_to_order_and_type, getmodelBPMs
+from .analysis import write_RDTshifts, getrdt_omc3, fit_BPM, recover_RDTshifts
+from .plotting import plot_BPM  # Assuming you have a plotting module for BPM plotting
 import time  # Import time to get the current timestamp
 import re    # Import re for regex substitution
 
@@ -16,9 +21,10 @@ class RDTFeeddownGUI(QMainWindow):
 		super().__init__()
 		self.setWindowTitle("RDT Feeddown Analysis")
 
-		# Default input and output paths
-		self.default_input_path = "/afs/cern.ch/work/s/sahorney/private/LHCoptics/2025_03_a4corr"
-		self.default_output_path = "/afs/cern.ch/work/s/sahorney/private/LHCoptics/2025_03_a4corr"
+		# Load defaults from the special file
+		config = load_defaults()
+		self.default_input_path = config.get("default_input_path")
+		self.default_output_path = config.get("default_output_path")
 
 		# Add an attribute to store the list of analysis output files
 		self.analysis_output_files = []
@@ -211,40 +217,10 @@ class RDTFeeddownGUI(QMainWindow):
 		self.tabs.addTab(self.graph_tab, "Graphing")
 		self.graph_layout = QVBoxLayout(self.graph_tab)
 
-		 # Keep only the new graph_files_list layout
-		graph_files_layout = QVBoxLayout()
-		self.graph_files_label = QLabel("Graph Files:")
-		self.graph_files_label.setStyleSheet("color: green;")
-		graph_files_layout.addWidget(self.graph_files_label)
-
-		self.graph_files_list = QListWidget()
+		 # Use QListWidget directly (removed QLineEdit conversion)
+		self.graph_files_list = QListWidget()  # was: QListWidget(self.analysis_output_files)
 		self.graph_files_list.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
-		graph_files_layout.addWidget(self.graph_files_list)
-
-		graph_buttons_layout = QHBoxLayout()
-		self.graph_files_button = QPushButton("Add Folders")
-		self.graph_files_button.clicked.connect(self.select_analysis_files)
-		graph_buttons_layout.addWidget(self.graph_files_button)
-
-		self.graph_files_remove_button = QPushButton("Remove Selected")
-		self.graph_files_remove_button.clicked.connect(lambda: self.remove_selected_items(self.graph_files_list))
-		graph_buttons_layout.addWidget(self.graph_files_remove_button)
-
-		self.graph_select_all_checkbox = QtWidgets.QCheckBox("Select All")
-		self.graph_select_all_checkbox.stateChanged.connect(self.toggle_select_all_graph_files)
-		graph_buttons_layout.addWidget(self.graph_select_all_checkbox)
-
-		graph_files_layout.addLayout(graph_buttons_layout)
-		self.graph_layout.addLayout(graph_files_layout)
-
-		# Graph text and canvas below file management
-		self.graph_text = QTextEdit()
-		self.graph_text.setReadOnly(True)
-		self.graph_layout.addWidget(self.graph_text)
-
-		self.figure = Figure(figsize=(6, 4))
-		self.canvas = FigureCanvas(self.figure)
-		self.graph_layout.addWidget(self.canvas)
+		self.graph_layout.addWidget(self.graph_files_list)
 
 		# BPM Search Group
 		bpm_search_group = QtWidgets.QGroupBox("BPM Search")
@@ -259,6 +235,15 @@ class RDTFeeddownGUI(QMainWindow):
 		bpm_search_layout.addWidget(self.bpm_graph_button)
 		bpm_search_group.setLayout(bpm_search_layout)
 		self.graph_layout.addWidget(bpm_search_group)
+
+		# Graph text and canvas below file management
+		self.graph_text = QTextEdit()
+		self.graph_text.setReadOnly(True)
+		self.graph_layout.addWidget(self.graph_text)
+
+		self.figure = Figure(figsize=(6, 4))
+		self.canvas = FigureCanvas(self.figure)
+		self.graph_layout.addWidget(self.canvas)
 
 	def change_default_input_path(self):
 		new_path = QFileDialog.getExistingDirectory(self, "Select Default Input Path", self.default_input_path)
@@ -279,7 +264,7 @@ class RDTFeeddownGUI(QMainWindow):
 		modelpath = QFileDialog.getExistingDirectory(self, "Select Beam 1 Model", self.default_input_path)
 		if modelpath:
 			self.beam1_model_entry.setText(modelpath)
-
+		
 	def select_beam2_model(self):
 		"""
 		Open a file dialog to select the Beam 2 model directory, starting from the default input path.
@@ -287,21 +272,33 @@ class RDTFeeddownGUI(QMainWindow):
 		modelpath = QFileDialog.getExistingDirectory(self, "Select Beam 2 Model", self.default_input_path)
 		if modelpath:
 			self.beam2_model_entry.setText(modelpath)
-
+		
 	def select_beam1_reffolder(self):
 		"""
 		Open a file dialog to select the Beam 1 reference measurement folder.
 		"""
-		folderpath = QFileDialog.getExistingDirectory(self, "Select Beam 1 Reference Folder", self.default_input_path)
-		if folderpath:
+		dialog = QFileDialog(self)
+		dialog.setWindowTitle("Select Beam 1 Reference Measurement Folder")
+		dialog.setDirectory(self.default_input_path)
+		dialog.setFileMode(QFileDialog.Directory)
+		dialog.setOption(QFileDialog.ShowDirsOnly, True)
+		dialog.setNameFilter("Beam1BunchTurn*;;All Folders (*)")
+		if dialog.exec_() == QFileDialog.Accepted:
+			folderpath = dialog.selectedFiles()[0]
 			self.beam1_reffolder_entry.setText(folderpath)
 
 	def select_beam2_reffolder(self):
 		"""
 		Open a file dialog to select the Beam 2 reference measurement folder.
 		"""
-		folderpath = QFileDialog.getExistingDirectory(self, "Select Beam 2 Reference Folder", self.default_input_path)
-		if folderpath:
+		dialog = QFileDialog(self)
+		dialog.setWindowTitle("Select Beam 2 Reference Measurement Folder")
+		dialog.setDirectory(self.default_input_path)
+		dialog.setFileMode(QFileDialog.Directory)
+		dialog.setOption(QFileDialog.ShowDirsOnly, True)
+		dialog.setNameFilter("Beam2BunchTurn*;;All Folders (*)")
+		if dialog.exec_() == QFileDialog.Accepted:
+			folderpath = dialog.selectedFiles()[0]
 			self.beam2_reffolder_entry.setText(folderpath)
 
 	def remove_beam1_reffolder(self):
@@ -339,10 +336,42 @@ class RDTFeeddownGUI(QMainWindow):
 					list_widget.addItem(directory)
 
 	def select_beam1_folders(self):
-		self.select_multiple_directories(self.beam1_folders_list)
+		dialog = QFileDialog(self)
+		dialog.setWindowTitle('Choose Directories')
+		dialog.setDirectory(self.default_input_path)  # Set the default input path
+		dialog.setOption(QFileDialog.DontUseNativeDialog, True)
+		dialog.setFileMode(QFileDialog.Directory)
+		dialog.setOption(QFileDialog.ShowDirsOnly, True)
+		dialog.setNameFilter("Beam1BunchTurn*;;All Folders (*)")
+
+		# Enable multiple selection in the dialog
+		for view in dialog.findChildren((QtWidgets.QListView, QtWidgets.QTreeView)):
+			if isinstance(view.model(), QtWidgets.QFileSystemModel):
+				view.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
+
+		if dialog.exec_() == QFileDialog.Accepted:
+			selected_dirs = dialog.selectedFiles()
+			for directory in selected_dirs:
+				self.beam1_folders_list.addItem(directory)
 
 	def select_beam2_folders(self):
-		self.select_multiple_directories(self.beam2_folders_list)
+		dialog = QFileDialog(self)
+		dialog.setWindowTitle('Choose Directories')
+		dialog.setDirectory(self.default_input_path)  # Set the default input path
+		dialog.setOption(QFileDialog.DontUseNativeDialog, True)
+		dialog.setFileMode(QFileDialog.Directory)
+		dialog.setOption(QFileDialog.ShowDirsOnly, True)
+		dialog.setNameFilter("Beam2BunchTurn*;;All Folders (*)")
+
+		# Enable multiple selection in the dialog
+		for view in dialog.findChildren((QtWidgets.QListView, QtWidgets.QTreeView)):
+			if isinstance(view.model(), QtWidgets.QFileSystemModel):
+				view.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
+
+		if dialog.exec_() == QFileDialog.Accepted:
+			selected_dirs = dialog.selectedFiles()
+			for directory in selected_dirs:
+				self.beam2_folders_list.addItem(directory)
 
 	def remove_selected_beam1_folders(self):
 		"""
@@ -414,51 +443,79 @@ class RDTFeeddownGUI(QMainWindow):
 		else:
 			QMessageBox.critical(self, "Knob Validation", "Invalid Knob: " + repr(knob_message))
 
-	def run_analysis_thread(self):
-		# This function contains the heavy processing code previously in run_analysis.
-		ldb = initialize_statetracker()
-		rdt = self.rdt_entry.text()
-		rdt_plane = self.rdt_plane_dropdown.currentText()
-		self.validate_rdt_and_plane(rdt, rdt_plane)
-		rdtfolder = rdt_to_order_and_type(rdt)
-		beam1_model = self.beam1_model_entry.text()
-		beam2_model = self.beam2_model_entry.text()
-		beam1_reffolder = self.beam1_reffolder_entry.text()
-		beam2_reffolder = self.beam2_reffolder_entry.text()
-		beam1_folders = [self.beam1_folders_list.item(i).text() for i in range(self.beam1_folders_list.count())]
-		beam2_folders = [self.beam2_folders_list.item(i).text() for i in range(self.beam2_folders_list.count())]
-		knob = self.knob_entry.text()
-		output_path = self.default_output_path
-
-		if beam1_model and beam1_folders:
-			b1modelbpmlist, b1bpmdata = getmodelBPMs(beam1_model)
-			b1rdtdata = getrdt_omc3(ldb, b1modelbpmlist, b1bpmdata, beam1_reffolder, beam1_folders,
-									knob, output_path, rdt, rdt_plane, rdtfolder, self.log_error)
-			b1rdtdata = fit_BPM(b1rdtdata)
-			write_RDTshifts(b1rdtdata, rdt, rdt_plane, "b1", output_path, self.log_er)
-		if beam2_model and beam2_folders:
-			b2modelbpmlist, b2bpmdata = getmodelBPMs(beam2_model)
-			b2rdtdata = getrdt_omc3(ldb, b2modelbpmlist, b2bpmdata, beam2_reffolder, beam2_folders,
-									knob, output_path, rdt, rdt_plane, rdtfolder, self.log_error)
-			b2rdtdata = fit_BPM(b2rdtdata)
-			write_RDTshifts(b2rdtdata, rdt, rdt_plane, "b2", output_path, self.log_error)
-		self.canvas.draw()
-		self.analysis_output_files = [
-			f"{output_path}/data_b1_f{rdt}{rdt_plane}rdtgradient.csv",
-			f"{output_path}/data_b1_f{rdt}{rdt_plane}rdtshiftvsknob.csv",
-			f"{output_path}/data_b2_f{rdt}{rdt_plane}rdtgradient.csv",
-			f"{output_path}/data_b2_f{rdt}{rdt_plane}rdtshiftvsknob.csv"
-		]
-
 	def run_analysis(self):
-		# Instead of starting a worker thread, run the analysis in the main thread.
-		# This eliminates the threading error but may block the UI.
 		self.figure.clear()
-		try:
-			self.run_analysis_thread()  # Run heavy processing directly.
+		# Divide heavy processing into steps for better UI responsiveness:
+		self.current_step = 0
+		self.analysis_steps = [
+			self.analysis_step1,  # e.g., initialization and first data processing
+			self.analysis_step2,  # e.g., fitting/BPM processing
+			self.analysis_step3   # e.g., finalizing and drawing results
+		]
+		self.run_next_step()
+
+	def update_graph_files_widget(self):
+		# Update the graph_files_list widget with analysis_output_files
+		self.graph_files_list.clear()
+		for f in self.analysis_output_files:
+			self.graph_files_list.addItem(f)
+
+	def run_next_step(self):
+		if self.current_step < len(self.analysis_steps):
+			self.analysis_steps[self.current_step]()  # execute current step
+			self.current_step += 1
+			QTimer.singleShot(0, self.run_next_step)     # schedule next step ASAP
+		else:
+			self.canvas.draw()
+			self.update_graph_files_widget()  # show analysis output files in the widget
 			QMessageBox.information(self, "Run Analysis", "Analysis completed successfully!")
-		except Exception as e:
-			QMessageBox.critical(self, "Error", "An error occurred: " + str(e))
+
+	def analysis_step1(self):
+		# Initialize variables and validate inputs
+		self.ldb = initialize_statetracker()
+		self.rdt = self.rdt_entry.text()
+		self.rdt_plane = self.rdt_plane_dropdown.currentText()
+		self.validate_rdt_and_plane(self.rdt, self.rdt_plane)
+		self.rdtfolder = rdt_to_order_and_type(self.rdt)
+		self.beam1_model = self.beam1_model_entry.text()
+		self.beam2_model = self.beam2_model_entry.text()
+		self.beam1_reffolder = self.beam1_reffolder_entry.text()
+		self.beam2_reffolder = self.beam2_reffolder_entry.text()
+		self.beam1_folders = [self.beam1_folders_list.item(i).text() for i in range(self.beam1_folders_list.count())]
+		self.beam2_folders = [self.beam2_folders_list.item(i).text() for i in range(self.beam2_folders_list.count())]
+		self.knob = self.knob_entry.text()
+		self.output_path = self.default_output_path
+
+	def analysis_step2(self):
+		# Process Beam 1 data
+		if self.beam1_model and self.beam1_folders:
+			b1modelbpmlist, b1bpmdata = getmodelBPMs(self.beam1_model)
+			self.b1rdtdata = getrdt_omc3(self.ldb, b1modelbpmlist, b1bpmdata,
+										  self.beam1_reffolder, self.beam1_folders,
+										  self.knob, self.output_path,
+										  self.rdt, self.rdt_plane, self.rdtfolder, self.log_error)
+			self.b1rdtdata = fit_BPM(self.b1rdtdata)
+
+	def analysis_step3(self):
+		# Process Beam 2 data and write output files:
+		if self.beam2_model and self.beam2_folders:
+			b2modelbpmlist, b2bpmdata = getmodelBPMs(self.beam2_model)
+			self.b2rdtdata = getrdt_omc3(self.ldb, b2modelbpmlist, b2bpmdata,
+										  self.beam2_reffolder, self.beam2_folders,
+										  self.knob, self.output_path,
+										  self.rdt, self.rdt_plane, self.rdtfolder, self.log_error)
+			self.b2rdtdata = fit_BPM(self.b2rdtdata)
+		# Write output files (add self.log_error as in original):
+		if self.beam1_model and self.beam1_folders:
+			write_RDTshifts(self.b1rdtdata, self.rdt, self.rdt_plane, "b1", self.output_path, self.log_error)
+		if self.beam2_model and self.beam2_folders:
+			write_RDTshifts(self.b2rdtdata, self.rdt, self.rdt_plane, "b2", self.output_path, self.log_error)
+		self.analysis_output_files = [
+			f"{self.output_path}/data_b1_f{self.rdt}{self.rdt_plane}rdtgradient.csv",
+			f"{self.output_path}/data_b1_f{self.rdt}{self.rdt_plane}rdtshiftvsknob.csv",
+			f"{self.output_path}/data_b2_f{self.rdt}{self.rdt_plane}rdtgradient.csv",
+			f"{self.output_path}/data_b2_f{self.rdt}{self.rdt_plane}rdtshiftvsknob.csv"
+		]
 
 	def log_error(self, error_msg):
 		QMessageBox.critical(self, "Error", error_msg)
@@ -525,7 +582,7 @@ class RDTFeeddownGUI(QMainWindow):
 			QMessageBox.information(self, "BPM Search", f"BPM '{search_term}' not found.")
 
 	def graph_bpm(self):
-		# placeholder for BPM graphing logic
+		plot_BPM(BPM, data, rdt, rdt_plane, filename)
 		pass
 
 

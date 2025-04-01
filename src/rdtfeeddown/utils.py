@@ -132,16 +132,31 @@ def getmodelBPMs(modelpath):
 	modelbpmlist=[]
 	bpmdata={}
 	twissfile=modelpath+'/twiss.dat'
-	rt=open(twissfile,'r')
-	csvrt=csv.reader(rt,delimiter=' ',skipinitialspace=True)
-	for row in csvrt:
-		if row[0]=='@' or row[0]=='*' or row[0]=='$':
-			continue
-		elif re.search('BPM',row[0]):
-			modelbpmlist.append(row[0])
-			bpmdata[row[0]]={}
-			bpmdata[row[0]]['s']=float(row[1])
-			bpmdata[row[0]]['ref']=[]
-			bpmdata[row[0]]['data']=[]
-	rt.close()
+	rt=tfs.read(twissfile)
+	rt_filtered=rt[rt['NAME'].str.contains('BPM')]
+	for index, row in rt_filtered.iterrows():
+		bpm = row["NAME"]
+		modelbpmlist.append(bpm)
+		bpmdata[bpm]={}
+		bpmdata[bpm]['s']=float(row["S"])
+		bpmdata[bpm]['ref']=[]
+		bpmdata[bpm]['data']=[]
 	return modelbpmlist,bpmdata
+
+def load_defaults():
+	# Set built-in defaults
+	curr_time = datetime.now().strftime('%Y-%m-%d')
+	defaults = {
+		"default_input_path": "/user/slops/data/LHC_DATA/OP_DATA/FILL_DATA/FILL_DIR/BPM/",
+		"default_output_path": f"/user/slops/data/LHC_DATA/OP_DATA/Betabeat/{curr_time}/",
+	}
+	# Use current working directory to locate the configuration file
+	config_path = os.path.join(os.getcwd(), "defaults.json")
+	if os.path.exists(config_path):
+		try:
+			with open(config_path, "r") as cf:
+				user_defaults = json.load(cf)
+				defaults.update(user_defaults)
+		except Exception:
+			pass
+	return defaults

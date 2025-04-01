@@ -3,7 +3,7 @@ from scipy.optimize import curve_fit
 from scipy.stats import zscore
 import csv
 from .utils import get_analysis_knobsetting
-
+import  tfs 
 def filter_outliers(
 	data, 
 	threshold=3
@@ -38,12 +38,9 @@ def read_rdt_file(filepath):
 	Reads RDT data from a file and returns raw data.
 	"""
 	raw_data = []
-	with open(filepath, 'r') as rf:
-		csv_reader = csv.reader(rf, delimiter=' ', skipinitialspace=True)
-		for row in csv_reader:
-			if row[0] in {'@', '*', '$'}:
-				continue
-			raw_data.append([str(row[0]), float(row[3]), float(row[7]), float(row[8])])
+	tfs.read(filepath)
+	for index, row in rt_filtered.iterrows():
+			raw_data.append([str(row["NAME"]), float(row["AMP"]), float(row["REAL"]), float(row["IMAG"])])
 	return raw_data
 
 def ensure_trailing_slash(path):
@@ -174,18 +171,12 @@ def badBPMcheck(bpm):
 			break
 	return badbpm
 
-def write_RDTshifts_for_beam(data, rdt, rdt_plane, beam, output_path, log_func=None):
+def write_RDTshifts_for_beam(data, rdt, rdt_plane, beam, output_path):
 	"""
-	Generalized function to write RDT shifts for a given beam (b1 or b2) with error logging.
+	Generalized function to write RDT shifts for a given beam (b1 or b2).
 	"""
 	# Ensure output_path has a trailing slash.
 	output_path = ensure_trailing_slash(output_path)
-	xing=[]  ### get the list of crossing angles measured
-	for b in data.keys():
-		diffdata=data[b]['diffdata']
-		for x in range(len(diffdata)):
-			xing.append(diffdata[x][0])
-		break
 	# Gradients
 	fout = f'{output_path}data_{beam}_f{rdt}{rdt_plane}rdtgradient.csv'
 	with open(fout, 'w') as wout:
@@ -203,6 +194,7 @@ def write_RDTshifts_for_beam(data, rdt, rdt_plane, beam, output_path, log_func=N
 			csvwout.writerow([b, s, dredk, dimdk, dreerr, dimerr])
 
 	# Average re**2 + im**2
+	xing = [diff[0] for diff in next(iter(data.values()))['diffdata']]
 	fout = f'{output_path}data_{beam}_f{rdt}{rdt_plane}rdtshiftvsknob.csv'
 	with open(fout, 'w') as wout:
 		csvwout = csv.writer(wout, delimiter=' ')
@@ -241,11 +233,17 @@ def write_RDTshifts_for_beam(data, rdt, rdt_plane, beam, output_path, log_func=N
 						amp = np.sqrt(re**2 + im**2)
 						csvwout.writerow([b, s, amp, re, im])
 
-def write_RDTshifts(data, rdt, rdt_plane, beam, output_path, log_func=None):
+def write_RDTshifts(data, rdt, rdt_plane, beam, output_path , log_func=None):
 	"""
-	Writes RDT shifts for a beam.
+	Writes RDT shifts for a beam
 	"""
-	write_RDTshifts_for_beam(data, rdt, rdt_plane, beam, output_path, log_func)
+	try:
+		write_RDTshifts_for_beam(data, rdt, rdt_plane, beam, output_path)
+	except Exception as e:
+		if log_func:
+			log_func(f"Error writing RDT shifts for {beam}: {e}")
+		else:
+			print(f"Error writing RDT shifts for {beam}: {e}")
 
 def calculate_avg_rdt_shift(data):
 	"""
@@ -278,4 +276,26 @@ def calculate_avg_rdt_shift(data):
 		stddat.append(avg_rdt_shift_err)
 
 	return np.array(xing), np.array(ampdat), np.array(stddat)
+
+def recover_RDTshifts(file_path: str, log_func=None):
+	"""
+	Recover the data structure from a write_RDTshifts output file.
+	Assumes the file is a CSV with a header row.
+	
+	Returns:
+		A list of dictionaries representing each row, or None if an error occurs.
+	"""
+	data = []
+	try:
+		with open(file_path, 'r', newline='') as csvfile:
+			reader = csv.DictReader(csvfile)
+			for row in reader:
+				data.append(row)
+	except Exception as e:
+		if log_func:
+			log_func(f"Error reading {file_path}: {e}")
+		else:
+			print(f"Error reading {file_path}: {e}")
+		return None
+	return data
 
