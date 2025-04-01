@@ -2,10 +2,8 @@ import os
 import sys
 import re
 import datetime as dt
-from optparse import OptionParser
 import pytimber
 from zoneinfo import ZoneInfo 
-import csv
 import tfs
 from datetime import datetime
 import json
@@ -157,12 +155,12 @@ def load_defaults(log_func=None):
 	if os.path.exists(config_path):
 		try:
 			with open(config_path, "r") as cf:
-				if log_func:
-					log_func(f"Loading configuration file from: {cf}")
 				user_defaults = json.load(cf)
 				defaults.update(user_defaults)
 		except Exception as e:
 			if log_func:
-				log_func(f"Looking for configuration file at: {e}")
+				log_func(f"Error looking for configuration file: {e}")
+			else:
+				print(f"Error looking for configuration file: {e}")
 			pass
 	return defaults

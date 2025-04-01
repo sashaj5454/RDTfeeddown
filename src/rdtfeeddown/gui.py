@@ -1,16 +1,15 @@
-import os
 import json
-import csv
 from PyQt5.QtWidgets import (
 	QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton,
 	QFileDialog, QListWidget, QTabWidget, QWidget, QTextEdit, QMessageBox
 )
 from PyQt5 import QtWidgets
-from PyQt5.QtCore import Qt, pyqtSignal, QTimer  # Import Qt for the correct constants and QTimer
+from PyQt5.QtCore import Qt, QTimer  # Import Qt for the correct constants and QTimer
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
 from .utils import load_defaults, check_rdt, initialize_statetracker, rdt_to_order_and_type, getmodelBPMs
-from .analysis import write_RDTshifts, getrdt_omc3, fit_BPM, save_RDTdata, load_RDTdata
+from .analysis import write_RDTshifts, getrdt_omc3, fit_BPM, save_RDTdata, load_RDTdata, group_datasets
 from .plotting import plot_BPM  # Assuming you have a plotting module for BPM plotting
 import time  # Import time to get the current timestamp
 import re    # Import re for regex substitution
@@ -194,7 +193,7 @@ class RDTFeeddownGUI(QMainWindow):
 		param_layout.addWidget(self.rdt_plane_dropdown)
 		self.knob_label = QLabel("Knob:")
 		param_layout.addWidget(self.knob_label)          # "Knob:"
-		self.knob_entry = QLineEdit("LHCBEAM/IP5-XING-H-MURAD")
+		self.knob_entry = QLineEdit("LHCBEAM/IP2-XING-V-MURAD")
 		param_layout.addWidget(self.knob_entry)
 		self.validate_knob_button = QPushButton("Validate Knob")
 		self.validate_knob_button.clicked.connect(self.validate_knob_button_clicked)
@@ -241,28 +240,46 @@ class RDTFeeddownGUI(QMainWindow):
 		graph_files_layout.addLayout(graph_buttons_layout)
 		self.graph_layout.addLayout(graph_files_layout)
 
-		# BPM Search Group
-		bpm_search_group = QtWidgets.QGroupBox("BPM Search")
-		bpm_search_layout = QHBoxLayout()
+		self.load_selected_files_button = QPushButton("Load Selected Files")
+		self.load_selected_files_button.clicked.connect(self.load_selected_files)
+		self.graph_layout.addWidget(self.load_selected_files_button)
+
+		self.loaded_files_list = QListWidget()
+		self.loaded_files_list.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
+		self.graph_layout.addWidget(self.loaded_files_list)
+
+		# --- Replace Beam Tabs with a Beam Selector and Single Plotting Canvas ---
+		beam_selector_layout = QHBoxLayout()
+		beam_label = QLabel("Select Beam:")
+		beam_selector_layout.addWidget(beam_label)
+		self.beam_selector = QtWidgets.QComboBox()
+		self.beam_selector.addItems(["Beam 1", "Beam 2"])
+		self.beam_selector.currentIndexChanged.connect(self.update_bpm_search_entry)
+		beam_selector_layout.addWidget(self.beam_selector)
+		self.graph_layout.addLayout(beam_selector_layout)
+		
+		# Now create the BPM search entry using the updated value from the selector
 		self.bpm_search_entry = QLineEdit()
-		bpm_search_layout.addWidget(self.bpm_search_entry)
-		self.bpm_search_button = QPushButton("Search BPM")
-		self.bpm_search_button.clicked.connect(self.search_bpm)
-		bpm_search_layout.addWidget(self.bpm_search_button)
-		self.bpm_graph_button = QPushButton("Graph BPM")
-		self.bpm_graph_button.clicked.connect(self.graph_bpm)
-		bpm_search_layout.addWidget(self.bpm_graph_button)
-		bpm_search_group.setLayout(bpm_search_layout)
-		self.graph_layout.addWidget(bpm_search_group)
+		self.update_bpm_search_entry()  # initialize with the correct default
+		self.bpm_search_entry.setPlaceholderText("Enter BPM search term")
+		bpm_layout = QHBoxLayout()
+		bpm_layout.addWidget(self.bpm_search_entry)
+		self.search_bpm_button = QPushButton("Search BPM")
+		self.search_bpm_button.clicked.connect(self.search_bpm)
+		bpm_layout.addWidget(self.search_bpm_button)
+		self.graph_bpm_button = QPushButton("Graph BPM")
+		self.graph_bpm_button.clicked.connect(self.graph_bpm)
+		bpm_layout.addWidget(self.graph_bpm_button)
+		self.graph_layout.addLayout(bpm_layout)
 
-		# Graph text and canvas below file management
-		self.graph_text = QTextEdit()
-		self.graph_text.setReadOnly(True)
-		self.graph_layout.addWidget(self.graph_text)
+		# BPM plotting canvas
+		self.bpm_figure = Figure(figsize=(6, 4))
+		self.bpm_canvas = FigureCanvas(self.bpm_figure)
+		self.graph_layout.addWidget(self.bpm_canvas)
 
-		self.figure = Figure(figsize=(6, 4))
-		self.canvas = FigureCanvas(self.figure)
-		self.graph_layout.addWidget(self.canvas)
+		# Add navigation toolbar for interactive zoom/pan
+		self.bpm_nav_toolbar = NavigationToolbar(self.bpm_canvas, self)
+		self.graph_layout.addWidget(self.bpm_nav_toolbar)
 
 	def change_default_input_path(self):
 		new_path = QFileDialog.getExistingDirectory(self, "Select Default Input Path", self.default_input_path)
@@ -463,7 +480,6 @@ class RDTFeeddownGUI(QMainWindow):
 			QMessageBox.critical(self, "Knob Validation", "Invalid Knob: " + repr(knob_message))
 
 	def run_analysis(self):
-		self.figure.clear()
 		# Divide heavy processing into steps for better UI responsiveness:
 		self.current_step = 0
 		self.analysis_steps = [
@@ -485,7 +501,6 @@ class RDTFeeddownGUI(QMainWindow):
 			self.current_step += 1
 			QTimer.singleShot(0, self.run_next_step)     # schedule next step ASAP
 		else:
-			self.canvas.draw()
 			self.update_graph_files_widget()  # show analysis output files in the widget
 			QMessageBox.information(self, "Run Analysis", "Analysis completed successfully!")
 
@@ -559,7 +574,7 @@ class RDTFeeddownGUI(QMainWindow):
 		dialog.setWindowTitle("Select Analysis Files")
 		dialog.setDirectory(self.default_input_path)  # Use default output path, adjust if needed
 		dialog.setFileMode(QFileDialog.ExistingFiles)
-		dialog.setNameFilter("All Files (*)")
+		dialog.setNameFilter("JSON Files (*.json)")
 
 		# Enable multiple selection in the dialog
 		for view in dialog.findChildren((QtWidgets.QListView, QtWidgets.QTreeView)):
@@ -583,25 +598,39 @@ class RDTFeeddownGUI(QMainWindow):
 		if not search_term:
 			QMessageBox.information(self, "BPM Search", "No BPM specified.")
 			return
-		results = []
-		for i in range(self.graph_files_list.count()):
-			file_path = self.graph_files_list.item(i).text()
-			try:
-				with open(file_path, "r") as f:
-					content = f.read()
-				if search_term in content:
-					results.append(file_path)
-			except Exception:
-				pass
-		if results:
-			QMessageBox.information(self, "BPM Search", f"Found BPM '{search_term}' in:\n" + "\n".join(results))
+		beam = self.beam_selector.currentText()
+		if beam == "Beam 1":
+			data = getattr(self, 'b1rdtdata', None)
 		else:
-			QMessageBox.information(self, "BPM Search", f"BPM '{search_term}' not found.")
+			data = getattr(self, 'b2rdtdata', None)
+		if data is None:
+			QMessageBox.information(self, "BPM Search", f"No data available for {beam}.")
+			return
+		if search_term in data["data"]:
+			QMessageBox.information(self, "BPM Search", f"Found BPM '{search_term}' in {beam}.")
+		else:
+			QMessageBox.information(self, "BPM Search", f"BPM '{search_term}' not found in {beam}.")
 
 	def graph_bpm(self):
-		plot_BPM(BPM, data, rdt, rdt_plane, filename)
-		pass
-
+		BPM = self.bpm_search_entry.text().strip()
+		if not BPM:
+			QMessageBox.information(self, "BPM Graph", "No BPM specified.")
+			return
+		beam = self.beam_selector.currentText()
+		data = getattr(self, 'b1rdtdata', None) if beam == "Beam 1" else getattr(self, 'b2rdtdata', None)
+		if data is None:
+			QMessageBox.information(self, "BPM Graph", f"No data available for {beam}.")
+			return
+		# Search for the BPM in the data before plotting (assuming data["data"] holds BPM keys)
+		if BPM not in data.get("data", {}):
+			QMessageBox.information(self, "BPM Graph", f"BPM '{BPM}' not found in {beam}.")
+			return
+		self.bpm_figure.clear()
+		ax1 = self.bpm_figure.add_subplot(211)
+		ax2 = self.bpm_figure.add_subplot(212)
+		plot_BPM(BPM, data, self.rdt, self.rdt_plane, ax1=ax1, ax2=ax2, self.log_error)
+		self.bpm_canvas.draw()
+	
 	def save_b1_rdtdata(self):
 		filename, _ = QFileDialog.getSaveFileName(
 			self,
@@ -614,15 +643,6 @@ class RDTFeeddownGUI(QMainWindow):
 				filename += ".json"
 			save_RDTdata(self.b1rdtdata, filename)
 
-	def load_b1_rdtdata(self):
-		filename, _ = QFileDialog.getOpenFileName(
-			self,
-			"Load Beam 1 RDT Data",
-			self.default_output_path,
-			"JSON Files (*.json)"
-		)
-		if filename:
-			self.b1rdtdata = load_RDTdata(filename)
 
 	def save_b2_rdtdata(self):
 		filename, _ = QFileDialog.getSaveFileName(
@@ -637,12 +657,22 @@ class RDTFeeddownGUI(QMainWindow):
 			save_RDTdata(self.b2rdtdata, filename)
 			self.analysis_output_files.append(f"{self.output_path}/{filename}")
 
-	def load_b2_rdtdata(self):
-		filename, _ = QFileDialog.getOpenFileName(
-			self,
-			"Load Beam 2 RDT Data",
-			self.default_output_path,
-			"JSON Files (*.json)"
-		)
-		if filename:
-			self.b2rdtdata = load_RDTdata(filename)
+	def load_selected_files(self):
+		# Load selected file paths from the graph files list into the loaded files list
+		selected_files = [self.graph_files_list.item(i).text() for i in range(self.graph_files_list.count()) 
+						if self.graph_files_list.item(i).isSelected()]
+		self.loaded_files_list.clear()
+		loaded_output_data = []
+		for file in selected_files:
+			self.loaded_files_list.addItem(file)
+			data = load_RDTdata(file)
+			loaded_output_data.append(data)
+		self.b1rdtdata, self.b2rdtdata, self.rdt, self.rdt_plane = group_datasets(loaded_output_data, self.log_error)
+
+	def update_bpm_search_entry(self):
+		# Set default BPM value based on the selected beam.
+		if self.beam_selector.currentText() == "Beam 1":
+			self.bpm_search_entry.setText("BPM.30L2.B1")
+		else:
+			self.bpm_search_entry.setText("BPM.30L1.B2")
+

@@ -2,47 +2,54 @@ import matplotlib.pyplot as plt
 import numpy as np
 from .analysis import polyfunction, calculate_avg_rdt_shift, arcBPMcheck, badBPMcheck
 
-def plot_BPM(BPM, knob_files, gradfile, shift, rdt, rdt_plane, filename):
-    fig, (ax1, ax2) = plt.subplots(2, 1, sharey=False)
-    diffdfs = []
-    for f in knob_files:
-        df = pd.read_csv(f)
-        df = df[df["NAME"] == BPM]
-        df["XING"] = f.replace(".csv", "").split("_")[-1]
-        diffdfs.append(df)
-    diffdata = pd.concat(diffdfs)
-    fitdata = fitdata[fitdata["NAME"] == BPM]
-    xing, re, im = [], [], []
+def plot_BPM(BPM, fulldata, rdt, rdt_plane, ax1=None, ax2=None, log_func=None):
+    try:
+        data = fulldata["data"]
+        diffdata = data[BPM]['diffdata']
+        fitdata = data[BPM]['fitdata']
+        xing, re, im = [], [], []
+        # print(diffdata)
+        for x in range(len(diffdata)):
+            print(diffdata[x])
+            xing.append(diffdata[x][0])
+            re.append(diffdata[x][1])
+            im.append(diffdata[x][2])
 
-    for x in range(len(diffdata)):
-        xing.append(diffdata[x][0])
-        re.append(diffdata[x][1])
-        im.append(diffdata[x][2])
+        xing = np.array(xing)
+        re = np.array(re)
+        im = np.array(im)
 
-    xing = np.array(xing)
-    re = np.array(re)
-    im = np.array(im)
+        if ax1 is None or ax2 is None:
+            fig, (ax1, ax2) = plt.subplots(2, 1, sharey=False)
+        else:
+            fig = ax1.figure
 
-    xing_min = np.min(xing)
-    xing_max = np.max(xing)
-    xing_ran = xing_max - xing_min
-    xfit = np.arange(xing_min, xing_max, xing_ran / 100.0)
-    refit = polyfunction(xfit, fitdata[0][0], fitdata[0][1], fitdata[0][2])
-    imfit = polyfunction(xfit, fitdata[3][0], fitdata[3][1], fitdata[3][2])
+        xing_min = np.min(xing)
+        xing_max = np.max(xing)
+        xing_ran = xing_max - xing_min
+        xfit = np.arange(xing_min, xing_max, xing_ran / 100.0)
+        refit = polyfunction(xfit, fitdata[0][0], fitdata[0][1], fitdata[0][2])
+        imfit = polyfunction(xfit, fitdata[3][0], fitdata[3][1], fitdata[3][2])
 
-    ax1.set_ylabel(f"{BPM} Re$f_{{{rdt_plane},{rdt}}}$")
-    ax1.set_xlabel("Knob trim")
-    ax1.plot(xfit, refit)
-    ax1.plot(xing, re, 'ro')
+        ax1.set_ylabel(f"{BPM} Re$f_{{{rdt_plane},{rdt}}}$")
+        ax1.set_xlabel("Knob trim")
+        ax1.plot(xfit, refit)
+        ax1.plot(xing, re, 'ro')
 
-    ax2.set_ylabel(f"{BPM} Im$f_{{{rdt_plane},{rdt}}}$")
-    ax2.set_xlabel("Knob trim")
-    ax2.plot(xfit, imfit)
-    ax2.plot(xing, im, 'ro')
+        ax2.set_ylabel(f"{BPM} Im$f_{{{rdt_plane},{rdt}}}$")
+        ax2.set_xlabel("Knob trim")
+        ax2.plot(xfit, imfit)
+        ax2.plot(xing, im, 'ro')
 
-    plt.tight_layout()
-    plt.savefig(filename, bbox_inches='tight')
-    return
+        plt.tight_layout()
+    except Exception as e:
+        if log_func:
+            log_func(f"Error plotting BPM {BPM}: {e}")
+        else:
+            print(f"Error plotting BPM {BPM}: {e}")
+        return None
+
+    return fig
 
 def plot_avg_rdt_shift(ax, data, rdt, rdt_plane, label_prefix):
     """

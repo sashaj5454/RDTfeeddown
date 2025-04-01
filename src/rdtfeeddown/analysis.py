@@ -4,8 +4,6 @@ from scipy.stats import zscore
 import csv
 from .utils import get_analysis_knobsetting
 import tfs
-import glob
-import numpy as np
 import json
 
 def filter_outliers(
@@ -108,6 +106,7 @@ def getrdt_omc3(ldb, modelbpmlist, bpmdata, ref, flist, knob, outputpath, rdt, r
 		update_bpm_data(bpmdata, cdat, 'data', ksetting)
 
 	intersectedBPMdata = {}
+	beam_no = modelbpmlist[0][-1]
 	for bpm in modelbpmlist:
 		if len(bpmdata[bpm]['ref']) != 1 or len(bpmdata[bpm]['data']) != len(flist):
 			continue
@@ -121,10 +120,10 @@ def getrdt_omc3(ldb, modelbpmlist, bpmdata, ref, flist, knob, outputpath, rdt, r
 			for k in range(len(dat))
 		]
 		diffdat.sort(key=lambda x: x[0])
-
 		intersectedBPMdata[bpm] = {'s': s, 'diffdata': diffdat}
 
-	return intersectedBPMdata
+	# New: Add metadata for rdt, rdt_plane and knob
+	return {'metadata': {'beam' : f'b{beam_no}', 'ref' : ref, 'rdt': rdt, 'rdt_plane': rdt_plane, 'knob': knob}, 'data': intersectedBPMdata}
 
 def polyfunction(x,c,m,n):
 	y=c+m*x+n*x**2
@@ -140,7 +139,8 @@ def fitdatanoerrors(xdata,ydata,fitfunction):
 	perr = np.sqrt(np.diag(pcov))
 	return popt,pcov,perr
 
-def fit_BPM(data):
+def fit_BPM(fulldata):
+	data = fulldata['data']
 	for bpm in data.keys():
 		diffdata=data[bpm]['diffdata']
 		xing=[]
@@ -149,13 +149,15 @@ def fit_BPM(data):
 		re_err=[]
 		im_err=[]
 		for x in range(len(diffdata)):
+			print(diffdata[x])
 			xing.append(diffdata[x][0])
 			re.append(diffdata[x][1])
 			im.append(diffdata[x][2])
 		re_opt,re_cov,re_err = fitdatanoerrors(xing,re,polyfunction)
 		im_opt,im_cov,im_err = fitdatanoerrors(xing,im,polyfunction)
 		data[bpm]['fitdata']=[re_opt,re_cov,re_err,im_opt,im_cov,im_err]
-	return data
+	fulldata['data'] = data
+	return fulldata
 
 def arcBPMcheck(bpm):
 	bpmtype=bpm.partition('.')[0]
@@ -302,9 +304,85 @@ def save_RDTdata(data, filename):
         json.dump(data, fout, default=_convert_for_json)
 
 def load_RDTdata(filename):
-    with open(filename, 'r') as fin:
-        return json.load(fin)
+	with open(filename, 'r') as fin:
+		return json.load(fin)
 
+def group_datasets(datasets, log_func=None):
+	if not datasets:
+		return None, None
+	rdt, rdt_plane = None, None
+	grouped_b1 = {'metadata': None, 'data': {}}
+	grouped_b2 = {'metadata': None, 'data': {}}
+	if len(datasets) == 1:
+		# If only one dataset, return it as is
+		dataset = datasets[0]
+		beam = dataset['metadata'].get('beam')
+		if beam is None:
+			if log_func:
+				log_func("Dataset metadata missing the 'beam' key.")
+			else:
+				raise ValueError("Dataset metadata missing the 'beam' key.")
+		if beam.lower() == 'b1':
+			grouped_b1['metadata'] = dataset['metadata']
+			grouped_b1['data'] = dataset['data']
+			return grouped_b1, None, grouped_b1['metadata']['rdt'], grouped_b1['metadata']['rdt_plane']
+		elif beam.lower() == 'b2':
+			grouped_b2['metadata'] = dataset['metadata']
+			grouped_b2['data'] = dataset['data']
+			return None, grouped_b2, grouped_b2['metadata']['rdt'], grouped_b2['metadata']['rdt_plane']
+	for data in datasets:
+		beam = data['metadata'].get('beam')
+		if beam is None:
+			if log_func:
+				log_func("Dataset metadata missing the 'beam' key.")
+			else:
+				raise ValueError("Dataset metadata missing the 'beam' key.")
+		# Group by the beam value: for example, "b1" or "b2"
+		if beam.lower() == 'b1':
+			# Set reference metadata if not set
+			if grouped_b1['metadata'] is None:
+				grouped_b1['metadata'] = data['metadata']
+			# Check for consistency with already grouped metadata:
+			elif data['metadata'] != grouped_b1['metadata']:
+				if log_func:
+					log_func("Datasets for beam b1 have differing metadata; cannot group them together.")
+				else:
+					raise ValueError("Datasets for beam 1 have differing metadata; cannot group them together.")
+			# Merge the data dictionaries
+			grouped_b1['data'].update(data['data'])
+		elif beam.lower() == 'b2':
+			if grouped_b2['metadata'] is None:
+				grouped_b2['metadata'] = data['metadata']
+			elif data['metadata'] != grouped_b2['metadata']:
+				if log_func:
+					log_func("Datasets for beam b2 have differing metadata; cannot group them together.")
+				else:
+					raise ValueError("Datasets for beam 2 have differing metadata; cannot group them together.")
+			grouped_b2['data'].update(data['data'])
+		else:
+			if log_func:
+				log_func(f"Unexpected beam value: {beam}")
+			else:
+				raise ValueError(f"Unexpected beam value: {beam}")
+		if grouped_b1['metadata'] is not None and grouped_b2['metadata'] is not None:
+			if grouped_b1['metadata'] != grouped_b2['metadata']:
+				if log_func:
+					log_func("Datasets for beam 1 and beam 2 have differing metadata; cannot group them together.")
+				else:
+					raise ValueError("Datasets for beam 1 and beam 2 have differing metadata; cannot group them together.")
+		if grouped_b1['metadata'] is not None:
+			rdt = grouped_b1['metadata']['rdt']
+			rdt_plane = grouped_b1['metadata']['rdt_plane']
+		elif grouped_b2['metadata'] is not None:
+			rdt = grouped_b2['metadata']['rdt']
+			rdt_plane = grouped_b2['metadata']['rdt_plane']
+		else:
+			if log_func:
+				log_func("No metadata found for either beam.")
+			else:
+				raise ValueError("No metadata found for either beam.")
+
+	return grouped_b1, grouped_b2, rdt, rdt_plane
 
 
 
