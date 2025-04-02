@@ -79,6 +79,7 @@ def update_bpm_data(bpmdata, data, key, knob_setting):
 		bpmdata[name][key].append([knob_setting, amp, re, im])
 
 def getrdt_omc3(ldb, modelbpmlist, bpmdata, ref, flist, knob, outputpath, rdt, rdt_plane, rdtfolder, sim, propfile, log_func=None):
+	print(sim, propfile)
 	mapping_dict = {}
 	if sim:
 		mapping_dict = csv_to_dict(propfile)
@@ -87,7 +88,7 @@ def getrdt_omc3(ldb, modelbpmlist, bpmdata, ref, flist, knob, outputpath, rdt, r
 	refk = None
 	if sim and mapping_dict:
 		for entry in mapping_dict:
-			if entry.get("ref") == ref:
+			if entry.get("ref") == os.path.basename(ref):
 				refk = float(entry.get("knob", 0))  # Default to 0 if "knob" is missing
 				break
 		if refk is None:
@@ -114,7 +115,7 @@ def getrdt_omc3(ldb, modelbpmlist, bpmdata, ref, flist, knob, outputpath, rdt, r
 	updated_count = 0
 	for f in flist:
 		if sim and mapping_dict:
-			entry = next((e for e in mapping_dict if e.get("ref") == f), None)
+			entry = next((e for e in mapping_dict if e.get("ref") == os.path.basename(f)), None)
 			if entry is not None:
 				ksetting = float(entry.get("knob", 0))
 			else:

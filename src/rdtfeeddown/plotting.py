@@ -63,7 +63,7 @@ def plot_BPM(BPM, fulldata, rdt, rdt_plane, ax1=None, ax2=None, log_func=None):
 		ax2.plot(xfit, imfit)
 		ax2.plot(xing, im, 'ro')
 
-		plt.tight_layout(pad=2.0, h_pad=2.5)
+		plt.tight_layout(pad=2.0, h_pad=5.0)
 	except Exception as e:
 		if log_func:
 			log_func(f"Error plotting BPM {BPM}: {e}")
@@ -81,6 +81,7 @@ def plot_avg_rdt_shift(ax, data, rdt, rdt_plane):
 	ax.set_ylabel(f"sqrt($\\Delta$Re$f_{{{rdt_plane},{rdt}}}^2$+$\\Delta$Im$f_{{{rdt_plane},{rdt}}}^2$)")
 	ax.set_xlabel(f"Knob trim")
 	ax.plot(xing, ampdat)
+	plt.tight_layout(pad=2.0, h_pad=5.0)
 	ax.errorbar(xing, ampdat, yerr=stddat, fmt='ro')
 
 def plot_RDTshifts(b1data, b2data, rdt, rdt_plane, axes, log_func=None):
@@ -146,13 +147,14 @@ def plot_RDTshifts(b1data, b2data, rdt, rdt_plane, axes, log_func=None):
 			ax_im.plot(sdat, dimdkdat)
 			ax_im.errorbar(sdat, dimdkdat, yerr=dimdkerr, fmt='ro')
 
-			for ax_ in ( ax_re, ax_im):
+			for ax_ in (ax_re, ax_im):
 				# Retrieve the current y-limits from the Axes object
 				y_min, y_max = ax_.get_ylim()
 				for ip in range(1, 9):
 					ip_x = IP_POS_DEFAULT[label][f"IP{ip}"]
 					ax_.axvline(x=ip_x, color="black", linestyle="--")
 					ax_.text(ip_x, y_max * 1.05, f"IP{ip}", rotation=0, va="bottom", ha="center")
+				plt.tight_layout(pad=2.0, h_pad=5.0)
 
 		# Case 1: Both Beam 1 and Beam 2 data
 		if b1data is not None and b2data is not None:
@@ -252,6 +254,7 @@ def plot_RDT(b1data, b2data, rdt, rdt_plane, axes, log_func=None):
 					ip_x = IP_POS_DEFAULT[beam_label][f"IP{ip}"]
 					ax_.axvline(x=ip_x, color="black", linestyle="--")
 					ax_.text(ip_x, y_max * 1.05, f"IP{ip}", rotation=0, va="bottom", ha="center")
+				plt.tight_layout(pad=2.0, h_pad=5.0)
 
 		if b1data and b2data:
 			# Plot B1 (left column)

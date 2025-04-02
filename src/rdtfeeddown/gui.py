@@ -295,7 +295,7 @@ class RDTFeeddownGUI(QMainWindow):
 		bpm_tab_layout.addLayout(bpm_layout)
 
 		# BPM plotting canvas
-		self.bpmFigure = Figure(figsize=(6, 4))
+		self.bpmFigure = Figure(figsize=(6, 40))
 		self.bpmCanvas = FigureCanvas(self.bpmFigure)
 		bpm_tab_layout.addWidget(self.bpmCanvas)
 		# Add navigation toolbar for interactive zoom/pan
@@ -314,7 +314,7 @@ class RDTFeeddownGUI(QMainWindow):
 		self.plot_rdt_button = QPushButton("Plot RDT")
 		self.plot_rdt_button.clicked.connect(self.plot_rdt)
 		rdt_layout.addWidget(self.plot_rdt_button)
-		self.rdtFigure = Figure(figsize=(6,20))
+		self.rdtFigure = Figure(figsize=(6,40))
 		self.rdtCanvas = FigureCanvas(self.rdtFigure)
 		rdt_layout.addWidget(self.rdtCanvas)
 		self.rdtNavToolbar = NavigationToolbar(self.rdtCanvas, self)
@@ -373,7 +373,7 @@ class RDTFeeddownGUI(QMainWindow):
 		dialog.setDirectory(self.default_input_path)
 		dialog.setFileMode(QFileDialog.Directory)
 		dialog.setOption(QFileDialog.ShowDirsOnly, True)
-		dialog.setNameFilter("Beam1BunchTurn*;;All Folders (*)")
+		dialog.setNameFilter("LHCB1 folders (Beam1BunchTurn*);;All Folders (*)")
 		if dialog.exec_() == QFileDialog.Accepted:
 			folderpath = dialog.selectedFiles()[0]
 			self.beam1_reffolder_entry.setText(folderpath)
@@ -387,7 +387,7 @@ class RDTFeeddownGUI(QMainWindow):
 		dialog.setDirectory(self.default_input_path)
 		dialog.setFileMode(QFileDialog.Directory)
 		dialog.setOption(QFileDialog.ShowDirsOnly, True)
-		dialog.setNameFilter("Beam2BunchTurn*;;All Folders (*)")
+		dialog.setNameFilter("LHCB2 folders (Beam2BunchTurn*);;All Folders (*)")
 		if dialog.exec_() == QFileDialog.Accepted:
 			folderpath = dialog.selectedFiles()[0]
 			self.beam2_reffolder_entry.setText(folderpath)
@@ -587,7 +587,9 @@ class RDTFeeddownGUI(QMainWindow):
 			self.b1rdtdata = getrdt_omc3(self.ldb, b1modelbpmlist, b1bpmdata,
 										  self.beam1_reffolder, self.beam1_folders,
 										  self.knob, self.output_path,
-										  self.rdt, self.rdt_plane, self.rdtfolder, self.log_error)
+										  self.rdt, self.rdt_plane, self.rdtfolder,
+										  self.simulation_checkbox.isChecked(), self.simulation_file_entry.text(),
+										  self.log_error)
 			self.b1rdtdata = fit_BPM(self.b1rdtdata)
 
 	def analysis_step3(self):
@@ -597,7 +599,9 @@ class RDTFeeddownGUI(QMainWindow):
 			self.b2rdtdata = getrdt_omc3(self.ldb, b2modelbpmlist, b2bpmdata,
 										  self.beam2_reffolder, self.beam2_folders,
 										  self.knob, self.output_path,
-										  self.rdt, self.rdt_plane, self.rdtfolder, self.log_error)
+										  self.rdt, self.rdt_plane, self.rdtfolder, 
+										  self.simulation_checkbox.isChecked(), self.simulation_file_entry.text(),
+										  self.log_error)
 			self.b2rdtdata = fit_BPM(self.b2rdtdata)
 	
 	def analysis_step4(self):			
@@ -867,7 +871,7 @@ class RDTFeeddownGUI(QMainWindow):
 	# New method to select a properties file
 	def select_properties_file(self):
 		filename, _ = QFileDialog.getOpenFileName(
-			self, "Select Properties File", self.default_input_path, "Properties Files (*.properties);;All Files (*)"
+			self, "Select Properties File", self.default_input_path, "Properties Files (*.csv);;All Files (*)"
 		)
 		if filename:
 			self.simulation_file_entry.setText(filename)
