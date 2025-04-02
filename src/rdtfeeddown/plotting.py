@@ -53,18 +53,17 @@ def plot_BPM(BPM, fulldata, rdt, rdt_plane, ax1=None, ax2=None, log_func=None):
 		refit = polyfunction(xfit, fitdata[0][0], fitdata[0][1], fitdata[0][2])
 		imfit = polyfunction(xfit, fitdata[3][0], fitdata[3][1], fitdata[3][2])
 
-		ax1.set_ylabel(f"{BPM} Re$f_{{{rdt_plane},{rdt}}}$")
+		ax1.set_ylabel(f"{BPM} Re($f_{{{rdt_plane},{rdt}}}$)")
 		ax1.set_xlabel("Knob trim")
 		ax1.plot(xfit, refit)
 		ax1.plot(xing, re, 'ro')
 
-		ax2.set_ylabel(f"{BPM} Im$f_{{{rdt_plane},{rdt}}}$")
+		ax2.set_ylabel(f"{BPM} Im($f_{{{rdt_plane},{rdt}}}$)")
 		ax2.set_xlabel("Knob trim")
 		ax2.plot(xfit, imfit)
 		ax2.plot(xing, im, 'ro')
-		print(xfit, refit, imfit)
 
-		plt.tight_layout()
+		plt.tight_layout(pad=2.0, h_pad=2.5)
 	except Exception as e:
 		if log_func:
 			log_func(f"Error plotting BPM {BPM}: {e}")
@@ -74,13 +73,13 @@ def plot_BPM(BPM, fulldata, rdt, rdt_plane, ax1=None, ax2=None, log_func=None):
 
 	return fig
 
-def plot_avg_rdt_shift(ax, data, rdt, rdt_plane, axes, label_prefix):
+def plot_avg_rdt_shift(ax, data, rdt, rdt_plane):
 	"""
 	Plot the average RDT shift and standard deviation for given data on the provided axis.
 	"""
 	xing, ampdat, stddat = calculate_avg_rdt_shift(data)
-	ax.set_ylabel(f"{label_prefix} sqrt($\\Delta$Re$f_{{{rdt_plane},{rdt}}}^2$+$\\Delta$Im$f_{{{rdt_plane},{rdt}}}^2$)")
-	ax.set_xlabel(f"{label_prefix} Knob trim")
+	ax.set_ylabel(f"sqrt($\\Delta$Re$f_{{{rdt_plane},{rdt}}}^2$+$\\Delta$Im$f_{{{rdt_plane},{rdt}}}^2$)")
+	ax.set_xlabel(f"Knob trim")
 	ax.plot(xing, ampdat)
 	ax.errorbar(xing, ampdat, yerr=stddat, fmt='ro')
 
@@ -107,13 +106,16 @@ def plot_RDTshifts(b1data, b2data, rdt, rdt_plane, axes, log_func=None):
 			# Unpack the axes
 			ax_avg, ax_re, ax_im = axs
 
+			 # Set title for the beam column
+			ax_avg.set_title(label, pad=20)
+
 			# Collect data for dRe/dknob and dIm/dknob
 			sdat, dredkdat, dimdkdat = [], [], []
 			dredkerr, dimdkerr = [], []
 			for bpm in data.keys():
 				if not arcBPMcheck(bpm) or badBPMcheck(bpm):
 					continue
-				s = data[bpm]['s']
+				s = data[bpm]['s']/1000
 				# [re_opt, re_cov, re_err, im_opt, im_cov, im_err]
 				re_opt, _, re_err, im_opt, _, im_err = data[bpm]['fitdata']
 				# re_opt[1] => slope in re polynomial fit, re_err[1] => error in that slope
@@ -130,19 +132,27 @@ def plot_RDTshifts(b1data, b2data, rdt, rdt_plane, axes, log_func=None):
 			dimdkerr = np.array(dimdkerr)
 
 			# Plot average re^2 + im^2
-			plot_avg_rdt_shift(ax_avg, data, rdt, rdt_plane, label)
+			plot_avg_rdt_shift(ax_avg, data, rdt, rdt_plane)
 
 			# Plot dRe
-			ax_re.set_ylabel(f'{label} dRe$f_{{{rdt_plane},{rdt}}}$/dknob')
-			ax_re.set_xlabel(f'{label} Knob trim')
+			ax_re.set_ylabel(f'$\partial$Re$f_{{{rdt_plane},{rdt}}}$/$\partial$knob')
+			ax_re.set_xlabel(f'S [km]')
 			ax_re.plot(sdat, dredkdat)
 			ax_re.errorbar(sdat, dredkdat, yerr=dredkerr, fmt='ro')
 
 			# Plot dIm
-			ax_im.set_ylabel(f'{label} dIm$f_{{{rdt_plane},{rdt}}}$/dknob')
-			ax_im.set_xlabel(f'{label} Knob trim')
+			ax_im.set_ylabel(f'$\partial$Im$f_{{{rdt_plane},{rdt}}}$/$\partial$knob')
+			ax_im.set_xlabel(f'S [km]')
 			ax_im.plot(sdat, dimdkdat)
 			ax_im.errorbar(sdat, dimdkdat, yerr=dimdkerr, fmt='ro')
+
+			for ax_ in ( ax_re, ax_im):
+				# Retrieve the current y-limits from the Axes object
+				y_min, y_max = ax_.get_ylim()
+				for ip in range(1, 9):
+					ip_x = IP_POS_DEFAULT[label][f"IP{ip}"]
+					ax_.axvline(x=ip_x, color="black", linestyle="--")
+					ax_.text(ip_x, y_max * 1.05, f"IP{ip}", rotation=0, va="bottom", ha="center")
 
 		# Case 1: Both Beam 1 and Beam 2 data
 		if b1data is not None and b2data is not None:
@@ -152,15 +162,13 @@ def plot_RDTshifts(b1data, b2data, rdt, rdt_plane, axes, log_func=None):
 			plot_beam_data((ax2, ax4, ax6), b2data, "LHCB2")
 
 		# Case 2: Only Beam 1 data given (b2data is None)
-		elif b1data is not None:
+		if b1data is not None:
 			plot_beam_data((ax1, ax2, ax3), b1data, "LHCB1")
 
 		# Case 3: Only Beam 2 data given (b1data is None)
-		elif b2data is not None:
+		if b2data is not None:
 			plot_beam_data((ax1, ax2, ax3), b2data, "LHCB2")
 
-		# Adjust layout and save
-		plt.tight_layout()
 	except Exception as e:
 		if log_func:
 			log_func(f"Error plotting f<sub>{rdt_plane},{rdt}</sub> RDT shift: {e}")
@@ -183,7 +191,6 @@ def plot_RDT(b1data, b2data, rdt, rdt_plane, axes, log_func=None):
 		else:
 			ax1, ax2, ax3 = axes
 
-
 		def plot_single_beam(ax_amp, ax_re, ax_im, data, beam_label):
 			"""
 			Plots |f|, Re(f), and Im(f) vs. knob trim in three provided axes.
@@ -197,13 +204,16 @@ def plot_RDT(b1data, b2data, rdt, rdt_plane, axes, log_func=None):
 				for entry in data[first_bpm]['diffdata']:
 					xing.append(entry[0])
 
+			 # Set title for the beam column
+			ax_amp.set_title(beam_label, pad=20)
+
 			# For each crossing angle, gather BPM data
 			for angle in xing:
 				sdat, ampdat, redat, imdat = [], [], [], []
 				for bpm in data.keys():
 					if not arcBPMcheck(bpm) or badBPMcheck(bpm):
 						continue
-					s = data[bpm]['s']
+					s = data[bpm]['s']/1000
 					diffdata = data[bpm]['diffdata']
 					for row in diffdata:
 						if row[0] == angle:
@@ -221,24 +231,27 @@ def plot_RDT(b1data, b2data, rdt, rdt_plane, axes, log_func=None):
 				imdat = np.array(imdat)
 
 				# Plot amplitude
-				ax_amp.set_ylabel(f'{beam_label} $|f_{{{rdt_plane},{rdt}}}|$')
-				ax_amp.set_xlabel(f'{beam_label} Knob trim')
+				ax_amp.set_ylabel(f'$|f_{{{rdt_plane},{rdt}}}|$')
+				ax_amp.set_xlabel(f'S [km]')
 				ax_amp.plot(sdat, ampdat, marker='o')
 
 				# Plot Delta Re
-				ax_re.set_ylabel(f'{beam_label} ΔRe($f_{{{rdt_plane},{rdt}}}$)')
-				ax_re.set_xlabel(f'{beam_label} Knob trim')
+				ax_re.set_ylabel(f'ΔRe($f_{{{rdt_plane},{rdt}}}$)')
+				ax_re.set_xlabel(f'S [km]')
 				ax_re.plot(sdat, redat, marker='o')
 
 				# Plot Delta Im
-				ax_im.set_ylabel(f'{beam_label} ΔIm($f_{{{rdt_plane},{rdt}}}$)')
-				ax_im.set_xlabel(f'{beam_label} Knob trim')
+				ax_im.set_ylabel(f'ΔIm($f_{{{rdt_plane},{rdt}}}$)')
+				ax_im.set_xlabel(f'S [km]')
 				ax_im.plot(sdat, imdat, marker='o')
 
-			y_max = plt.gca().get_ylim()[1]
-			for ip in range(1, 9):
-				plt.axvline(x=IP_POS_DEFAULT[beam_label][f"IP{ip}"], color="black", linestyle="--")
-				plt.text(IP_POS_DEFAULT[beam_label][f"IP{ip}"], y_max * 1.05, f'IP{ip}', rotation=0, va='bottom', ha='center')
+			for ax_ in (ax_amp, ax_re, ax_im):
+				# Retrieve the current y-limits from the Axes object
+				y_min, y_max = ax_.get_ylim()
+				for ip in range(1, 9):
+					ip_x = IP_POS_DEFAULT[beam_label][f"IP{ip}"]
+					ax_.axvline(x=ip_x, color="black", linestyle="--")
+					ax_.text(ip_x, y_max * 1.05, f"IP{ip}", rotation=0, va="bottom", ha="center")
 
 		if b1data and b2data:
 			# Plot B1 (left column)
@@ -252,7 +265,6 @@ def plot_RDT(b1data, b2data, rdt, rdt_plane, axes, log_func=None):
 			# Only B2
 			plot_single_beam(ax1, ax2, ax3, b2data, "LHCB2")
 
-		plt.tight_layout()
 	except Exception as e:
 		if log_func:
 			log_func(f"Error plotting f<sub>{rdt_plane},{rdt}</sub> RDT shift: {e}")

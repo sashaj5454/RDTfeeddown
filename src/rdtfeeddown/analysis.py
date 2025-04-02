@@ -2,7 +2,7 @@ import numpy as np
 from scipy.optimize import curve_fit
 from scipy.stats import zscore
 import csv
-from .utils import get_analysis_knobsetting
+from .utils import get_analysis_knobsetting, csv_to_dict
 import tfs
 import json
 
@@ -78,32 +78,66 @@ def update_bpm_data(bpmdata, data, key, knob_setting):
 		name, amp, re, im = entry
 		bpmdata[name][key].append([knob_setting, amp, re, im])
 
-def getrdt_omc3(ldb, modelbpmlist, bpmdata, ref, flist, knob, outputpath, rdt, rdt_plane, rdtfolder, log_func=None):
-	"""
-	Processes RDT data and updates BPM data dictionary.
-	"""
-	refk = get_analysis_knobsetting(ldb, knob, ref)
+def getrdt_omc3(ldb, modelbpmlist, bpmdata, ref, flist, knob, outputpath, rdt, rdt_plane, rdtfolder, sim, propfile, log_func=None):
+	mapping_dict = {}
+	if sim:
+		mapping_dict = csv_to_dict(propfile)
+
+	# Search for ref in mapping_dict and retrieve knob value
+	refk = None
+	if sim and mapping_dict:
+		for entry in mapping_dict:
+			if entry.get("ref") == ref:
+				refk = float(entry.get("knob", 0))  # Default to 0 if "knob" is missing
+				break
+		if refk is None:
+			msg = f"Reference knob {ref} not found in mapping dictionary."
+			if log_func:
+				log_func(msg)
+			raise RuntimeError(msg)
+	else:  # Fallback to original method if not found
+		refk = get_analysis_knobsetting(ldb, knob, ref, log_func)
+	if refk is None:
+		msg = f"Reference knob {ref} not found."
+		if log_func:
+			log_func(msg)
+		raise RuntimeError(msg)
 	try:
 		refdat = readrdtdatafile(ref, rdt, rdt_plane, rdtfolder, log_func)
 	except FileNotFoundError:
+		msg = f"RDT file not found in reference folder: {ref}."
 		if log_func:
-			log_func(f"RDT file not found in reference folder: {ref}. Skipping reference data.")
-		else:
-			print(f"RDT file not found in reference folder: {ref}. Skipping reference data.")
-		refdat = []
+			log_func(msg)
+		raise RuntimeError(msg)
 	update_bpm_data(bpmdata, refdat, 'ref', refk)
 
+	updated_count = 0
 	for f in flist:
-		ksetting = get_analysis_knobsetting(ldb, knob, f)
+		if sim and mapping_dict:
+			entry = next((e for e in mapping_dict if e.get("ref") == f), None)
+			if entry is not None:
+				ksetting = float(entry.get("knob", 0))
+			else:
+				ksetting = get_analysis_knobsetting(ldb, knob, f, log_func)
+		else:  # Fallback to original method if not found
+			ksetting = get_analysis_knobsetting(ldb, knob, f, log_func)
+
 		try:
 			cdat = readrdtdatafile(f, rdt, rdt_plane, rdtfolder, log_func)
 		except FileNotFoundError:
+			msg = f"RDT file not found in measurement folder: {f}."
 			if log_func:
-				log_func(f"RDT file not found in measurement folder: {f}. Skipping.")
-			else:
-				print(f"RDT file not found in measurement folder: {f}. Skipping.")
-			continue
+				log_func(msg)
+			raise RuntimeError(msg)
 		update_bpm_data(bpmdata, cdat, 'data', ksetting)
+		updated_count += 1
+
+	# If no measurement folder updated, throw error and return None
+	if updated_count == 0:
+		msg = "No BPM data updated for any measurement folder; stopping analysis."
+		if log_func:
+			log_func(msg)
+		raise RuntimeError(msg)
 
 	intersectedBPMdata = {}
 	beam_no = modelbpmlist[0][-1]
@@ -121,6 +155,11 @@ def getrdt_omc3(ldb, modelbpmlist, bpmdata, ref, flist, knob, outputpath, rdt, r
 		]
 		diffdat.sort(key=lambda x: x[0])
 		intersectedBPMdata[bpm] = {'s': s, 'diffdata': diffdat}
+	if not intersectedBPMdata:
+		msg = "No BPM data found after intersection."
+		if log_func:
+			log_func(msg)
+		raise RuntimeError(msg)
 
 	# New: Add metadata for rdt, rdt_plane and knob
 	return {'metadata': {'beam' : f'b{beam_no}', 'ref' : ref, 'rdt': rdt, 'rdt_plane': rdt_plane, 'knob': knob}, 'data': intersectedBPMdata}

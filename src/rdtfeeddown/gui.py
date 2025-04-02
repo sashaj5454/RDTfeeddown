@@ -1,7 +1,7 @@
 import json
 from PyQt5.QtWidgets import (
 	QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton,
-	QFileDialog, QListWidget, QTabWidget, QWidget, QTextEdit, QMessageBox
+	QFileDialog, QListWidget, QTabWidget, QWidget, QTextEdit, QMessageBox, QProgressBar
 )
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt, QTimer  # Import Qt for the correct constants and QTimer
@@ -60,9 +60,9 @@ class RDTFeeddownGUI(QMainWindow):
 		# --- Beam Models Group ---
 		beam_model_group = QtWidgets.QGroupBox("Beam Model Selection")
 		beam_model_layout = QHBoxLayout()
-		# Beam 1
+		# LHCB1
 		beam1_layout = QVBoxLayout()
-		self.beam1_model_label = QLabel("Beam 1 Model:")
+		self.beam1_model_label = QLabel("LHCB1 Model:")
 		self.beam1_model_label.setStyleSheet("color: blue;")
 		beam1_layout.addWidget(self.beam1_model_label)
 		self.beam1_model_entry = QLineEdit()
@@ -71,9 +71,9 @@ class RDTFeeddownGUI(QMainWindow):
 		self.beam1_model_button.clicked.connect(self.select_beam1_model)
 		beam1_layout.addWidget(self.beam1_model_button)
 		beam_model_layout.addLayout(beam1_layout)
-		# Beam 2
+		# LHCB2
 		beam2_layout = QVBoxLayout()
-		self.beam2_model_label = QLabel("Beam 2 Model:")
+		self.beam2_model_label = QLabel("LHCB2 Model:")
 		self.beam2_model_label.setStyleSheet("color: red;")
 		beam2_layout.addWidget(self.beam2_model_label)
 		self.beam2_model_entry = QLineEdit()
@@ -93,9 +93,9 @@ class RDTFeeddownGUI(QMainWindow):
 		ref_folders_group = QtWidgets.QGroupBox("Reference Folders")
 		ref_folders_layout = QHBoxLayout()
 
-		# Beam 1 Reference Folder (vertical layout)
+		# LHCB1 Reference Folder (vertical layout)
 		beam1_ref_layout = QVBoxLayout()
-		self.beam1_reffolder_label = QLabel("Beam 1 Reference Folder:")
+		self.beam1_reffolder_label = QLabel("LHCB1 Reference Folder:")
 		self.beam1_reffolder_label.setStyleSheet("color: blue;")
 		beam1_ref_layout.addWidget(self.beam1_reffolder_label)
 		self.beam1_reffolder_entry = QLineEdit()
@@ -110,9 +110,9 @@ class RDTFeeddownGUI(QMainWindow):
 		beam1_ref_layout.addLayout(beam1_buttons_layout)
 		ref_folders_layout.addLayout(beam1_ref_layout)
 
-		# Beam 2 Reference Folder (vertical layout)
+		# LHCB2 Reference Folder (vertical layout)
 		beam2_ref_layout = QVBoxLayout()
-		self.beam2_reffolder_label = QLabel("Beam 2 Reference Folder:")
+		self.beam2_reffolder_label = QLabel("LHCB2 Reference Folder:")
 		self.beam2_reffolder_label.setStyleSheet("color: red;")
 		beam2_ref_layout.addWidget(self.beam2_reffolder_label)
 		self.beam2_reffolder_entry = QLineEdit()
@@ -131,12 +131,12 @@ class RDTFeeddownGUI(QMainWindow):
 		# Insert the new reference folders group at the top of the folders layout.
 		folders_layout.insertWidget(0, ref_folders_group)
 
-		# Measurement Folders for Beam 1 and Beam 2
+		# Measurement Folders for LHCB1 and LHCB2
 		measure_group = QtWidgets.QGroupBox("Measurement Folders")
 		measure_layout = QHBoxLayout()
-		# Beam 1 Measurement Folders
+		# LHCB1 Measurement Folders
 		beam1_folders_layout = QVBoxLayout()
-		self.beam1_folders_label = QLabel("Beam 1 Measurement Folders:")
+		self.beam1_folders_label = QLabel("LHCB1 Measurement Folders:")
 		self.beam1_folders_label.setStyleSheet("color: blue;")
 		beam1_folders_layout.addWidget(self.beam1_folders_label)
 		self.beam1_folders_list = QListWidget()
@@ -154,9 +154,9 @@ class RDTFeeddownGUI(QMainWindow):
 		beam1_buttons_layout.addWidget(self.beam1_select_all_checkbox)
 		beam1_folders_layout.addLayout(beam1_buttons_layout)
 		measure_layout.addLayout(beam1_folders_layout)
-		# Beam 2 Measurement Folders (similar)
+		# LHCB2 Measurement Folders (similar)
 		beam2_folders_layout = QVBoxLayout()
-		self.beam2_folders_label = QLabel("Beam 2 Measurement Folders:")
+		self.beam2_folders_label = QLabel("LHCB2 Measurement Folders:")
 		self.beam2_folders_label.setStyleSheet("color: red;")
 		beam2_folders_layout.addWidget(self.beam2_folders_label)
 		self.beam2_folders_list = QListWidget()
@@ -195,6 +195,19 @@ class RDTFeeddownGUI(QMainWindow):
 		param_layout.addWidget(self.knob_label)          # "Knob:"
 		self.knob_entry = QLineEdit("LHCBEAM/IP2-XING-V-MURAD")
 		param_layout.addWidget(self.knob_entry)
+		# New simulation mode checkbox
+		self.simulation_checkbox = QtWidgets.QCheckBox("Simulation Mode")
+		param_layout.addWidget(self.simulation_checkbox)
+		self.simulation_checkbox.stateChanged.connect(self.toggle_simulation_mode)
+		# New properties file input and browse button (hidden by default)
+		self.simulation_file_entry = QLineEdit()
+		self.simulation_file_entry.setPlaceholderText("Select properties file")
+		self.simulation_file_entry.hide()
+		param_layout.addWidget(self.simulation_file_entry)
+		self.simulation_file_button = QPushButton("Browse Properties")
+		self.simulation_file_button.clicked.connect(self.select_properties_file)
+		self.simulation_file_button.hide()
+		param_layout.addWidget(self.simulation_file_button)
 		self.validate_knob_button = QPushButton("Validate Knob")
 		self.validate_knob_button.clicked.connect(self.validate_knob_button_clicked)
 		param_layout.addWidget(self.validate_knob_button)
@@ -209,6 +222,12 @@ class RDTFeeddownGUI(QMainWindow):
 		run_layout.addWidget(self.run_button)
 		run_group.setLayout(run_layout)
 		self.input_layout.addWidget(run_group)
+
+		 # Progress bar for plotting
+		self.input_progress = QProgressBar()
+		self.input_progress.setRange(0, 0)
+		self.input_progress.hide()
+		self.layout.addWidget(self.input_progress)
 
 		 # Validation Tab
 		self.validation_tab = QWidget()
@@ -257,7 +276,7 @@ class RDTFeeddownGUI(QMainWindow):
 		beam_label = QLabel("Select Beam:")
 		beam_selector_layout.addWidget(beam_label)
 		self.beam_selector = QtWidgets.QComboBox()
-		self.beam_selector.addItems(["Beam 1", "Beam 2"])
+		self.beam_selector.addItems(["LHCB1", "LHCB2"])
 		self.beam_selector.currentIndexChanged.connect(self.update_bpm_search_entry)
 		beam_selector_layout.addWidget(self.beam_selector)
 		bpm_tab_layout.addLayout(beam_selector_layout)
@@ -283,10 +302,6 @@ class RDTFeeddownGUI(QMainWindow):
 		self.bpmNavToolbar = NavigationToolbar(self.bpmCanvas, self)
 		bpm_tab_layout.addWidget(self.bpmNavToolbar)
 
-		# RDT plotting canvas
-		self.rdtFigure = Figure(figsize=(6, 4))
-		self.rdtCanvas = FigureCanvas(self.rdtFigure)
-
 		# Add graph tabs for RDT and RDT shifts
 		self.graph_tabs.addTab(self.bpm_tab, "BPM")
 		self.rdt_tab = QWidget()
@@ -299,7 +314,7 @@ class RDTFeeddownGUI(QMainWindow):
 		self.plot_rdt_button = QPushButton("Plot RDT")
 		self.plot_rdt_button.clicked.connect(self.plot_rdt)
 		rdt_layout.addWidget(self.plot_rdt_button)
-		self.rdtFigure = Figure(figsize=(6,4))
+		self.rdtFigure = Figure(figsize=(6,20))
 		self.rdtCanvas = FigureCanvas(self.rdtFigure)
 		rdt_layout.addWidget(self.rdtCanvas)
 		self.rdtNavToolbar = NavigationToolbar(self.rdtCanvas, self)
@@ -309,11 +324,17 @@ class RDTFeeddownGUI(QMainWindow):
 		self.plot_rdt_shifts_button = QPushButton("Plot RDT Shifts")
 		self.plot_rdt_shifts_button.clicked.connect(self.plot_rdt_shifts)
 		rdt_shift_layout.addWidget(self.plot_rdt_shifts_button)
-		self.rdtShiftFigure = Figure(figsize=(6,4))
+		self.rdtShiftFigure = Figure(figsize=(6,20))
 		self.rdtShiftCanvas = FigureCanvas(self.rdtShiftFigure)
 		rdt_shift_layout.addWidget(self.rdtShiftCanvas)
 		self.rdtShiftNavToolbar = NavigationToolbar(self.rdtShiftCanvas, self)
 		rdt_shift_layout.addWidget(self.rdtShiftNavToolbar)
+
+		 # Progress bar for plotting
+		self.plot_progress = QProgressBar()
+		self.plot_progress.setRange(0, 0)
+		self.plot_progress.hide()
+		self.layout.addWidget(self.plot_progress)
 
 	def change_default_input_path(self):
 		new_path = QFileDialog.getExistingDirectory(self, "Select Default Input Path", self.default_input_path)
@@ -329,26 +350,26 @@ class RDTFeeddownGUI(QMainWindow):
 
 	def select_beam1_model(self):
 		"""
-		Open a file dialog to select the Beam 1 model directory, starting from the default input path.
+		Open a file dialog to select the LHCB1 model directory, starting from the default input path.
 		"""
-		modelpath = QFileDialog.getExistingDirectory(self, "Select Beam 1 Model", self.default_input_path)
+		modelpath = QFileDialog.getExistingDirectory(self, "Select LHCB1 Model", self.default_input_path)
 		if modelpath:
 			self.beam1_model_entry.setText(modelpath)
 		
 	def select_beam2_model(self):
 		"""
-		Open a file dialog to select the Beam 2 model directory, starting from the default input path.
+		Open a file dialog to select the LHCB2 model directory, starting from the default input path.
 		"""
-		modelpath = QFileDialog.getExistingDirectory(self, "Select Beam 2 Model", self.default_input_path)
+		modelpath = QFileDialog.getExistingDirectory(self, "Select LHCB2 Model", self.default_input_path)
 		if modelpath:
 			self.beam2_model_entry.setText(modelpath)
 		
 	def select_beam1_reffolder(self):
 		"""
-		Open a file dialog to select the Beam 1 reference measurement folder.
+		Open a file dialog to select the LHCB1 reference measurement folder.
 		"""
 		dialog = QFileDialog(self)
-		dialog.setWindowTitle("Select Beam 1 Reference Measurement Folder")
+		dialog.setWindowTitle("Select LHCB1 Reference Measurement Folder")
 		dialog.setDirectory(self.default_input_path)
 		dialog.setFileMode(QFileDialog.Directory)
 		dialog.setOption(QFileDialog.ShowDirsOnly, True)
@@ -359,10 +380,10 @@ class RDTFeeddownGUI(QMainWindow):
 
 	def select_beam2_reffolder(self):
 		"""
-		Open a file dialog to select the Beam 2 reference measurement folder.
+		Open a file dialog to select the LHCB2 reference measurement folder.
 		"""
 		dialog = QFileDialog(self)
-		dialog.setWindowTitle("Select Beam 2 Reference Measurement Folder")
+		dialog.setWindowTitle("Select LHCB2 Reference Measurement Folder")
 		dialog.setDirectory(self.default_input_path)
 		dialog.setFileMode(QFileDialog.Directory)
 		dialog.setOption(QFileDialog.ShowDirsOnly, True)
@@ -373,13 +394,13 @@ class RDTFeeddownGUI(QMainWindow):
 
 	def remove_beam1_reffolder(self):
 		"""
-		Clear the Beam 1 reference folder entry.
+		Clear the LHCB1 reference folder entry.
 		"""
 		self.beam1_reffolder_entry.clear()
 
 	def remove_beam2_reffolder(self):
 		"""
-		Clear the Beam 2 reference folder entry.
+		Clear the LHCB2 reference folder entry.
 		"""
 		self.beam2_reffolder_entry.clear()
 
@@ -388,7 +409,6 @@ class RDTFeeddownGUI(QMainWindow):
 		Allow the user to select multiple directories and add them to the provided list widget.
 		"""
 		dialog = QFileDialog(self)
-		dialog.setWindowTitle('Choose Directories')
 		dialog.setDirectory(self.default_input_path)  # Set the default input path
 		dialog.setOption(QFileDialog.DontUseNativeDialog, True)
 		dialog.setFileMode(QFileDialog.Directory)
@@ -407,7 +427,7 @@ class RDTFeeddownGUI(QMainWindow):
 
 	def select_beam1_folders(self):
 		dialog = QFileDialog(self)
-		dialog.setWindowTitle('Choose Directories')
+		dialog.setWindowTitle('Select LHCB1 Measurement Directories')
 		dialog.setDirectory(self.default_input_path)  # Set the default input path
 		dialog.setOption(QFileDialog.DontUseNativeDialog, True)
 		dialog.setFileMode(QFileDialog.Directory)
@@ -426,7 +446,7 @@ class RDTFeeddownGUI(QMainWindow):
 
 	def select_beam2_folders(self):
 		dialog = QFileDialog(self)
-		dialog.setWindowTitle('Choose Directories')
+		dialog.setWindowTitle('Select LHCB2 Measurement Directories')
 		dialog.setDirectory(self.default_input_path)  # Set the default input path
 		dialog.setOption(QFileDialog.DontUseNativeDialog, True)
 		dialog.setFileMode(QFileDialog.Directory)
@@ -445,28 +465,28 @@ class RDTFeeddownGUI(QMainWindow):
 
 	def remove_selected_beam1_folders(self):
 		"""
-		Remove selected items from the Beam 1 folders list.
+		Remove selected items from the LHCB1 folders list.
 		"""
 		for item in self.beam1_folders_list.selectedItems():
 			self.beam1_folders_list.takeItem(self.beam1_folders_list.row(item))
 
 	def remove_selected_beam2_folders(self):
 		"""
-		Remove selected items from the Beam 2 folders list.
+		Remove selected items from the LHCB2 folders list.
 		"""
 		for item in self.beam2_folders_list.selectedItems():
 			self.beam2_folders_list.takeItem(self.beam2_folders_list.row(item))
 
 	def toggle_select_all_beam1_folders(self, state):
 		"""
-		Toggle selection for all items in the Beam 1 folders list based on the checkbox state.
+		Toggle selection for all items in the LHCB1 folders list based on the checkbox state.
 		"""
 		for i in range(self.beam1_folders_list.count()):
 			self.beam1_folders_list.item(i).setSelected(state == Qt.Checked)
 
 	def toggle_select_all_beam2_folders(self, state):
 		"""
-		Toggle selection for all items in the Beam 2 folders list based on the checkbox state.
+		Toggle selection for all items in the LHCB2 folders list based on the checkbox state.
 		"""
 		for i in range(self.beam2_folders_list.count()):
 			self.beam2_folders_list.item(i).setSelected(state == Qt.Checked)
@@ -530,15 +550,21 @@ class RDTFeeddownGUI(QMainWindow):
 			self.validation_files_list.addItem(f)
 
 	def run_next_step(self):
-		if self.current_step < len(self.analysis_steps):
-			self.analysis_steps[self.current_step]()  # execute current step
-			self.current_step += 1
-			QTimer.singleShot(0, self.run_next_step)     # schedule next step ASAP
-		else:
-			self.update_validation_files_widget()  # show analysis output files in the widget
-			QMessageBox.information(self, "Run Analysis", "Analysis completed successfully!")
+		try:
+			if self.current_step < len(self.analysis_steps):
+				self.analysis_steps[self.current_step]()  # execute current step
+				self.current_step += 1
+				QTimer.singleShot(0, self.run_next_step)     # schedule next step ASAP
+			else:
+				self.update_validation_files_widget()  # show analysis output files in the widget
+				QMessageBox.information(self, "Run Analysis", "Analysis completed successfully!")
+		except Exception as e:
+			self.input_progress.hide()
+			QMessageBox.critical(self, "Analysis Error", f"Step {self.current_step+1} failed: {e}")
 
 	def analysis_step1(self):
+		self.input_progress.show()
+		QtWidgets.QApplication.processEvents()
 		# Initialize variables and validate inputs
 		self.ldb = initialize_statetracker()
 		self.rdt = self.rdt_entry.text()
@@ -555,7 +581,7 @@ class RDTFeeddownGUI(QMainWindow):
 		self.output_path = self.default_output_path
 
 	def analysis_step2(self):
-		# Process Beam 1 data
+		# Process LHCB1 data
 		if self.beam1_model and self.beam1_folders:
 			b1modelbpmlist, b1bpmdata = getmodelBPMs(self.beam1_model)
 			self.b1rdtdata = getrdt_omc3(self.ldb, b1modelbpmlist, b1bpmdata,
@@ -565,7 +591,7 @@ class RDTFeeddownGUI(QMainWindow):
 			self.b1rdtdata = fit_BPM(self.b1rdtdata)
 
 	def analysis_step3(self):
-		# Process Beam 2 data and write output files:
+		# Process LHCB2 data and write output files:
 		if self.beam2_model and self.beam2_folders:
 			b2modelbpmlist, b2bpmdata = getmodelBPMs(self.beam2_model)
 			self.b2rdtdata = getrdt_omc3(self.ldb, b2modelbpmlist, b2bpmdata,
@@ -575,14 +601,14 @@ class RDTFeeddownGUI(QMainWindow):
 			self.b2rdtdata = fit_BPM(self.b2rdtdata)
 	
 	def analysis_step4(self):			
-		# Prompt to save Beam 1 RDT data just before calling write_RDTshifts
+		# Prompt to save LHCB1 RDT data just before calling write_RDTshifts
 		self.analysis_output_files = []
 		if self.beam1_model and self.beam1_folders:
 			self.save_b1_rdtdata()
-			write_RDTshifts(self.b1rdtdata, self.rdt, self.rdt_plane, "b1", self.output_path, self.log_error)
+			# write_RDTshifts(self.b1rdtdata, self.rdt, self.rdt_plane, "b1", self.output_path, self.log_error)
 		if self.beam2_model and self.beam2_folders:
 			self.save_b2_rdtdata()
-			write_RDTshifts(self.b2rdtdata, self.rdt, self.rdt_plane, "b2", self.output_path, self.log_error)
+			# write_RDTshifts(self.b2rdtdata, self.rdt, self.rdt_plane, "b2", self.output_path, self.log_error)
 
 		loaded_output_data = []
 		self.loaded_files_list.clear()
@@ -593,11 +619,14 @@ class RDTFeeddownGUI(QMainWindow):
 		results = group_datasets(loaded_output_data, self.log_error)
 		if len(results) < 4:
 			QMessageBox.critical(self, "Error", "Not enough data from group_datasets.")
+			self.input_progress.hide()
 			return
 		self.b1rdtdata, self.b2rdtdata, self.rdt, self.rdt_plane = results
 		if self.b1rdtdata is None and self.b2rdtdata is None:
 			self.loaded_files_list.clear()
+			self.input_progress.hide()
 			return
+		self.input_progress.hide()
 
 	def log_error(self, error_msg):
 		QMessageBox.critical(self, "Error", error_msg)
@@ -674,7 +703,7 @@ class RDTFeeddownGUI(QMainWindow):
 			QMessageBox.information(self, "BPM Search", "No BPM specified.")
 			return
 		beam = self.beam_selector.currentText()
-		if beam == "Beam 1":
+		if beam == "LHCB1":
 			data = getattr(self, 'b1rdtdata', None)
 		else:
 			data = getattr(self, 'b2rdtdata', None)
@@ -692,7 +721,7 @@ class RDTFeeddownGUI(QMainWindow):
 			QMessageBox.information(self, "BPM Graph", "No BPM specified.")
 			return
 		beam = self.beam_selector.currentText()
-		data = getattr(self, 'b1rdtdata', None) if beam == "Beam 1" else getattr(self, 'b2rdtdata', None)
+		data = getattr(self, 'b1rdtdata', None) if beam == "LHCB1" else getattr(self, 'b2rdtdata', None)
 		if data is None:
 			QMessageBox.information(self, "BPM Graph", f"No data available for {beam}.")
 			return
@@ -705,11 +734,12 @@ class RDTFeeddownGUI(QMainWindow):
 		ax2 = self.bpmFigure.add_subplot(212)
 		plot_BPM(BPM, data, self.rdt, self.rdt_plane, ax1=ax1, ax2=ax2, log_func=self.log_error)
 		self.bpmCanvas.draw()
+		self.plot_progress.hide()
 	
 	def save_b1_rdtdata(self):
 		filename, _ = QFileDialog.getSaveFileName(
 			self,
-			"Save Beam 1 RDT Data",
+			"Save LHCB1 RDT Data",
 			self.default_output_path,
 			"JSON Files (*.json)"
 		)
@@ -722,7 +752,7 @@ class RDTFeeddownGUI(QMainWindow):
 	def save_b2_rdtdata(self):
 		filename, _ = QFileDialog.getSaveFileName(
 			self,
-			"Save Beam 2 RDT Data",
+			"Save LHCB2 RDT Data",
 			self.default_output_path,
 			"JSON Files (*.json)"
 		)
@@ -733,6 +763,8 @@ class RDTFeeddownGUI(QMainWindow):
 			self.analysis_output_files.append(filename)
 
 	def load_selected_files(self):
+		self.plot_progress.show()
+		QtWidgets.QApplication.processEvents()
 		# Load selected file paths from the validation files list into the loaded files list
 		selected_files = [self.validation_files_list.item(i).text() for i in range(self.validation_files_list.count()) 
 						if self.validation_files_list.item(i).isSelected()]
@@ -753,7 +785,7 @@ class RDTFeeddownGUI(QMainWindow):
 
 	def update_bpm_search_entry(self):
 		# Set default BPM value based on the selected beam.
-		if self.beam_selector.currentText() == "Beam 1":
+		if self.beam_selector.currentText() == "LHCB1":
 			self.bpm_search_entry.setText("BPM.30L2.B1")
 		else:
 			self.bpm_search_entry.setText("BPM.30L1.B2")
@@ -766,40 +798,77 @@ class RDTFeeddownGUI(QMainWindow):
 		]
 
 	def plot_rdt(self):
+		self.plot_progress.show()
+		QtWidgets.QApplication.processEvents()
 		datab1, datab2 = None, None
-		if self.b1rdtdata is None and self.b2rdtdata is None:
-			QMessageBox.information(self, "RDT Graph", "No data available for either beam.")
-			return
-		if self.b1rdtdata is not None:
+		try:
 			datab1 = self.b1rdtdata["data"]
-		if self.b2rdtdata is not None:
+		except Exception as e:
+			self.log_error(f"Error accessing LHCB1 RDT data: {e}")
+		try:
 			datab2 = self.b2rdtdata["data"]
+		except Exception as e:
+			self.log_error(f"Error accessing LHCB2 RDT data: {e}")
 		self.rdtFigure.clear()
 		if datab1 and datab2:
-			self.rdtFigure.set_size_inches(10, 8)
 			axes = self.rdtFigure.subplots(3, 2, sharey=False)
 		else:
-			self.rdtFigure.set_size_inches(6, 10)
 			axes = self.rdtFigure.subplots(3, 1, sharey=False)
-		plot_RDT(datab1, datab2, self.rdt, self.rdt_plane, axes, log_func=self.log_error)
-		self.rdtCanvas.draw()
+		try:
+			plot_RDT(datab1, datab2, self.rdt, self.rdt_plane, axes, log_func=self.log_error)
+			self.rdtCanvas.draw()
+		except Exception as e:
+			self.log_error(f"Error plotting RDT data: {e}")
+			self.plot_progress.hide()
+			return
+		self.plot_progress.hide()
 
 	def plot_rdt_shifts(self):
+		self.plot_progress.show()
+		QtWidgets.QApplication.processEvents()
 		datab1, datab2 = None, None
-		if self.b1rdtdata is None and self.b2rdtdata is None:
-			QMessageBox.information(self, "RDT Shift Graph", "No data available for either beam.")
-			return
-		if self.b1rdtdata is not None:
+		try:
 			datab1 = self.b1rdtdata["data"]
-		if self.b2rdtdata is not None:
+		except Exception as e:
+			self.log_error(f"Error accessing LHCB1 RDT data: {e}")
+		try:
 			datab2 = self.b2rdtdata["data"]
+		except Exception as e:
+			self.log_error(f"Error accessing LHCB2 RDT data: {e}")
 		self.rdtShiftFigure.clear()
 		if datab1 and datab2:
-			self.rdtShiftFigure.set_size_inches(10, 8)
 			axes = self.rdtShiftFigure.subplots(3, 2, sharey=False)
 		else:
-			self.rdtShiftFigure.set_size_inches(6, 10)
 			axes = self.rdtShiftFigure.subplots(3, 1, sharey=False)
-		plot_RDTshifts(datab1, datab2, self.rdt, self.rdt_plane, axes, log_func=self.log_error)
-		self.rdtShiftCanvas.draw()
+		try:
+			plot_RDTshifts(datab1, datab2, self.rdt, self.rdt_plane, axes, log_func=self.log_error)
+			self.rdtShiftCanvas.draw()
+		except Exception as e:
+			self.log_error(f"Error plotting RDT shifts: {e}")
+			self.plot_progress.hide()
+			return
+		self.plot_progress.hide()
+
+	# New method to toggle simulation mode UI changes
+	def toggle_simulation_mode(self, state):
+		if state == Qt.Checked:
+			self.knob_entry.hide()
+			self.knob_label.hide()
+			self.validate_knob_button.hide()
+			self.simulation_file_entry.show()
+			self.simulation_file_button.show()
+		else:
+			self.knob_entry.show()
+			self.knob_label.show()
+			self.validate_knob_button.show()
+			self.simulation_file_entry.hide()
+			self.simulation_file_button.hide()
+
+	# New method to select a properties file
+	def select_properties_file(self):
+		filename, _ = QFileDialog.getOpenFileName(
+			self, "Select Properties File", self.default_input_path, "Properties Files (*.properties);;All Files (*)"
+		)
+		if filename:
+			self.simulation_file_entry.setText(filename)
 

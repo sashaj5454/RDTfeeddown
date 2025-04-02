@@ -59,30 +59,44 @@ def getknobsetting_statetracker(ldb,thistimestamp,requested_knob):
 	knob_setting = ldb.get(statetrackerknobname,thistimestamp)[statetrackerknobname][1][0]
 	return knob_setting
 
-def get_analysis_knobsetting(ldb,requested_knob,analyfile):
-	############-> read the command.run file to generate a list of all the kicks used to produce this results folder
+def get_analysis_knobsetting(ldb,requested_knob,analyfile, log_func=None):
+	############-> read the command.run file to generate a list of all the kicks used to produce this results folder	
 	fc=analyfile+'/command.run'
-	rc=open(fc,'r')
+	try:
+		rc=open(fc,'r')
+	except FileNotFoundError:
+		if log_func:
+			log_func('No command.run file found in the results folder')
+		else:
+			print('No command.run file found in the results folder')
 	for line in rc.readlines():
 		if re.search('/afs/cern.ch/eng/sl/lintrack/omc_python3/bin/python -m omc3.hole_in_one --optics',line):
 			flist=line.partition('--files')[2].partition('--')[0].split(',') 
 			break
 	rc.close()
 	knobsettings=[]
-	for f in flist:
-		kickname=f.rpartition('/')[2]
-		kicktime=convert_from_kickfilename(kickname)
-		localktime=utctolocal(kicktime)
-		knobsetting=getknobsetting_statetracker(ldb,localktime,requested_knob)
-		knobsettings.append([kicktime,knobsetting])
+	try:
+		for f in flist:
+			kickname=f.rpartition('/')[2]
+			kicktime=convert_from_kickfilename(kickname)
+			localktime=utctolocal(kicktime)
+			knobsetting=getknobsetting_statetracker(ldb,localktime,requested_knob)
+			knobsettings.append([kicktime,knobsetting])
+	except Exception as e:
+		if log_func:
+			log_func('Error reading command.run file: '+str(e))
+		else:
+			print('Error reading command.run file: '+str(e))
+		return None
 
 	if len(knobsettings)>1:  #### --> in case multiple files were used for the analysis - check all were performed at timestamp with equal knob settings
 		for k in range(len(knobsettings)):
 			if knobsettings[k][1]!=knobsettings[0][1]:
-				print('Results file '+analyfile+' includes kicks with different knob settings')
-				for k in range(len(knobsettings)):
-					print(knobsettings[k])
-				sys.exit('Terminating')
+				if log_func:
+					log_func('Results file '+analyfile+' includes kicks with different knob settings')
+				else:
+					print('Results file '+analyfile+' includes kicks with different knob settings')
+				return None
 
 	knobvalue=knobsetting ### --> in case results folder generated with single kick, or all kicks have the same knob setting, just take the last knobsetting as the value to use moving forward
 	return knobvalue
@@ -164,3 +178,21 @@ def load_defaults(log_func=None):
 				print(f"Error looking for configuration file: {e}")
 			pass
 	return defaults
+
+def csv_to_dict(
+	file_path: str
+):
+	"""
+	Converts a CSV file to a dictionary
+	
+	Parameters:
+	- file_path: The file path of the CSV file.
+	
+	Returns:
+	- data: The dictionary of the CSV file.
+	
+	"""
+	with open(file_path, mode="r") as infile:
+		reader = csv.DictReader(infile, skipinitialspace=True)
+		data = [row for row in reader]
+	return data
