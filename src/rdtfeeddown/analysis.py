@@ -348,6 +348,7 @@ def group_datasets(datasets, log_func=None):
 					log_func("Datasets for beam b1 have differing metadata; cannot group them together.")
 				else:
 					raise ValueError("Datasets for beam 1 have differing metadata; cannot group them together.")
+				return None, None, None, None
 			# Merge the data dictionaries
 			grouped_b1['data'].update(data['data'])
 		elif beam.lower() == 'b2':
@@ -358,6 +359,7 @@ def group_datasets(datasets, log_func=None):
 					log_func("Datasets for beam b2 have differing metadata; cannot group them together.")
 				else:
 					raise ValueError("Datasets for beam 2 have differing metadata; cannot group them together.")
+				return None, None, None, None
 			grouped_b2['data'].update(data['data'])
 		else:
 			if log_func:
@@ -370,6 +372,7 @@ def group_datasets(datasets, log_func=None):
 					log_func("Datasets for beam 1 and beam 2 have differing metadata; cannot group them together.")
 				else:
 					raise ValueError("Datasets for beam 1 and beam 2 have differing metadata; cannot group them together.")
+				return None, None, None, None
 		if grouped_b1['metadata'] is not None:
 			rdt = grouped_b1['metadata']['rdt']
 			rdt_plane = grouped_b1['metadata']['rdt_plane']
@@ -381,6 +384,7 @@ def group_datasets(datasets, log_func=None):
 				log_func("No metadata found for either beam.")
 			else:
 				raise ValueError("No metadata found for either beam.")
+			return None, None, None, None
 
 	return grouped_b1, grouped_b2, rdt, rdt_plane
 

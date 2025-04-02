@@ -10,7 +10,7 @@ from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as Navigatio
 from matplotlib.figure import Figure
 from .utils import load_defaults, check_rdt, initialize_statetracker, rdt_to_order_and_type, getmodelBPMs
 from .analysis import write_RDTshifts, getrdt_omc3, fit_BPM, save_RDTdata, load_RDTdata, group_datasets
-from .plotting import plot_BPM  # Assuming you have a plotting module for BPM plotting
+from .plotting import plot_BPM, plot_RDT, plot_RDTshifts  # Assuming you have a plotting module for BPM plotting
 import time  # Import time to get the current timestamp
 import re    # Import re for regex substitution
 
@@ -245,10 +245,14 @@ class RDTFeeddownGUI(QMainWindow):
 		self.validation_layout.addWidget(self.load_selected_files_button)
 
 		self.loaded_files_list = QListWidget()
-		self.loaded_files_list.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
+		self.loaded_files_list.setSelectionMode(QtWidgets.QAbstractItemView.NoSelection)
 		self.validation_layout.addWidget(self.loaded_files_list)
 
 		# --- Replace Beam Tabs with a Beam Selector and Single Plotting Canvas ---
+		self.graph_tabs = QTabWidget()
+		self.bpm_tab = QWidget()
+		bpm_tab_layout = QVBoxLayout(self.bpm_tab)
+
 		beam_selector_layout = QHBoxLayout()
 		beam_label = QLabel("Select Beam:")
 		beam_selector_layout.addWidget(beam_label)
@@ -256,9 +260,8 @@ class RDTFeeddownGUI(QMainWindow):
 		self.beam_selector.addItems(["Beam 1", "Beam 2"])
 		self.beam_selector.currentIndexChanged.connect(self.update_bpm_search_entry)
 		beam_selector_layout.addWidget(self.beam_selector)
-		self.validation_layout.addLayout(beam_selector_layout)
-		
-		# Now create the BPM search entry using the updated value from the selector
+		bpm_tab_layout.addLayout(beam_selector_layout)
+
 		self.bpm_search_entry = QLineEdit()
 		self.update_bpm_search_entry()  # initialize with the correct default
 		self.bpm_search_entry.setPlaceholderText("Enter BPM search term")
@@ -270,16 +273,47 @@ class RDTFeeddownGUI(QMainWindow):
 		self.graph_bpm_button = QPushButton("Graph BPM")
 		self.graph_bpm_button.clicked.connect(self.graph_bpm)
 		bpm_layout.addWidget(self.graph_bpm_button)
-		self.validation_layout.addLayout(bpm_layout)
+		bpm_tab_layout.addLayout(bpm_layout)
 
 		# BPM plotting canvas
-		self.bpm_figure = Figure(figsize=(6, 4))
-		self.bpm_canvas = FigureCanvas(self.bpm_figure)
-		self.validation_layout.addWidget(self.bpm_canvas)
-
+		self.bpmFigure = Figure(figsize=(6, 4))
+		self.bpmCanvas = FigureCanvas(self.bpmFigure)
+		bpm_tab_layout.addWidget(self.bpmCanvas)
 		# Add navigation toolbar for interactive zoom/pan
-		self.bpm_nav_toolbar = NavigationToolbar(self.bpm_canvas, self)
-		self.validation_layout.addWidget(self.bpm_nav_toolbar)
+		self.bpmNavToolbar = NavigationToolbar(self.bpmCanvas, self)
+		bpm_tab_layout.addWidget(self.bpmNavToolbar)
+
+		# RDT plotting canvas
+		self.rdtFigure = Figure(figsize=(6, 4))
+		self.rdtCanvas = FigureCanvas(self.rdtFigure)
+
+		# Add graph tabs for RDT and RDT shifts
+		self.graph_tabs.addTab(self.bpm_tab, "BPM")
+		self.rdt_tab = QWidget()
+		self.rdt_shift_tab = QWidget()
+		self.graph_tabs.addTab(self.rdt_tab, "RDT")
+		self.graph_tabs.addTab(self.rdt_shift_tab, "RDT shift")
+		self.validation_layout.addWidget(self.graph_tabs)
+
+		rdt_layout = QVBoxLayout(self.rdt_tab)
+		self.plot_rdt_button = QPushButton("Plot RDT")
+		self.plot_rdt_button.clicked.connect(self.plot_rdt)
+		rdt_layout.addWidget(self.plot_rdt_button)
+		self.rdtFigure = Figure(figsize=(6,4))
+		self.rdtCanvas = FigureCanvas(self.rdtFigure)
+		rdt_layout.addWidget(self.rdtCanvas)
+		self.rdtNavToolbar = NavigationToolbar(self.rdtCanvas, self)
+		rdt_layout.addWidget(self.rdtNavToolbar)
+
+		rdt_shift_layout = QVBoxLayout(self.rdt_shift_tab)
+		self.plot_rdt_shifts_button = QPushButton("Plot RDT Shifts")
+		self.plot_rdt_shifts_button.clicked.connect(self.plot_rdt_shifts)
+		rdt_shift_layout.addWidget(self.plot_rdt_shifts_button)
+		self.rdtShiftFigure = Figure(figsize=(6,4))
+		self.rdtShiftCanvas = FigureCanvas(self.rdtShiftFigure)
+		rdt_shift_layout.addWidget(self.rdtShiftCanvas)
+		self.rdtShiftNavToolbar = NavigationToolbar(self.rdtShiftCanvas, self)
+		rdt_shift_layout.addWidget(self.rdtShiftNavToolbar)
 
 	def change_default_input_path(self):
 		new_path = QFileDialog.getExistingDirectory(self, "Select Default Input Path", self.default_input_path)
@@ -485,13 +519,13 @@ class RDTFeeddownGUI(QMainWindow):
 		self.analysis_steps = [
 			self.analysis_step1,  # e.g., initialization and first data processing
 			self.analysis_step2,  # e.g., fitting/BPM processing
-			self.analysis_step3   # e.g., finalizing and drawing results
+			self.analysis_step3,   # e.g., fitting/BPM processing
+			self.analysis_step4,  # e.g., writing output files
 		]
 		self.run_next_step()
 
 	def update_validation_files_widget(self):
 		# Update the validation_files_list widget with analysis_output_files
-		self.validation_files_list.clear()
 		for f in self.analysis_output_files:
 			self.validation_files_list.addItem(f)
 
@@ -539,7 +573,8 @@ class RDTFeeddownGUI(QMainWindow):
 										  self.knob, self.output_path,
 										  self.rdt, self.rdt_plane, self.rdtfolder, self.log_error)
 			self.b2rdtdata = fit_BPM(self.b2rdtdata)
-			
+	
+	def analysis_step4(self):			
 		# Prompt to save Beam 1 RDT data just before calling write_RDTshifts
 		self.analysis_output_files = []
 		if self.beam1_model and self.beam1_folders:
@@ -548,6 +583,21 @@ class RDTFeeddownGUI(QMainWindow):
 		if self.beam2_model and self.beam2_folders:
 			self.save_b2_rdtdata()
 			write_RDTshifts(self.b2rdtdata, self.rdt, self.rdt_plane, "b2", self.output_path, self.log_error)
+
+		loaded_output_data = []
+		self.loaded_files_list.clear()
+		for f in self.analysis_output_files:
+			self.loaded_files_list.addItem(f)
+			data = load_RDTdata(f)
+			loaded_output_data.append(data)
+		results = group_datasets(loaded_output_data, self.log_error)
+		if len(results) < 4:
+			QMessageBox.critical(self, "Error", "Not enough data from group_datasets.")
+			return
+		self.b1rdtdata, self.b2rdtdata, self.rdt, self.rdt_plane = results
+		if self.b1rdtdata is None and self.b2rdtdata is None:
+			self.loaded_files_list.clear()
+			return
 
 	def log_error(self, error_msg):
 		QMessageBox.critical(self, "Error", error_msg)
@@ -604,6 +654,7 @@ class RDTFeeddownGUI(QMainWindow):
 			)
 			if reply == QMessageBox.Yes:
 				loaded_output_data = []
+				self.loaded_files_list.clear()
 				for file in selected_files:
 					self.loaded_files_list.addItem(file)
 					data = load_RDTdata(file)
@@ -613,6 +664,9 @@ class RDTFeeddownGUI(QMainWindow):
 					QMessageBox.critical(self, "Error", "Not enough data from group_datasets.")
 					return
 				self.b1rdtdata, self.b2rdtdata, self.rdt, self.rdt_plane = results
+				if self.b1rdtdata is None and self.b2rdtdata is None:
+					self.loaded_files_list.clear()
+					return
 
 	def search_bpm(self):
 		search_term = self.bpm_search_entry.text().strip()
@@ -646,11 +700,11 @@ class RDTFeeddownGUI(QMainWindow):
 		if BPM not in data.get("data", {}):
 			QMessageBox.information(self, "BPM Graph", f"BPM '{BPM}' not found in {beam}.")
 			return
-		self.bpm_figure.clear()
-		ax1 = self.bpm_figure.add_subplot(211)
-		ax2 = self.bpm_figure.add_subplot(212)
+		self.bpmFigure.clear()
+		ax1 = self.bpmFigure.add_subplot(211)
+		ax2 = self.bpmFigure.add_subplot(212)
 		plot_BPM(BPM, data, self.rdt, self.rdt_plane, ax1=ax1, ax2=ax2, log_func=self.log_error)
-		self.bpm_canvas.draw()
+		self.bpmCanvas.draw()
 	
 	def save_b1_rdtdata(self):
 		filename, _ = QFileDialog.getSaveFileName(
@@ -663,7 +717,7 @@ class RDTFeeddownGUI(QMainWindow):
 			if not filename.lower().endswith(".json"):
 				filename += ".json"
 			save_RDTdata(self.b1rdtdata, filename)
-
+			self.analysis_output_files.append(filename)
 
 	def save_b2_rdtdata(self):
 		filename, _ = QFileDialog.getSaveFileName(
@@ -676,7 +730,7 @@ class RDTFeeddownGUI(QMainWindow):
 			if not filename.lower().endswith(".json"):
 				filename += ".json"
 			save_RDTdata(self.b2rdtdata, filename)
-			self.analysis_output_files.append(f"{self.output_path}/{filename}")
+			self.analysis_output_files.append(filename)
 
 	def load_selected_files(self):
 		# Load selected file paths from the validation files list into the loaded files list
@@ -693,6 +747,9 @@ class RDTFeeddownGUI(QMainWindow):
 			QMessageBox.critical(self, "Error", "Not enough data from group_datasets.")
 			return
 		self.b1rdtdata, self.b2rdtdata, self.rdt, self.rdt_plane = results
+		if self.b1rdtdata is None and self.b2rdtdata is None:
+			self.loaded_files_list.clear()
+			return
 
 	def update_bpm_search_entry(self):
 		# Set default BPM value based on the selected beam.
@@ -707,4 +764,42 @@ class RDTFeeddownGUI(QMainWindow):
 			for i in range(self.validation_files_list.count())
 			if self.validation_files_list.item(i).isSelected()
 		]
+
+	def plot_rdt(self):
+		datab1, datab2 = None, None
+		if self.b1rdtdata is None and self.b2rdtdata is None:
+			QMessageBox.information(self, "RDT Graph", "No data available for either beam.")
+			return
+		if self.b1rdtdata is not None:
+			datab1 = self.b1rdtdata["data"]
+		if self.b2rdtdata is not None:
+			datab2 = self.b2rdtdata["data"]
+		self.rdtFigure.clear()
+		if datab1 and datab2:
+			self.rdtFigure.set_size_inches(10, 8)
+			axes = self.rdtFigure.subplots(3, 2, sharey=False)
+		else:
+			self.rdtFigure.set_size_inches(6, 10)
+			axes = self.rdtFigure.subplots(3, 1, sharey=False)
+		plot_RDT(datab1, datab2, self.rdt, self.rdt_plane, axes, log_func=self.log_error)
+		self.rdtCanvas.draw()
+
+	def plot_rdt_shifts(self):
+		datab1, datab2 = None, None
+		if self.b1rdtdata is None and self.b2rdtdata is None:
+			QMessageBox.information(self, "RDT Shift Graph", "No data available for either beam.")
+			return
+		if self.b1rdtdata is not None:
+			datab1 = self.b1rdtdata["data"]
+		if self.b2rdtdata is not None:
+			datab2 = self.b2rdtdata["data"]
+		self.rdtShiftFigure.clear()
+		if datab1 and datab2:
+			self.rdtShiftFigure.set_size_inches(10, 8)
+			axes = self.rdtShiftFigure.subplots(3, 2, sharey=False)
+		else:
+			self.rdtShiftFigure.set_size_inches(6, 10)
+			axes = self.rdtShiftFigure.subplots(3, 1, sharey=False)
+		plot_RDTshifts(datab1, datab2, self.rdt, self.rdt_plane, axes, log_func=self.log_error)
+		self.rdtShiftCanvas.draw()
 
