@@ -99,7 +99,7 @@ def update_bpm_data(bpmdata, data, key, knob_setting):
 		name, amp, re, im = entry
 		bpmdata[name][key].append([knob_setting, amp, re, im])
 
-def getrdt_omc3(ldb, beam, modelbpmlist, bpmdata, ref, flist, knob, outputpath, rdt, rdt_plane, rdtfolder, sim, propfile, log_func=None):
+def getrdt_omc3(ldb, beam, modelbpmlist, bpmdata, ref, flist, knob, rdt, rdt_plane, rdtfolder, sim, propfile, log_func=None):
 	beam_no = modelbpmlist[0][-1]
 	if beam[-1] != beam_no:
 		msg = f"Beam number {beam} does not match the model BPM list."
@@ -460,5 +460,92 @@ def group_datasets(datasets, log_func=None):
 
 	return grouped_b1, grouped_b2, rdt, rdt_plane
 
+def getrdt_sim(beam, ref, file, xing, knob_name, knob_strength, rdt, rdt_plane, rdtfolder, log_func=None):
+	bpmdata = {}
+	bpmlist = []
+	# Read the reference data
+	try:
+		refdat = readrdtdatafile(ref, rdt, rdt_plane, rdtfolder, log_func)
+	except FileNotFoundError:
+		msg = f"RDT file not found in reference folder: {ref}."
+		if log_func:
+			log_func(msg)
+		raise RuntimeError(msg)
+		return None
+	if refdat is not None:
+		for entry in refdat:
+			bpm = entry["NAME"]
+			bpmlist.append(bpm)
+			if not arcBPMcheck(bpm) or badBPMcheck(bpm):
+				continue
+			bpmdata[bpm] = {}
+			bpmdata[bpm]['s']=float(row["S"])
+			bpmdata[bpm]['ref']=[]
+			bpmdata[bpm]['data']=[]
+			bpmdata[bpm]['ref'].append([0, entry["AMP"], entry["REAL"], entry["IMAG"]])
+	else:
+		msg = f"Reference data not found for {ref}."
+		if log_func:
+			log_func(msg)
+		raise RuntimeError(msg)
+		return None
+	# Read the measurement data
+	try:
+		cdat = readrdtdatafile(file, rdt, rdt_plane, rdtfolder, log_func)
+	except FileNotFoundError:
+		msg = f"RDT file not found in measurement folder: {file}."
+		if log_func:
+			log_func(msg)
+		raise RuntimeError(msg)
+		return None
+	if cdat is not None:
+		for entry in cdat:
+			bpm = entry["NAME"]
+			if not arcBPMcheck(bpm) or badBPMcheck(bpm):
+				continue
+			if bpm not in bpmdata:
+				bpmdata[bpm] = {}
+				bpmdata[bpm]['s']=float(row["S"])
+				bpmdata[bpm]['ref']=[]
+				bpmdata[bpm]['data']=[]
+				bpmdata[bpm]['data'].append([knob_strength, entry["AMP"], entry["REAL"], entry["IMAG"]])
+	else:
+		msg = f"Measurement data not found for {file}."
+		if log_func:
+			log_func(msg)
+		raise RuntimeError(msg)
+		return None
+	# Check if the reference and measurement data have the same number of entries
+	if len(bpmdata) == 0:
+		msg = "No BPM data found."
+		if log_func:
+			log_func(msg)
+		raise RuntimeError(msg)
+		return None
+	intersectedBPMdata = {}
+	# Check if the reference and measurement data have the same number of entries
+	for bpm in bpmlist:
+		if len(bpmdata) != 1 or len(bpmdata[bpm]['data']) != 1:
+			msg = f"Reference and measurement data for BPM {bpm} do not match."
+			if log_func:
+				log_func(msg)
+			raise RuntimeError(msg)
+			return None
+		# Calculate the RDT shifts
+		s = bpmdata[bpm]['s']
+		bref = bpmdata[bpm]['ref']
+		dat = bpmdata[bpm]['data']
+
+		diffdat = [((dat[0][0] - bref[0][0])/xing)/knob_strength, 
+					((dat[0][2] - bref[0][2]))/xing/knob_strength, 
+					((dat[0][3] - bref[0][3]))/xing/knob_strength]
+		intersectedBPMdata[bpm] = {'s': s, 'diffdata': diffdat}
+	if not intersectedBPMdata:
+		msg = "No BPM data found after intersection."
+		if log_func:
+			log_func(msg)
+		raise RuntimeError(msg)
+		return None
+	return {'metadata': {'beam' : beam, 'ref' : ref, 'rdt': rdt, 'rdt_plane': rdt_plane, 'knob_name': knob_name}, 'data': intersectedBPMdata}
 
 

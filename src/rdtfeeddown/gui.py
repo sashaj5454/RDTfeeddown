@@ -1,7 +1,7 @@
 import json
 from PyQt5.QtWidgets import (
-	QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton,
-	QFileDialog, QListWidget, QTabWidget, QWidget, QTextEdit, QMessageBox, QProgressBar
+	QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QCheckBox,
+	QFileDialog, QListWidget, QTabWidget, QWidget, QTextEdit, QMessageBox, QProgressBar, QSizePolicy, QToolButton, QGroupBox
 )
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt, QTimer  # Import Qt for the correct constants and QTimer
@@ -9,7 +9,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
 from .utils import load_defaults, check_rdt, initialize_statetracker, rdt_to_order_and_type, getmodelBPMs
-from .analysis import write_RDTshifts, getrdt_omc3, fit_BPM, save_RDTdata, load_RDTdata, group_datasets
+from .analysis import write_RDTshifts, getrdt_omc3, fit_BPM, save_RDTdata, load_RDTdata, group_datasets, getrdt_sim
 from .plotting import plot_BPM, plot_RDT, plot_RDTshifts  # Assuming you have a plotting module for BPM plotting
 import time  # Import time to get the current timestamp
 import re    # Import re for regex substitution
@@ -102,11 +102,15 @@ class RDTFeeddownGUI(QMainWindow):
 		beam1_ref_layout.addWidget(self.beam1_reffolder_entry)
 		beam1_buttons_layout = QHBoxLayout()
 		self.beam1_reffolder_button = QPushButton("Select Folder")
-		self.beam1_reffolder_button.clicked.connect(self.select_beam1_reffolder)
+		self.beam1_reffolder_button.clicked.connect(lambda: self.select_singlefolder("LHCB1",
+													f"Select LHCB1 Reference Measurement Folder",
+													f"LHCB1 folders (Beam1BunchTurn*);;All Folders (*)",
+													self.beam1_reffolder_entry, self.beam2_reffolder_entry))
 		beam1_buttons_layout.addWidget(self.beam1_reffolder_button)
 		self.beam1_reffolder_remove_button = QPushButton("Remove File")
-		self.beam1_reffolder_remove_button.clicked.connect(self.remove_beam1_reffolder)
-		beam1_buttons_layout.addWidget(self.beam1_reffolder_remove_button)
+		self.beam1_reffolder_remove_button.clicked.connect(lambda: self.remove_singlefolder("LHCB1",
+													self.beam1_reffolder_entry, self.beam2_reffolder_entry))
+		beam1_buttons_layout.addWidget(self.beam1_reffolder_remove_button)  # Added the remove button to the layout
 		beam1_ref_layout.addLayout(beam1_buttons_layout)
 		ref_folders_layout.addLayout(beam1_ref_layout)
 
@@ -119,10 +123,14 @@ class RDTFeeddownGUI(QMainWindow):
 		beam2_ref_layout.addWidget(self.beam2_reffolder_entry)
 		beam2_buttons_layout = QHBoxLayout()
 		self.beam2_reffolder_button = QPushButton("Select Folder")
-		self.beam2_reffolder_button.clicked.connect(self.select_beam2_reffolder)
+		self.beam2_reffolder_button.clicked.connect(lambda: self.select_singlefolder("LHCB2", 
+													f"Select LHCB2 Reference Measurement Folder", 
+													f"LHCB2 folders (Beam2BunchTurn*);;All Folders (*)", 
+													self.beam1_reffolder_entry, self.beam2_reffolder_entry))
 		beam2_buttons_layout.addWidget(self.beam2_reffolder_button)
 		self.beam2_reffolder_remove_button = QPushButton("Remove File")
-		self.beam2_reffolder_remove_button.clicked.connect(self.remove_beam2_reffolder)
+		self.beam2_reffolder_remove_button.clicked.connect(lambda: self.remove_singlefolder("LHCB2",
+													self.beam1_reffolder_entry, self.beam2_reffolder_entry))
 		beam2_buttons_layout.addWidget(self.beam2_reffolder_remove_button)
 		beam2_ref_layout.addLayout(beam2_buttons_layout)
 		ref_folders_layout.addLayout(beam2_ref_layout)
@@ -211,6 +219,24 @@ class RDTFeeddownGUI(QMainWindow):
 		self.validate_knob_button = QPushButton("Validate Knob")
 		self.validate_knob_button.clicked.connect(self.validate_knob_button_clicked)
 		param_layout.addWidget(self.validate_knob_button)
+		# Common checkbox above knob entries
+		self.b1andb2same_checkbox = QtWidgets.QCheckBox("LHCB1 same as LHCB2 mode")
+		param_layout.addWidget(self.b1andb2same_checkbox)
+		# Connect the checkbox state to the toggle method
+		self.b1andb2same_checkbox.stateChanged.connect(self.toggle_b1andb2same_mode)
+		# Unified fields (hidden by default)
+		self.corr_knobname_entry = QLineEdit()
+		self.corr_knobname_entry.setPlaceholderText("Unified Knob Name")
+		self.corr_knobname_entry.hide()
+		param_layout.addWidget(self.corr_knobname_entry)
+		self.corr_knob_entry = QLineEdit()
+		self.corr_knob_entry.setPlaceholderText("Unified Knob Value")
+		self.corr_knob_entry.hide()
+		param_layout.addWidget(self.corr_knob_entry)
+		self.corr_xing_entry = QLineEdit()
+		self.corr_xing_entry.setPlaceholderText("Unified XING")
+		self.corr_xing_entry.hide()
+		param_layout.addWidget(self.corr_xing_entry)
 		param_group.setLayout(param_layout)
 		self.input_layout.addWidget(param_group)
 
@@ -252,7 +278,7 @@ class RDTFeeddownGUI(QMainWindow):
 		self.validation_files_remove_button.clicked.connect(lambda: self.remove_selected_items(self.validation_files_list))
 		validation_buttons_layout.addWidget(self.validation_files_remove_button)
 
-		self.validation_select_all_checkbox = QtWidgets.QCheckBox("Select All")
+		self.validation_select_all_checkbox = QCheckBox("Select All")
 		self.validation_select_all_checkbox.stateChanged.connect(self.toggle_select_all_validation_files)
 		validation_buttons_layout.addWidget(self.validation_select_all_checkbox)
 
@@ -336,6 +362,253 @@ class RDTFeeddownGUI(QMainWindow):
 		self.plot_progress.hide()
 		self.layout.addWidget(self.plot_progress)
 
+		# Correction Tab
+		self.correction_tab = QWidget()
+		self.tabs.addTab(self.correction_tab, "Correction")
+		correction_main_layout = QVBoxLayout(self.correction_tab)
+
+		# Create a header container for the toggle button.
+		header_container = QWidget()
+		header_layout = QHBoxLayout(header_container)
+		header_layout.setContentsMargins(0, 0, 0, 0)
+		self.corr_toggle_button = QToolButton()
+		self.corr_toggle_button.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)  # force text display
+		self.corr_toggle_button.setText("Collapse Section")
+		self.corr_toggle_button.setCheckable(True)
+		self.corr_toggle_button.setChecked(True)
+		self.corr_toggle_button.setArrowType(Qt.DownArrow)
+		self.corr_toggle_button.clicked.connect(self.toggle_correction_content)
+		self.corr_toggle_button.setFixedHeight(30)  # optional: ensure a fixed height for the header
+		header_layout.addWidget(self.corr_toggle_button)
+		header_layout.addStretch()  # keep the header at the top
+		correction_main_layout.addWidget(header_container)
+
+		# Collapsible content container – remains below the fixed header.
+		self.correction_content = QWidget()
+		self.correction_layout = QVBoxLayout(self.correction_content)
+
+		# Reference correction folders
+		corr_folders_group = QtWidgets.QGroupBox("Reference and Measurement Folders ")
+		corr_folders_group.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
+		corr_folders_layout = QVBoxLayout(corr_folders_group)
+
+		# Replace the individual reference folder groups with a combined horizontal group:
+		corr_ref_folders_group = QtWidgets.QGroupBox("Reference Folders")
+		corr_ref_folders_group.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
+		corr_ref_folders_layout = QHBoxLayout()
+
+		# LHCB1 Reference Folder (vertical layout)
+		corr_beam1_ref_layout = QVBoxLayout()
+		self.corr_beam1_reffolder_label = QLabel("LHCB1 Reference Folder:")
+		self.corr_beam1_reffolder_label.setStyleSheet("color: blue;")
+		corr_beam1_ref_layout.addWidget(self.corr_beam1_reffolder_label)
+		self.corr_beam1_reffolder_entry = QLineEdit()
+		corr_beam1_ref_layout.addWidget(self.corr_beam1_reffolder_entry)
+		corr_beam1_buttons_layout = QHBoxLayout()
+		self.corr_beam1_reffolder_button = QPushButton("Select Folder")
+		self.corr_beam1_reffolder_button.clicked.connect(lambda: self.select_singlefolder("LHCB1", 
+													f"Select LHCB1 Reference Folder", 
+													"All Folders (*)", 
+													self.corr_beam1_reffolder_entry, self.corr_beam2_reffolder_entry))
+		corr_beam1_buttons_layout.addWidget(self.corr_beam1_reffolder_button)
+		self.corr_beam1_reffolder_remove_button = QPushButton("Remove File")
+		self.corr_beam1_reffolder_remove_button.clicked.connect(lambda: self.remove_singlefolder("LHCB1",
+													self.beam1_reffolder_entry, self.beam2_reffolder_entry))
+		corr_beam1_buttons_layout.addWidget(self.corr_beam1_reffolder_remove_button)
+		corr_beam1_ref_layout.addLayout(corr_beam1_buttons_layout)
+		corr_ref_folders_layout.addLayout(corr_beam1_ref_layout)
+
+		# LHCB2 Reference Folder (vertical layout)
+		corr_beam2_ref_layout = QVBoxLayout()
+		self.corr_beam2_reffolder_label = QLabel("LHCB2 Reference Folder:")
+		self.corr_beam2_reffolder_label.setStyleSheet("color: red;")
+		corr_beam2_ref_layout.addWidget(self.corr_beam2_reffolder_label)
+		self.corr_beam2_reffolder_entry = QLineEdit()
+		corr_beam2_ref_layout.addWidget(self.corr_beam2_reffolder_entry)
+		corr_beam2_buttons_layout = QHBoxLayout()
+		self.corr_beam2_reffolder_button = QPushButton("Select Folder")
+		self.corr_beam2_reffolder_button.clicked.connect(lambda: self.select_singlefolder("LHCB2", 
+													f"Select LHCB2 Reference Folder", 
+													"All Folders (*)", 
+													self.corr_beam1_reffolder_entry, self.corr_beam2_reffolder_entry))
+		corr_beam2_buttons_layout.addWidget(self.corr_beam2_reffolder_button)
+		self.corr_beam2_reffolder_remove_button = QPushButton("Remove File")
+		self.corr_beam2_reffolder_remove_button.clicked.connect(lambda: self.remove_singlefolder("LHCB2",
+													self.beam2_reffolder_entry, self.beam2_reffolder_entry))
+		corr_beam2_buttons_layout.addWidget(self.corr_beam2_reffolder_remove_button)
+		corr_beam2_ref_layout.addLayout(corr_beam2_buttons_layout)
+		corr_ref_folders_layout.addLayout(corr_beam2_ref_layout)
+
+		corr_ref_folders_group.setLayout(corr_ref_folders_layout)
+		# Insert the new reference folders group at the top of the folders layout.
+		corr_folders_layout.insertWidget(0, corr_ref_folders_group)
+
+		# Replace the individual measurement folder groups with a combined horizontal group:
+		corr_meas_folders_group = QtWidgets.QGroupBox("Measurement Folders")
+		corr_meas_folders_group.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
+		corr_meas_folders_layout = QHBoxLayout()
+
+		# LHCB1 Measurement Folder (vertical layout)
+		corr_beam1_meas_layout = QVBoxLayout()
+		self.corr_beam1_measfolder_label = QLabel("LHCB1 Measurement Folder:")
+		self.corr_beam1_measfolder_label.setStyleSheet("color: blue;")
+		corr_beam1_meas_layout.addWidget(self.corr_beam1_measfolder_label)
+		self.corr_beam1_measfolder_entry = QLineEdit()
+		corr_beam1_meas_layout.addWidget(self.corr_beam1_measfolder_entry)
+		corr_beam1_buttons_layout = QHBoxLayout()
+		self.corr_beam1_measfolder_button = QPushButton("Select Folder")
+		self.corr_beam1_measfolder_button.clicked.connect(lambda: self.select_singlefolder("LHCB1", 
+													f"Select LHCB1 Measurement Folder", 
+													"All Folders (*)", 
+													self.corr_beam1_measfolder_entry, self.corr_beam2_measfolder_entry))
+		corr_beam1_buttons_layout.addWidget(self.corr_beam1_measfolder_button)
+		self.corr_beam1_measfolder_remove_button = QPushButton("Remove File")
+		self.corr_beam1_measfolder_remove_button.clicked.connect(lambda: self.remove_singlefolder("LHCB1",
+													self.beam1_neasfolder_entry, self.beam2_measfolder_entry))
+		corr_beam1_buttons_layout.addWidget(self.corr_beam1_measfolder_remove_button)
+		corr_beam1_meas_layout.addLayout(corr_beam1_buttons_layout)
+		corr_meas_folders_layout.addLayout(corr_beam1_meas_layout)
+
+		# LHCB2 Measurement Folder (vertical layout)
+		corr_beam2_meas_layout = QVBoxLayout()
+		self.corr_beam2_measfolder_label = QLabel("LHCB2 Measurement Folder:")
+		self.corr_beam2_measfolder_label.setStyleSheet("color: red;")
+		corr_beam2_meas_layout.addWidget(self.corr_beam2_measfolder_label)
+		self.corr_beam2_measfolder_entry = QLineEdit()
+		corr_beam2_meas_layout.addWidget(self.corr_beam2_measfolder_entry)
+		corr_beam2_buttons_layout = QHBoxLayout()
+		self.corr_beam2_measfolder_button = QPushButton("Select Folder")
+		self.corr_beam2_measfolder_button.clicked.connect(lambda: self.select_singlefolder("LHCB2", 
+													f"Select LHCB2 Measurement Folder", 
+													"All Folders (*)", 
+													self.corr_beam1_measfolder_entry, self.corr_beam2_measfolder_entry))
+		corr_beam2_buttons_layout.addWidget(self.corr_beam2_measfolder_button)
+		self.corr_beam2_measfolder_remove_button = QPushButton("Remove File")
+		self.corr_beam2_measfolder_remove_button.clicked.connect(lambda: self.remove_singlefolder("LHCB1",
+													self.beam1_measfolder_entry, self.beam2_measfolder_entry))
+		corr_beam2_buttons_layout.addWidget(self.corr_beam2_measfolder_remove_button)
+		corr_beam2_meas_layout.addLayout(corr_beam2_buttons_layout)
+		corr_meas_folders_layout.addLayout(corr_beam2_meas_layout)
+
+		corr_meas_folders_group.setLayout(corr_meas_folders_layout)
+		# Insert the new measured folders group at the top of the folders layout.
+		corr_folders_layout.insertWidget(1, corr_meas_folders_group)
+		self.correction_layout.addWidget(corr_folders_group)
+
+		# --- Parameters and Knob Group (Correction Tab) ---
+		corr_param_group = QtWidgets.QGroupBox("Parameters and Knob")
+		corr_param_layout = QVBoxLayout()
+		self.corr_rdt_label = QLabel("RDT (in form of jklm):")
+		corr_param_layout.addWidget(self.corr_rdt_label)
+		self.corr_rdt_entry = QLineEdit()
+		corr_param_layout.addWidget(self.corr_rdt_entry)
+		self.corr_rdt_plane_label = QLabel("RDT Plane:")
+		corr_param_layout.addWidget(self.corr_rdt_plane_label)
+		self.corr_rdt_plane_dropdown = QtWidgets.QComboBox()
+		self.corr_rdt_plane_dropdown.addItems(["x", "y"])
+		corr_param_layout.addWidget(self.corr_rdt_plane_dropdown)
+
+		# Common checkbox above knob entries
+		self.b1andb2same_checkbox = QtWidgets.QCheckBox("LHCB1 same as LHCB2 mode")
+		corr_param_layout.addWidget(self.b1andb2same_checkbox)
+		self.b1andb2same_checkbox.stateChanged.connect(self.toggle_b1andb2same_mode)
+
+		# --- Add separate LHCB1 and LHCB2 knob fields ---
+		separate_knob_layout = QHBoxLayout()
+		# LHCB1 widgets
+		lhcb1_layout = QVBoxLayout()
+		self.b1_corr_knobname_label = QLabel("LHCB1 Knob name:")
+		self.b1_corr_knobname_label.setStyleSheet("color: blue;")
+		lhcb1_layout.addWidget(self.b1_corr_knobname_label)
+		self.b1_corr_knobname_entry = QLineEdit()
+		lhcb1_layout.addWidget(self.b1_corr_knobname_entry)
+		self.b1_corr_knob_label = QLabel("LHCB1 Knob value:")
+		self.b1_corr_knob_label.setStyleSheet("color: blue;")
+		lhcb1_layout.addWidget(self.b1_corr_knob_label)
+		self.b1_corr_knob_entry = QLineEdit()
+		lhcb1_layout.addWidget(self.b1_corr_knob_entry)
+		self.b1_corr_xing_label = QLabel("LHCB1 XING angle:")
+		self.b1_corr_xing_label.setStyleSheet("color: blue;")
+		lhcb1_layout.addWidget(self.b1_corr_xing_label)
+		self.b1_corr_xing_entry = QLineEdit()
+		lhcb1_layout.addWidget(self.b1_corr_xing_entry)
+		separate_knob_layout.addLayout(lhcb1_layout)
+		# LHCB2 widgets
+		lhcb2_layout = QVBoxLayout()
+		self.b2_corr_knobname_label = QLabel("LHCB2 Knob name:")
+		self.b2_corr_knobname_label.setStyleSheet("color: red;")
+		lhcb2_layout.addWidget(self.b2_corr_knobname_label)
+		self.b2_corr_knobname_entry = QLineEdit()
+		lhcb2_layout.addWidget(self.b2_corr_knobname_entry)
+		self.b2_corr_knob_label = QLabel("LHCB2 Knob value:")
+		self.b2_corr_knob_label.setStyleSheet("color: red;")
+		lhcb2_layout.addWidget(self.b2_corr_knob_label)
+		self.b2_corr_knob_entry = QLineEdit()
+		lhcb2_layout.addWidget(self.b2_corr_knob_entry)
+		self.b2_corr_xing_label = QLabel("LHCB2 XING angle:")
+		self.b2_corr_xing_label.setStyleSheet("color: red;")
+		lhcb2_layout.addWidget(self.b2_corr_xing_label)
+		self.b2_corr_xing_entry = QLineEdit()
+		lhcb2_layout.addWidget(self.b2_corr_xing_entry)
+		separate_knob_layout.addLayout(lhcb2_layout)
+		corr_param_layout.addLayout(separate_knob_layout)
+		# By default show separate fields
+		self.b1_corr_knobname_label.show()
+		self.b1_corr_knobname_entry.show()
+		self.b1_corr_knob_label.show()
+		self.b1_corr_knob_entry.show()
+		self.b1_corr_xing_label.show()
+		self.b1_corr_xing_entry.show()
+		self.b2_corr_knobname_label.show()
+		self.b2_corr_knobname_entry.show()
+		self.b2_corr_knob_label.show()
+		self.b2_corr_knob_entry.show()
+		self.b2_corr_xing_label.show()
+		self.b2_corr_xing_entry.show()
+
+		# --- Unified knob fields (for same mode) ---
+		self.corr_knobname_entry_label = QLabel("Shared Knob name:")
+		self.corr_knobname_entry = QLineEdit()
+		self.corr_knob_entry_label = QLabel("Shared Knob value:")
+		self.corr_knob_entry = QLineEdit()
+		self.corr_xing_entry_label = QLabel("Shared XING angle:")
+		self.corr_xing_entry = QLineEdit()
+		# Initially hide unified fields
+		self.corr_knobname_entry_label.hide()
+		self.corr_knobname_entry.hide()
+		self.corr_knob_entry_label.hide()
+		self.corr_knob_entry.hide()
+		self.corr_xing_entry_label.hide()
+		self.corr_xing_entry.hide()
+		corr_param_layout.addWidget(self.corr_knobname_entry_label)
+		corr_param_layout.addWidget(self.corr_knobname_entry)
+		corr_param_layout.addWidget(self.corr_knob_entry_label)
+		corr_param_layout.addWidget(self.corr_knob_entry)
+		corr_param_layout.addWidget(self.corr_xing_entry_label)
+		corr_param_layout.addWidget(self.corr_xing_entry)
+
+		corr_param_group.setLayout(corr_param_layout)
+		self.correction_layout.addWidget(corr_param_group)
+
+		# --- Run Button Group ---
+		run_response_group = QtWidgets.QGroupBox("Find Response")
+		run_response_layout = QVBoxLayout()
+		self.run_response_button = QPushButton("Find response")
+		self.run_response_button.clicked.connect(self.run_response)
+		run_response_layout.addWidget(self.run_response_button)
+		run_response_group.setLayout(run_response_layout)
+		self.correction_layout.addWidget(run_response_group)
+
+		# Add new Loaded Files section at the bottom of Correction tab
+		loaded_files_group = QGroupBox("Loaded Files")
+		loaded_files_layout = QVBoxLayout()
+		self.correction_loaded_files_list = QListWidget()
+		loaded_files_layout.addWidget(self.correction_loaded_files_list)
+		loaded_files_group.setLayout(loaded_files_layout)
+		self.correction_layout.addWidget(loaded_files_group)
+
+		correction_main_layout.addWidget(self.correction_content)
+
 	def change_default_input_path(self):
 		new_path = QFileDialog.getExistingDirectory(self, "Select Default Input Path", self.default_input_path)
 		if new_path:
@@ -363,135 +636,32 @@ class RDTFeeddownGUI(QMainWindow):
 		modelpath = QFileDialog.getExistingDirectory(self, "Select LHCB2 Model", self.default_input_path)
 		if modelpath:
 			self.beam2_model_entry.setText(modelpath)
-		
-	def select_beam1_reffolder(self):
+
+	def select_singlefolder(self, beam, title_text, filter_text, b1entry, b2entry):
 		"""
-		Open a file dialog to select the LHCB1 reference measurement folder.
+		Open a file dialog to select the reference measurement folder for the specified beam.
 		"""
 		dialog = QFileDialog(self)
-		dialog.setWindowTitle("Select LHCB1 Reference Measurement Folder")
+		dialog.setWindowTitle(title_text)
 		dialog.setDirectory(self.default_input_path)
 		dialog.setFileMode(QFileDialog.Directory)
 		dialog.setOption(QFileDialog.ShowDirsOnly, True)
-		dialog.setNameFilter("LHCB1 folders (Beam1BunchTurn*);;All Folders (*)")
+		dialog.setNameFilter(filter_text)
 		if dialog.exec_() == QFileDialog.Accepted:
 			folderpath = dialog.selectedFiles()[0]
-			self.beam1_reffolder_entry.setText(folderpath)
+			if beam == "LHCB1":
+				b1entry.setText(folderpath)
+			else:
+				b2entry.setText(folderpath)
 
-	def select_beam2_reffolder(self):
+	def remove_singlefolder(self, beam, b1entry, b2entry):
 		"""
-		Open a file dialog to select the LHCB2 reference measurement folder.
+		Clear the reference folder entry for the specified beam.
 		"""
-		dialog = QFileDialog(self)
-		dialog.setWindowTitle("Select LHCB2 Reference Measurement Folder")
-		dialog.setDirectory(self.default_input_path)
-		dialog.setFileMode(QFileDialog.Directory)
-		dialog.setOption(QFileDialog.ShowDirsOnly, True)
-		dialog.setNameFilter("LHCB2 folders (Beam2BunchTurn*);;All Folders (*)")
-		if dialog.exec_() == QFileDialog.Accepted:
-			folderpath = dialog.selectedFiles()[0]
-			self.beam2_reffolder_entry.setText(folderpath)
-
-	def remove_beam1_reffolder(self):
-		"""
-		Clear the LHCB1 reference folder entry.
-		"""
-		self.beam1_reffolder_entry.clear()
-
-	def remove_beam2_reffolder(self):
-		"""
-		Clear the LHCB2 reference folder entry.
-		"""
-		self.beam2_reffolder_entry.clear()
-
-	def select_multiple_directories(self, list_widget):
-		"""
-		Allow the user to select multiple directories and add them to the provided list widget.
-		"""
-		dialog = QFileDialog(self)
-		dialog.setDirectory(self.default_input_path)  # Set the default input path
-		dialog.setOption(QFileDialog.DontUseNativeDialog, True)
-		dialog.setFileMode(QFileDialog.Directory)
-		dialog.setOption(QFileDialog.ShowDirsOnly, True)
-
-		# Enable multiple selection in the dialog
-		for view in dialog.findChildren((QtWidgets.QListView, QtWidgets.QTreeView)):
-			if isinstance(view.model(), QtWidgets.QFileSystemModel):
-				view.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
-
-		if dialog.exec_() == QFileDialog.Accepted:
-			selected_dirs = dialog.selectedFiles()
-			for directory in selected_dirs:
-				if directory not in [list_widget.item(i).text() for i in range(list_widget.count())]:
-					list_widget.addItem(directory)
-
-	def select_beam1_folders(self):
-		dialog = QFileDialog(self)
-		dialog.setWindowTitle('Select LHCB1 Measurement Directories')
-		dialog.setDirectory(self.default_input_path)  # Set the default input path
-		dialog.setOption(QFileDialog.DontUseNativeDialog, True)
-		dialog.setFileMode(QFileDialog.Directory)
-		dialog.setOption(QFileDialog.ShowDirsOnly, True)
-		dialog.setNameFilter("Beam1BunchTurn*;;All Folders (*)")
-
-		# Enable multiple selection in the dialog
-		for view in dialog.findChildren((QtWidgets.QListView, QtWidgets.QTreeView)):
-			if isinstance(view.model(), QtWidgets.QFileSystemModel):
-				view.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
-
-		if dialog.exec_() == QFileDialog.Accepted:
-			selected_dirs = dialog.selectedFiles()
-			for directory in selected_dirs:
-				if directory not in [self.beam1_folders_list.item(i).text() for i in range(self.beam1_folders_list.count())]:
-					self.beam1_folders_list.addItem(directory)
-
-	def select_beam2_folders(self):
-		dialog = QFileDialog(self)
-		dialog.setWindowTitle('Select LHCB2 Measurement Directories')
-		dialog.setDirectory(self.default_input_path)  # Set the default input path
-		dialog.setOption(QFileDialog.DontUseNativeDialog, True)
-		dialog.setFileMode(QFileDialog.Directory)
-		dialog.setOption(QFileDialog.ShowDirsOnly, True)
-		dialog.setNameFilter("Beam2BunchTurn*;;All Folders (*)")
-
-		# Enable multiple selection in the dialog
-		for view in dialog.findChildren((QtWidgets.QListView, QtWidgets.QTreeView)):
-			if isinstance(view.model(), QtWidgets.QFileSystemModel):
-				view.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
-
-		if dialog.exec_() == QFileDialog.Accepted:
-			selected_dirs = dialog.selectedFiles()
-			for directory in selected_dirs:
-				if directory not in [self.beam2_folders_list.item(i).text() for i in range(self.beam2_folders_list.count())]:
-					self.beam2_folders_list.addItem(directory)
-
-	def remove_selected_beam1_folders(self):
-		"""
-		Remove selected items from the LHCB1 folders list.
-		"""
-		for item in self.beam1_folders_list.selectedItems():
-			self.beam1_folders_list.takeItem(self.beam1_folders_list.row(item))
-
-	def remove_selected_beam2_folders(self):
-		"""
-		Remove selected items from the LHCB2 folders list.
-		"""
-		for item in self.beam2_folders_list.selectedItems():
-			self.beam2_folders_list.takeItem(self.beam2_folders_list.row(item))
-
-	def toggle_select_all_beam1_folders(self, state):
-		"""
-		Toggle selection for all items in the LHCB1 folders list based on the checkbox state.
-		"""
-		for i in range(self.beam1_folders_list.count()):
-			self.beam1_folders_list.item(i).setSelected(state == Qt.Checked)
-
-	def toggle_select_all_beam2_folders(self, state):
-		"""
-		Toggle selection for all items in the LHCB2 folders list based on the checkbox state.
-		"""
-		for i in range(self.beam2_folders_list.count()):
-			self.beam2_folders_list.item(i).setSelected(state == Qt.Checked)
+		if beam == "LHCB1":
+			b1entry.clear()
+		else:
+			b2entry.clear()
 
 	def validate_rdt_and_plane(self, rdt, rdt_plane):
 		"""
@@ -569,7 +739,10 @@ class RDTFeeddownGUI(QMainWindow):
 		self.input_progress.show()
 		QtWidgets.QApplication.processEvents()
 		# Initialize variables and validate inputs
-		self.ldb = initialize_statetracker()
+		if self.simulation_checkbox.isChecked():
+			self.ldb = None
+		else:
+			self.ldb = initialize_statetracker()
 		self.rdt = self.rdt_entry.text()
 		self.rdt_plane = self.rdt_plane_dropdown.currentText()
 		self.validate_rdt_and_plane(self.rdt, self.rdt_plane)
@@ -589,9 +762,10 @@ class RDTFeeddownGUI(QMainWindow):
 			b1modelbpmlist, b1bpmdata = getmodelBPMs(self.beam1_model)
 			self.b1rdtdata = getrdt_omc3(self.ldb, "b1", b1modelbpmlist, b1bpmdata,
 										  self.beam1_reffolder, self.beam1_folders,
-										  self.knob, self.output_path,
-										  self.rdt, self.rdt_plane, self.rdtfolder,
-										  self.simulation_checkbox.isChecked(), self.simulation_file_entry.text(),
+										  self.knob, self.rdt, self.rdt_plane, 
+										  self.rdtfolder,
+										  self.simulation_checkbox.isChecked(), 
+										  self.simulation_file_entry.text(),
 										  self.log_error)
 			self.b1rdtdata = fit_BPM(self.b1rdtdata)
 
@@ -601,9 +775,10 @@ class RDTFeeddownGUI(QMainWindow):
 			b2modelbpmlist, b2bpmdata = getmodelBPMs(self.beam2_model)
 			self.b2rdtdata = getrdt_omc3(self.ldb, "b2", b2modelbpmlist, b2bpmdata,
 										  self.beam2_reffolder, self.beam2_folders,
-										  self.knob, self.output_path,
-										  self.rdt, self.rdt_plane, self.rdtfolder, 
-										  self.simulation_checkbox.isChecked(), self.simulation_file_entry.text(),
+										  self.knob, self.rdt, self.rdt_plane, 
+										  self.rdtfolder, 
+										  self.simulation_checkbox.isChecked(), 
+										  self.simulation_file_entry.text(),
 										  self.log_error)
 			self.b2rdtdata = fit_BPM(self.b2rdtdata)
 	
@@ -638,13 +813,6 @@ class RDTFeeddownGUI(QMainWindow):
 
 	def log_error(self, error_msg):
 		QMessageBox.critical(self, "Error", error_msg)
-
-	def remove_selected_items(self, list_widget):
-		"""
-		Remove selected items from a given list widget.
-		"""
-		for item in list_widget.selectedItems():
-			list_widget.takeItem(list_widget.row(item))
 
 	def toggle_select_all_validation_files(self, state):
 		"""
@@ -885,3 +1053,113 @@ class RDTFeeddownGUI(QMainWindow):
 		if filename:
 			self.simulation_file_entry.setText(filename)
 
+	def _select_folders(self, name_filter, list_widget):
+		dialog = QFileDialog(self)
+		dialog.setOption(QFileDialog.DontUseNativeDialog, True)
+		dialog.setFileMode(QFileDialog.Directory)
+		dialog.setOption(QFileDialog.ShowDirsOnly, True)
+		dialog.setDirectory(self.default_input_path)
+		dialog.setNameFilter(name_filter)
+		for view in dialog.findChildren((QtWidgets.QListView, QtWidgets.QTreeView)):
+			if isinstance(view.model(), QtWidgets.QFileSystemModel):
+				view.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
+		if dialog.exec_() == QFileDialog.Accepted:
+			selected_dirs = dialog.selectedFiles()
+			for directory in selected_dirs:
+				if directory not in [list_widget.item(i).text() for i in range(list_widget.count())]:
+					list_widget.addItem(directory)
+
+	def remove_selected_items(self, list_widget):
+		for item in list_widget.selectedItems():
+			list_widget.takeItem(list_widget.row(item))
+
+	def _toggle_select_all(self, list_widget, state):
+		for i in range(list_widget.count()):
+			list_widget.item(i).setSelected(state == Qt.Checked)
+
+	def select_beam1_folders(self):
+		self._select_folders("Beam1BunchTurn (Beam1BunchTurn*);;All Folders (*)", self.beam1_folders_list)
+
+	def select_beam2_folders(self):
+		self._select_folders("Beam2BunchTurn (Beam2BunchTurn)*;;All Folders (*)", self.beam2_folders_list)
+
+	def remove_selected_beam1_folders(self):
+		self.remove_selected_items(self.beam1_folders_list)
+
+	def remove_selected_beam2_folders(self):
+		self.remove_selected_items(self.beam2_folders_list)
+
+	def toggle_select_all_beam1_folders(self, state):
+		self._toggle_select_all(self.beam1_folders_list, state)
+
+	def toggle_select_all_beam2_folders(self, state):
+		self._toggle_select_all(self.beam2_folders_list, state)
+
+	def run_response(self):
+		self.corr_b1_reffile = self.corr_beam1_reffolder_entry.text()
+		self.corr_b2_reffile = self.corr_beam2_reffolder_entry.text()
+		self.corr_b1_measfile = self.corr_beam1_measfolder_entry.text()
+		self.corr_b2_measfile = self.corr_beam2_measfolder_entry.text()
+		# Updated knob assignment based on b1andb2same_checkbox toggle
+		if self.b1andb2same_checkbox.isChecked():
+			self.b1_corr_knobname = self.corr_knobname_entry.text()
+			self.b2_corr_knobname = self.corr_knobname_entry.text()
+			self.b1_corr_knob = self.corr_knob_entry.text()
+			self.b2_corr_knob = self.corr_knob_entry.text()
+			self.b1_corr_xing = self.corr_xing_entry.text()
+			self.b2_corr_xing = self.corr_xing_entry.text()
+		else:
+			self.b1_corr_knobname = self.b1_corr_knobname_entry.text()
+			self.b1_corr_knob = self.b1_corr_knob_entry.text()
+			self.b2_corr_knobname = self.b2_corr_knobname_entry.text()
+			self.b2_corr_knob = self.b2_corr_knob_entry.text() 
+			self.b1_corr_xing = self.b1_corr_xing_entry.text()
+			self.b2_corr_xing = self.b2_corr_xing_entry.text()
+		self.rdt = self.rdt_entry.text()
+		self.rdt_plane = self.rdt_plane_dropdown.currentText()
+		self.rdtfolder = rdt_to_order_and_type(self.rdt)
+		try:
+			getrdt_sim("LHCB1", self.corr_b1_reffile, self.corr_b1_measfile, self.b1_corr_xing, 
+			self.b1_corr_knobname, self.b1_corr_knob, self.rdt, self.rdt_plane, self.rdtfolder, log_func=None)
+		except Exception as e:
+			self.log_error(f"Error in getting RDT: {e}")
+		try:
+			getrdt_sim("LHCB2", self.corr_b2_reffile, self.corr_b2_measfile, self.b2_corr_xing, 
+			self.b2_corr_knobname, self.b2_corr_knob, self.rdt, self.rdt_plane, self.rdtfolder, log_func=None)
+		except Exception as e:
+			self.log_error(f"Error in getting RDT: {e}")
+
+	def toggle_b1andb2same_mode(self, state):
+		is_checked = (state == Qt.Checked)
+		 # For sections with separate knob fields, only toggle if they exist.
+
+		self.b1_corr_knobname_label.setVisible(not is_checked)
+		self.b1_corr_knobname_entry.setVisible(not is_checked)
+		self.b1_corr_knob_label.setVisible(not is_checked)
+		self.b1_corr_knob_entry.setVisible(not is_checked)
+		self.b1_corr_xing_label.setVisible(not is_checked)
+		self.b1_corr_xing_entry.setVisible(not is_checked)
+		self.b2_corr_knobname_label.setVisible(not is_checked)
+		self.b2_corr_knobname_entry.setVisible(not is_checked)
+		self.b2_corr_knob_label.setVisible(not is_checked)
+		self.b2_corr_knob_entry.setVisible(not is_checked)
+		self.b2_corr_xing_label.setVisible(not is_checked)
+		self.b2_corr_xing_entry.setVisible(not is_checked)
+		# Always toggle the unified fields in the correction parameters layout
+		self.corr_knobname_entry_label.setVisible(is_checked)
+		self.corr_knobname_entry.setVisible(is_checked)
+		self.corr_knob_entry_label.setVisible(is_checked)
+		self.corr_knob_entry.setVisible(is_checked)
+		self.corr_xing_entry_label.setVisible(is_checked)
+		self.corr_xing_entry.setVisible(is_checked)
+
+	# New method to toggle the Correction content visibility
+	def toggle_correction_content(self):
+		visible = self.corr_toggle_button.isChecked()
+		self.correction_content.setVisible(visible)
+		if visible:
+			self.corr_toggle_button.setArrowType(Qt.DownArrow)
+			self.corr_toggle_button.setText("Collapse Section")
+		else:
+			self.corr_toggle_button.setArrowType(Qt.RightArrow)
+			self.corr_toggle_button.setText("Expand Section")
