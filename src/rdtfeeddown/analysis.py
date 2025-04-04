@@ -5,6 +5,8 @@ import csv
 from .utils import get_analysis_knobsetting, csv_to_dict
 import tfs
 import json
+import os
+import re
 
 def filter_outliers(
 	data, 
@@ -59,15 +61,34 @@ def ensure_trailing_slash(path):
 	"""
 	return path if path.endswith('/') else path + '/'
 
-def readrdtdatafile(cfile, rdt, rdt_plane, rdtfolder, log_func=None):
+def readrdtdatafile(cfile, rdt, rdt_plane, rdtfolder, sim, log_func=None):
 	"""
 	Reads RDT data from a file and removes outliers based on Z-scores.
 	"""
 	# Ensure cfile and rdtfolder have trailing slashes
-	cfile = ensure_trailing_slash(cfile)
+	cfile2 = ensure_trailing_slash(cfile)
 	rdtfolder = ensure_trailing_slash(rdtfolder)
-	filepath = f'{cfile}rdt/{rdtfolder}f{rdt}_{rdt_plane}.tfs'
-	raw_data = read_rdt_file(filepath)
+	filepath = f'{cfile2}rdt/{rdtfolder}f{rdt}_{rdt_plane}.tfs'
+	if sim:
+		try:
+			df = tfs.read(cfile)
+			df_filted = df[df['NAME'].str.contains('BPM')]
+			if df_filted.empty:
+				if log_func:
+					log_func(f"No BPM data found in file: {filepath}")
+				else:
+					print(f"No BPM data found in file: {filepath}")
+				return None
+			raw_data = []
+			for index, row in df_filted.iterrows():
+				row["REAL"] = np.real(row[f"F{rdt}"])
+				row["IMAG"] = np.imag(row[f"F{rdt}"]) 
+				row["AMP"] = np.abs(row[f"F{rdt}"])
+				raw_data.append([str(row["NAME"]), float(row["AMP"]), float(row["REAL"]), float(row["IMAG"])])
+		except Exception as e:
+			raw_data = read_rdt_file(filepath, log_func)
+	else:
+		raw_data = read_rdt_file(filepath, log_func)
 	return filter_outliers(raw_data)
 
 def update_bpm_data(bpmdata, data, key, knob_setting):
@@ -78,8 +99,15 @@ def update_bpm_data(bpmdata, data, key, knob_setting):
 		name, amp, re, im = entry
 		bpmdata[name][key].append([knob_setting, amp, re, im])
 
-def getrdt_omc3(ldb, modelbpmlist, bpmdata, ref, flist, knob, outputpath, rdt, rdt_plane, rdtfolder, sim, propfile, log_func=None):
-	print(sim, propfile)
+def getrdt_omc3(ldb, beam, modelbpmlist, bpmdata, ref, flist, knob, outputpath, rdt, rdt_plane, rdtfolder, sim, propfile, log_func=None):
+	beam_no = modelbpmlist[0][-1]
+	if beam[-1] != beam_no:
+		msg = f"Beam number {beam} does not match the model BPM list."
+		if log_func:
+			log_func(msg)
+		else:
+			print(msg)
+		return None
 	mapping_dict = {}
 	if sim:
 		mapping_dict = csv_to_dict(propfile)
@@ -88,21 +116,22 @@ def getrdt_omc3(ldb, modelbpmlist, bpmdata, ref, flist, knob, outputpath, rdt, r
 	refk = None
 	if sim and mapping_dict:
 		for entry in mapping_dict:
-			if entry.get("ref") == os.path.basename(ref):
-				refk = float(entry.get("knob", 0))  # Default to 0 if "knob" is missing
+			regex_str = entry.get("MATCH", "")
+			if re.fullmatch(fr"^{regex_str}$", os.path.basename(ref)):
+				refk = float(entry.get("KNOB", 0))  # Default to 0 if "KNOB" is missing
 				break
 		if refk is None:
-			msg = f"Reference knob {ref} not found in mapping dictionary."
+			msg = f"Reference knob for {ref} not found in mapping dictionary."
 			if log_func:
 				log_func(msg)
 			raise RuntimeError(msg)
 	else:  # Fallback to original method if not found
 		refk = get_analysis_knobsetting(ldb, knob, ref, log_func)
-	if refk is None:
-		msg = f"Reference knob {ref} not found."
-		if log_func:
-			log_func(msg)
-		raise RuntimeError(msg)
+		if refk is None:
+			msg = f"Reference knob {ref} not found."
+			if log_func:
+				log_func(msg)
+			raise RuntimeError(msg)
 	try:
 		refdat = readrdtdatafile(ref, rdt, rdt_plane, rdtfolder, log_func)
 	except FileNotFoundError:
@@ -110,19 +139,22 @@ def getrdt_omc3(ldb, modelbpmlist, bpmdata, ref, flist, knob, outputpath, rdt, r
 		if log_func:
 			log_func(msg)
 		raise RuntimeError(msg)
-	update_bpm_data(bpmdata, refdat, 'ref', refk)
+	if refdat is not None and refk is not None:
+		update_bpm_data(bpmdata, refdat, 'ref', refk)
 
 	updated_count = 0
+	ksetting = None
 	for f in flist:
 		if sim and mapping_dict:
-			entry = next((e for e in mapping_dict if e.get("ref") == os.path.basename(f)), None)
+			entry = next((e for e in mapping_dict if re.fullmatch(fr'^{e.get("MATCH", "")}$', os.path.basename(f))), None)
 			if entry is not None:
-				ksetting = float(entry.get("knob", 0))
+				ksetting = float(entry.get("KNOB", 0))
 			else:
-				ksetting = get_analysis_knobsetting(ldb, knob, f, log_func)
+				msg = f"Measurement knob for {f} not found in mapping dictionary"
+				if log_func:
+					log_func(msg)
 		else:  # Fallback to original method if not found
 			ksetting = get_analysis_knobsetting(ldb, knob, f, log_func)
-
 		try:
 			cdat = readrdtdatafile(f, rdt, rdt_plane, rdtfolder, log_func)
 		except FileNotFoundError:
@@ -130,8 +162,9 @@ def getrdt_omc3(ldb, modelbpmlist, bpmdata, ref, flist, knob, outputpath, rdt, r
 			if log_func:
 				log_func(msg)
 			raise RuntimeError(msg)
-		update_bpm_data(bpmdata, cdat, 'data', ksetting)
-		updated_count += 1
+		if cdat is not None and ksetting is not None:
+			update_bpm_data(bpmdata, cdat, 'data', ksetting)
+			updated_count += 1
 
 	# If no measurement folder updated, throw error and return None
 	if updated_count == 0:
@@ -139,19 +172,19 @@ def getrdt_omc3(ldb, modelbpmlist, bpmdata, ref, flist, knob, outputpath, rdt, r
 		if log_func:
 			log_func(msg)
 		raise RuntimeError(msg)
+		return None
 
 	intersectedBPMdata = {}
-	beam_no = modelbpmlist[0][-1]
 	for bpm in modelbpmlist:
 		if len(bpmdata[bpm]['ref']) != 1 or len(bpmdata[bpm]['data']) != len(flist):
 			continue
 
 		s = bpmdata[bpm]['s']
-		ref = bpmdata[bpm]['ref']
+		bref = bpmdata[bpm]['ref']
 		dat = bpmdata[bpm]['data']
 
 		diffdat = [
-			[dat[k][0] - ref[0][0], dat[k][2] - ref[0][2], dat[k][3] - ref[0][3]]
+			[dat[k][0] - bref[0][0], dat[k][2] - bref[0][2], dat[k][3] - bref[0][3]]
 			for k in range(len(dat))
 		]
 		diffdat.sort(key=lambda x: x[0])
@@ -161,9 +194,9 @@ def getrdt_omc3(ldb, modelbpmlist, bpmdata, ref, flist, knob, outputpath, rdt, r
 		if log_func:
 			log_func(msg)
 		raise RuntimeError(msg)
+		return None
 
-	# New: Add metadata for rdt, rdt_plane and knob
-	return {'metadata': {'beam' : f'b{beam_no}', 'ref' : ref, 'rdt': rdt, 'rdt_plane': rdt_plane, 'knob': knob}, 'data': intersectedBPMdata}
+	return {'metadata': {'beam' : beam, 'ref' : ref, 'rdt': rdt, 'rdt_plane': rdt_plane, 'knob': knob}, 'data': intersectedBPMdata}
 
 def polyfunction(x,c,m,n):
 	y=c+m*x+n*x**2
@@ -189,7 +222,6 @@ def fit_BPM(fulldata):
 		re_err=[]
 		im_err=[]
 		for x in range(len(diffdata)):
-			print(diffdata[x])
 			xing.append(diffdata[x][0])
 			re.append(diffdata[x][1])
 			im.append(diffdata[x][2])
@@ -406,25 +438,25 @@ def group_datasets(datasets, log_func=None):
 				log_func(f"Unexpected beam value: {beam}")
 			else:
 				raise ValueError(f"Unexpected beam value: {beam}")
-		if grouped_b1['metadata'] is not None and grouped_b2['metadata'] is not None:
-			if grouped_b1['metadata'] != grouped_b2['metadata']:
-				if log_func:
-					log_func("Datasets for beam 1 and beam 2 have differing metadata; cannot group them together.")
-				else:
-					raise ValueError("Datasets for beam 1 and beam 2 have differing metadata; cannot group them together.")
-				return None, None, None, None
-		if grouped_b1['metadata'] is not None:
-			rdt = grouped_b1['metadata']['rdt']
-			rdt_plane = grouped_b1['metadata']['rdt_plane']
-		elif grouped_b2['metadata'] is not None:
-			rdt = grouped_b2['metadata']['rdt']
-			rdt_plane = grouped_b2['metadata']['rdt_plane']
-		else:
+	if {k: v for k, v in grouped_b1['metadata'].items() if k != 'beam' and k != 'ref'} != \
+		{k: v for k, v in grouped_b2['metadata'].items() if k != 'beam' and k != 'ref'}:
 			if log_func:
-				log_func("No metadata found for either beam.")
+				log_func("Datasets for beam 1 and beam 2 have differing metadata; cannot group them together.")
 			else:
-				raise ValueError("No metadata found for either beam.")
+				raise ValueError("Datasets for beam 1 and beam 2 have differing metadata; cannot group them together.")
 			return None, None, None, None
+	if grouped_b1['metadata'] is not None:
+		rdt = grouped_b1['metadata']['rdt']
+		rdt_plane = grouped_b1['metadata']['rdt_plane']
+	elif grouped_b2['metadata'] is not None:
+		rdt = grouped_b2['metadata']['rdt']
+		rdt_plane = grouped_b2['metadata']['rdt_plane']
+	else:
+		if log_func:
+			log_func("No metadata found for either beam.")
+		else:
+			raise ValueError("No metadata found for either beam.")
+		return None, None, None, None
 
 	return grouped_b1, grouped_b2, rdt, rdt_plane
 

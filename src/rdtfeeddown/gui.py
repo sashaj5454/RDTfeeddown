@@ -140,7 +140,7 @@ class RDTFeeddownGUI(QMainWindow):
 		self.beam1_folders_label.setStyleSheet("color: blue;")
 		beam1_folders_layout.addWidget(self.beam1_folders_label)
 		self.beam1_folders_list = QListWidget()
-		self.beam1_folders_list.setSelectionMode(QListWidget.MultiSelection)
+		self.beam1_folders_list.setSelectionMode(QListWidget.ExtendedSelection)
 		beam1_folders_layout.addWidget(self.beam1_folders_list)
 		beam1_buttons_layout = QHBoxLayout()
 		self.beam1_folders_button = QPushButton("Add Folders")
@@ -160,7 +160,7 @@ class RDTFeeddownGUI(QMainWindow):
 		self.beam2_folders_label.setStyleSheet("color: red;")
 		beam2_folders_layout.addWidget(self.beam2_folders_label)
 		self.beam2_folders_list = QListWidget()
-		self.beam2_folders_list.setSelectionMode(QListWidget.MultiSelection)
+		self.beam2_folders_list.setSelectionMode(QListWidget.ExtendedSelection)
 		beam2_folders_layout.addWidget(self.beam2_folders_list)
 		beam2_buttons_layout = QHBoxLayout()
 		self.beam2_folders_button = QPushButton("Add Folders")
@@ -442,7 +442,8 @@ class RDTFeeddownGUI(QMainWindow):
 		if dialog.exec_() == QFileDialog.Accepted:
 			selected_dirs = dialog.selectedFiles()
 			for directory in selected_dirs:
-				self.beam1_folders_list.addItem(directory)
+				if directory not in [self.beam1_folders_list.item(i).text() for i in range(self.beam1_folders_list.count())]:
+					self.beam1_folders_list.addItem(directory)
 
 	def select_beam2_folders(self):
 		dialog = QFileDialog(self)
@@ -461,7 +462,8 @@ class RDTFeeddownGUI(QMainWindow):
 		if dialog.exec_() == QFileDialog.Accepted:
 			selected_dirs = dialog.selectedFiles()
 			for directory in selected_dirs:
-				self.beam2_folders_list.addItem(directory)
+				if directory not in [self.beam2_folders_list.item(i).text() for i in range(self.beam2_folders_list.count())]:
+					self.beam2_folders_list.addItem(directory)
 
 	def remove_selected_beam1_folders(self):
 		"""
@@ -547,7 +549,8 @@ class RDTFeeddownGUI(QMainWindow):
 	def update_validation_files_widget(self):
 		# Update the validation_files_list widget with analysis_output_files
 		for f in self.analysis_output_files:
-			self.validation_files_list.addItem(f)
+			if f not in [self.validation_files_list.item(i).text() for i in range(self.validation_files_list.count())]:
+				self.validation_files_list.addItem(f)
 
 	def run_next_step(self):
 		try:
@@ -584,7 +587,7 @@ class RDTFeeddownGUI(QMainWindow):
 		# Process LHCB1 data
 		if self.beam1_model and self.beam1_folders:
 			b1modelbpmlist, b1bpmdata = getmodelBPMs(self.beam1_model)
-			self.b1rdtdata = getrdt_omc3(self.ldb, b1modelbpmlist, b1bpmdata,
+			self.b1rdtdata = getrdt_omc3(self.ldb, "b1", b1modelbpmlist, b1bpmdata,
 										  self.beam1_reffolder, self.beam1_folders,
 										  self.knob, self.output_path,
 										  self.rdt, self.rdt_plane, self.rdtfolder,
@@ -596,7 +599,7 @@ class RDTFeeddownGUI(QMainWindow):
 		# Process LHCB2 data and write output files:
 		if self.beam2_model and self.beam2_folders:
 			b2modelbpmlist, b2bpmdata = getmodelBPMs(self.beam2_model)
-			self.b2rdtdata = getrdt_omc3(self.ldb, b2modelbpmlist, b2bpmdata,
+			self.b2rdtdata = getrdt_omc3(self.ldb, "b2", b2modelbpmlist, b2bpmdata,
 										  self.beam2_reffolder, self.beam2_folders,
 										  self.knob, self.output_path,
 										  self.rdt, self.rdt_plane, self.rdtfolder, 
@@ -617,7 +620,8 @@ class RDTFeeddownGUI(QMainWindow):
 		loaded_output_data = []
 		self.loaded_files_list.clear()
 		for f in self.analysis_output_files:
-			self.loaded_files_list.addItem(f)
+			if f not in [self.loaded_files_list.item(i).text() for i in range(self.loaded_files_list.count())]:
+				self.loaded_files_list.addItem(f)
 			data = load_RDTdata(f)
 			loaded_output_data.append(data)
 		results = group_datasets(loaded_output_data, self.log_error)
@@ -736,6 +740,7 @@ class RDTFeeddownGUI(QMainWindow):
 		self.bpmFigure.clear()
 		ax1 = self.bpmFigure.add_subplot(211)
 		ax2 = self.bpmFigure.add_subplot(212)
+		self.bpmFigure.subplots_adjust(hspace=0.7)
 		plot_BPM(BPM, data, self.rdt, self.rdt_plane, ax1=ax1, ax2=ax2, log_func=self.log_error)
 		self.bpmCanvas.draw()
 		self.plot_progress.hide()
@@ -816,8 +821,10 @@ class RDTFeeddownGUI(QMainWindow):
 		self.rdtFigure.clear()
 		if datab1 and datab2:
 			axes = self.rdtFigure.subplots(3, 2, sharey=False)
+			self.rdtFigure.subplots_adjust(hspace=0.7, wspace=0.4)
 		else:
 			axes = self.rdtFigure.subplots(3, 1, sharey=False)
+			self.rdtFigure.subplots_adjust(hspace=0.7)
 		try:
 			plot_RDT(datab1, datab2, self.rdt, self.rdt_plane, axes, log_func=self.log_error)
 			self.rdtCanvas.draw()
@@ -842,8 +849,10 @@ class RDTFeeddownGUI(QMainWindow):
 		self.rdtShiftFigure.clear()
 		if datab1 and datab2:
 			axes = self.rdtShiftFigure.subplots(3, 2, sharey=False)
+			self.rdtShiftFigure.subplots_adjust(hspace=0.7, wspace=0.4)
 		else:
 			axes = self.rdtShiftFigure.subplots(3, 1, sharey=False)
+			self.rdtShiftFigure.subplots_adjust(hspace=0.7)
 		try:
 			plot_RDTshifts(datab1, datab2, self.rdt, self.rdt_plane, axes, log_func=self.log_error)
 			self.rdtShiftCanvas.draw()

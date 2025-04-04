@@ -25,6 +25,25 @@ IP_POS_DEFAULT = {
 	}
 }
 
+# New helper function to update IP labels on a given axis.
+def update_ip_labels(ax, beam):
+	# Remove previous IP lines and texts if present.
+	if hasattr(ax, '_ip_artists'):
+		for artist in ax._ip_artists:
+			artist.remove()
+	artists = []
+	# Get current axis limits.
+	x_min, x_max = ax.get_xlim()
+	_, y_max = ax.get_ylim()
+	for ip in range(1, 9):
+		ip_x = IP_POS_DEFAULT[beam][f"IP{ip}"]
+		# Only draw if within current x limits.
+		if x_min <= ip_x <= x_max:
+			line = ax.axvline(x=ip_x, color="black", linestyle="--")
+			text = ax.text(ip_x, y_max, f"IP{ip}", rotation=0, va="bottom", ha="center")
+			artists.extend([line, text])
+	ax._ip_artists = artists
+
 def plot_BPM(BPM, fulldata, rdt, rdt_plane, ax1=None, ax2=None, log_func=None):
 	try:
 		data = fulldata["data"]
@@ -62,8 +81,7 @@ def plot_BPM(BPM, fulldata, rdt, rdt_plane, ax1=None, ax2=None, log_func=None):
 		ax2.set_xlabel("Knob trim")
 		ax2.plot(xfit, imfit)
 		ax2.plot(xing, im, 'ro')
-
-		plt.tight_layout(pad=2.0, h_pad=5.0)
+		
 	except Exception as e:
 		if log_func:
 			log_func(f"Error plotting BPM {BPM}: {e}")
@@ -78,10 +96,9 @@ def plot_avg_rdt_shift(ax, data, rdt, rdt_plane):
 	Plot the average RDT shift and standard deviation for given data on the provided axis.
 	"""
 	xing, ampdat, stddat = calculate_avg_rdt_shift(data)
-	ax.set_ylabel(f"sqrt($\\Delta$Re$f_{{{rdt_plane},{rdt}}}^2$+$\\Delta$Im$f_{{{rdt_plane},{rdt}}}^2$)")
+	ax.set_ylabel(rf"$\sqrt{{\Delta\,\mathrm{{Re}}(f_{{{rdt_plane},{rdt}}})^2+\Delta\,\mathrm{{Im}}(f_{{{rdt_plane},{rdt}}})^2}}$")	
 	ax.set_xlabel(f"Knob trim")
 	ax.plot(xing, ampdat)
-	plt.tight_layout(pad=2.0, h_pad=5.0)
 	ax.errorbar(xing, ampdat, yerr=stddat, fmt='ro')
 
 def plot_RDTshifts(b1data, b2data, rdt, rdt_plane, axes, log_func=None):
@@ -93,7 +110,7 @@ def plot_RDTshifts(b1data, b2data, rdt, rdt_plane, axes, log_func=None):
 	"""
 	try:
 		if b1data and b2data:
-			ax1, ax2, ax3, ax4, ax5, ax6 = axes
+			ax1, ax2, ax3, ax4, ax5, ax6 = axes.flatten()
 		else:
 			ax1, ax2, ax3 = axes
 
@@ -147,28 +164,25 @@ def plot_RDTshifts(b1data, b2data, rdt, rdt_plane, axes, log_func=None):
 			ax_im.plot(sdat, dimdkdat)
 			ax_im.errorbar(sdat, dimdkdat, yerr=dimdkerr, fmt='ro')
 
+			# Instead of statically drawing IP labels, register callbacks to update on zoom.
 			for ax_ in (ax_re, ax_im):
-				# Retrieve the current y-limits from the Axes object
-				y_min, y_max = ax_.get_ylim()
-				for ip in range(1, 9):
-					ip_x = IP_POS_DEFAULT[label][f"IP{ip}"]
-					ax_.axvline(x=ip_x, color="black", linestyle="--")
-					ax_.text(ip_x, y_max * 1.05, f"IP{ip}", rotation=0, va="bottom", ha="center")
-				plt.tight_layout(pad=2.0, h_pad=5.0)
+				ax_.callbacks.connect('xlim_changed', lambda event, ax=ax_, beam=label: update_ip_labels(ax, beam))
+				ax_.callbacks.connect('ylim_changed', lambda event, ax=ax_, beam=label: update_ip_labels(ax, beam))
+				update_ip_labels(ax_, label)
 
 		# Case 1: Both Beam 1 and Beam 2 data
-		if b1data is not None and b2data is not None:
+		if b1data  and b2data:
 			# LHCB1 on the left: (ax1, ax3, ax5)
 			plot_beam_data((ax1, ax3, ax5), b1data, "LHCB1")
 			# LHCB2 on the right: (ax2, ax4, ax6)
 			plot_beam_data((ax2, ax4, ax6), b2data, "LHCB2")
 
 		# Case 2: Only Beam 1 data given (b2data is None)
-		if b1data is not None:
+		elif b1data:
 			plot_beam_data((ax1, ax2, ax3), b1data, "LHCB1")
 
 		# Case 3: Only Beam 2 data given (b1data is None)
-		if b2data is not None:
+		elif b2data is not None:
 			plot_beam_data((ax1, ax2, ax3), b2data, "LHCB2")
 
 	except Exception as e:
@@ -189,7 +203,7 @@ def plot_RDT(b1data, b2data, rdt, rdt_plane, axes, log_func=None):
 	try:
 		# Decide figure layout
 		if b1data and b2data:
-			ax1, ax2, ax3, ax4, ax5, ax6 = axes
+			ax1, ax2, ax3, ax4, ax5, ax6 = axes.flatten()
 		else:
 			ax1, ax2, ax3 = axes
 
@@ -247,14 +261,11 @@ def plot_RDT(b1data, b2data, rdt, rdt_plane, axes, log_func=None):
 				ax_im.set_xlabel(f'S [km]')
 				ax_im.plot(sdat, imdat, marker='o')
 
+			# Instead of static IP drawing, register callbacks for zoom updates.
 			for ax_ in (ax_amp, ax_re, ax_im):
-				# Retrieve the current y-limits from the Axes object
-				y_min, y_max = ax_.get_ylim()
-				for ip in range(1, 9):
-					ip_x = IP_POS_DEFAULT[beam_label][f"IP{ip}"]
-					ax_.axvline(x=ip_x, color="black", linestyle="--")
-					ax_.text(ip_x, y_max * 1.05, f"IP{ip}", rotation=0, va="bottom", ha="center")
-				plt.tight_layout(pad=2.0, h_pad=5.0)
+				ax_.callbacks.connect('xlim_changed', lambda event, ax=ax_, beam=beam_label: update_ip_labels(ax, beam))
+				ax_.callbacks.connect('ylim_changed', lambda event, ax=ax_, beam=beam_label: update_ip_labels(ax, beam))
+				update_ip_labels(ax_, beam_label)
 
 		if b1data and b2data:
 			# Plot B1 (left column)
