@@ -10,7 +10,7 @@ from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as Navigatio
 from matplotlib.figure import Figure
 from .utils import load_defaults, check_rdt, initialize_statetracker, rdt_to_order_and_type, getmodelBPMs
 from .analysis import write_RDTshifts, getrdt_omc3, fit_BPM, save_RDTdata, load_RDTdata, group_datasets, getrdt_sim
-from .plotting import plot_BPM, plot_RDT, plot_RDTshifts  # Assuming you have a plotting module for BPM plotting
+from .plotting import plot_BPM, plot_RDT, plot_RDTshifts, plot_dRDTdknob  # Assuming you have a plotting module for BPM plotting
 import time  # Import time to get the current timestamp
 import re    # Import re for regex substitution
 
@@ -95,17 +95,18 @@ class RDTFeeddownGUI(QMainWindow):
 
 		# LHCB1 Reference Folder (vertical layout)
 		beam1_ref_layout = QVBoxLayout()
-		self.beam1_reffolder_label = QLabel("LHCB1 Reference Folder:")
+		self.beam1_reffolder_label = QLabel("LHCB1 Reference Measurement Folder:")
 		self.beam1_reffolder_label.setStyleSheet("color: blue;")
 		beam1_ref_layout.addWidget(self.beam1_reffolder_label)
 		self.beam1_reffolder_entry = QLineEdit()
 		beam1_ref_layout.addWidget(self.beam1_reffolder_entry)
 		beam1_buttons_layout = QHBoxLayout()
 		self.beam1_reffolder_button = QPushButton("Select Folder")
-		self.beam1_reffolder_button.clicked.connect(lambda: self.select_singlefolder("LHCB1",
+		self.beam1_reffolder_button.clicked.connect(lambda: self.select_singleitem("LHCB1",
 													f"Select LHCB1 Reference Measurement Folder",
 													f"LHCB1 folders (Beam1BunchTurn*);;All Folders (*)",
-													self.beam1_reffolder_entry, self.beam2_reffolder_entry))
+													self.beam1_reffolder_entry, self.beam2_reffolder_entry,
+													True))
 		beam1_buttons_layout.addWidget(self.beam1_reffolder_button)
 		self.beam1_reffolder_remove_button = QPushButton("Remove File")
 		self.beam1_reffolder_remove_button.clicked.connect(lambda: self.remove_singlefolder("LHCB1",
@@ -116,17 +117,18 @@ class RDTFeeddownGUI(QMainWindow):
 
 		# LHCB2 Reference Folder (vertical layout)
 		beam2_ref_layout = QVBoxLayout()
-		self.beam2_reffolder_label = QLabel("LHCB2 Reference Folder:")
+		self.beam2_reffolder_label = QLabel("LHCB2 Reference Measurement Folder:")
 		self.beam2_reffolder_label.setStyleSheet("color: red;")
 		beam2_ref_layout.addWidget(self.beam2_reffolder_label)
 		self.beam2_reffolder_entry = QLineEdit()
 		beam2_ref_layout.addWidget(self.beam2_reffolder_entry)
 		beam2_buttons_layout = QHBoxLayout()
 		self.beam2_reffolder_button = QPushButton("Select Folder")
-		self.beam2_reffolder_button.clicked.connect(lambda: self.select_singlefolder("LHCB2", 
+		self.beam2_reffolder_button.clicked.connect(lambda: self.select_singleitem("LHCB2", 
 													f"Select LHCB2 Reference Measurement Folder", 
 													f"LHCB2 folders (Beam2BunchTurn*);;All Folders (*)", 
-													self.beam1_reffolder_entry, self.beam2_reffolder_entry))
+													self.beam1_reffolder_entry, self.beam2_reffolder_entry,
+													True))
 		beam2_buttons_layout.addWidget(self.beam2_reffolder_button)
 		self.beam2_reffolder_remove_button = QPushButton("Remove File")
 		self.beam2_reffolder_remove_button.clicked.connect(lambda: self.remove_singlefolder("LHCB2",
@@ -219,11 +221,6 @@ class RDTFeeddownGUI(QMainWindow):
 		self.validate_knob_button = QPushButton("Validate Knob")
 		self.validate_knob_button.clicked.connect(self.validate_knob_button_clicked)
 		param_layout.addWidget(self.validate_knob_button)
-		# Common checkbox above knob entries
-		self.b1andb2same_checkbox = QtWidgets.QCheckBox("LHCB1 same as LHCB2 mode")
-		param_layout.addWidget(self.b1andb2same_checkbox)
-		# Connect the checkbox state to the toggle method
-		self.b1andb2same_checkbox.stateChanged.connect(self.toggle_b1andb2same_mode)
 		# Unified fields (hidden by default)
 		self.corr_knobname_entry = QLineEdit()
 		self.corr_knobname_entry.setPlaceholderText("Unified Knob Name")
@@ -387,8 +384,44 @@ class RDTFeeddownGUI(QMainWindow):
 		self.correction_content = QWidget()
 		self.correction_layout = QVBoxLayout(self.correction_content)
 
+		 # Insert new group box at the top of the collapsible content
+		measurement_match_group = QGroupBox("Measurement to be matched")
+		match_layout = QHBoxLayout(measurement_match_group)
+		
+		# LHCB1
+		b1_container = QWidget()
+		b1_vlayout = QVBoxLayout(b1_container)
+		b1_label = QLabel("LHCB1 Single Measurement:")
+		self.b1_match_entry = QLineEdit()
+		b1_button = QPushButton("Browse File")
+		b1_button.clicked.connect(lambda: self.select_singleitem("LHCB1",
+															"Select LHCB1 Match File",
+															"JSON Files (*.json);;All Files (*)", 
+															self.b1_match_entry, None))
+		b1_vlayout.addWidget(b1_label)
+		b1_vlayout.addWidget(self.b1_match_entry)
+		b1_vlayout.addWidget(b1_button)
+		match_layout.addWidget(b1_container)
+
+		# LHCB2
+		b2_container = QWidget()
+		b2_vlayout = QVBoxLayout(b2_container)
+		b2_label = QLabel("LHCB2 Single Measurement:")
+		self.b2_match_entry = QLineEdit()
+		b2_button = QPushButton("Browse File")
+		b2_button.clicked.connect(lambda: self.select_singleitem("LHCB2",
+														   	"Select LHCB2 Match File",
+															"JSON Files (*.json);;Select LHCB2 Match File",
+															None, self.b2_match_entry))
+		b2_vlayout.addWidget(b2_label)
+		b2_vlayout.addWidget(self.b2_match_entry)
+		b2_vlayout.addWidget(b2_button)
+		match_layout.addWidget(b2_container)
+		
+		self.correction_layout.insertWidget(0, measurement_match_group)
+
 		# Reference correction folders
-		corr_folders_group = QtWidgets.QGroupBox("Reference and Measurement Folders ")
+		corr_folders_group = QtWidgets.QGroupBox("Reference and Measurement Folders")
 		corr_folders_group.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
 		corr_folders_layout = QVBoxLayout(corr_folders_group)
 
@@ -406,14 +439,15 @@ class RDTFeeddownGUI(QMainWindow):
 		corr_beam1_ref_layout.addWidget(self.corr_beam1_reffolder_entry)
 		corr_beam1_buttons_layout = QHBoxLayout()
 		self.corr_beam1_reffolder_button = QPushButton("Select Folder")
-		self.corr_beam1_reffolder_button.clicked.connect(lambda: self.select_singlefolder("LHCB1", 
-													f"Select LHCB1 Reference Folder", 
+		self.corr_beam1_reffolder_button.clicked.connect(lambda: self.select_singleitem("LHCB1", 
+													"Select LHCB1 Reference File", 
 													"All Folders (*)", 
-													self.corr_beam1_reffolder_entry, self.corr_beam2_reffolder_entry))
+													self.corr_beam1_reffolder_entry, None,
+													True))
 		corr_beam1_buttons_layout.addWidget(self.corr_beam1_reffolder_button)
 		self.corr_beam1_reffolder_remove_button = QPushButton("Remove File")
 		self.corr_beam1_reffolder_remove_button.clicked.connect(lambda: self.remove_singlefolder("LHCB1",
-													self.beam1_reffolder_entry, self.beam2_reffolder_entry))
+													self.beam1_reffolder_entry, self.beam2_reffolder_entry,))
 		corr_beam1_buttons_layout.addWidget(self.corr_beam1_reffolder_remove_button)
 		corr_beam1_ref_layout.addLayout(corr_beam1_buttons_layout)
 		corr_ref_folders_layout.addLayout(corr_beam1_ref_layout)
@@ -427,10 +461,11 @@ class RDTFeeddownGUI(QMainWindow):
 		corr_beam2_ref_layout.addWidget(self.corr_beam2_reffolder_entry)
 		corr_beam2_buttons_layout = QHBoxLayout()
 		self.corr_beam2_reffolder_button = QPushButton("Select Folder")
-		self.corr_beam2_reffolder_button.clicked.connect(lambda: self.select_singlefolder("LHCB2", 
+		self.corr_beam2_reffolder_button.clicked.connect(lambda: self.select_singleitem("LHCB2", 
 													f"Select LHCB2 Reference Folder", 
 													"All Folders (*)", 
-													self.corr_beam1_reffolder_entry, self.corr_beam2_reffolder_entry))
+													None, self.corr_beam2_reffolder_entry,
+													True))
 		corr_beam2_buttons_layout.addWidget(self.corr_beam2_reffolder_button)
 		self.corr_beam2_reffolder_remove_button = QPushButton("Remove File")
 		self.corr_beam2_reffolder_remove_button.clicked.connect(lambda: self.remove_singlefolder("LHCB2",
@@ -444,48 +479,50 @@ class RDTFeeddownGUI(QMainWindow):
 		corr_folders_layout.insertWidget(0, corr_ref_folders_group)
 
 		# Replace the individual measurement folder groups with a combined horizontal group:
-		corr_meas_folders_group = QtWidgets.QGroupBox("Measurement Folders")
+		corr_meas_folders_group = QtWidgets.QGroupBox("Response Folders")
 		corr_meas_folders_group.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
 		corr_meas_folders_layout = QHBoxLayout()
 
 		# LHCB1 Measurement Folder (vertical layout)
 		corr_beam1_meas_layout = QVBoxLayout()
-		self.corr_beam1_measfolder_label = QLabel("LHCB1 Measurement Folder:")
+		self.corr_beam1_measfolder_label = QLabel("LHCB1 Response Folder:")
 		self.corr_beam1_measfolder_label.setStyleSheet("color: blue;")
 		corr_beam1_meas_layout.addWidget(self.corr_beam1_measfolder_label)
 		self.corr_beam1_measfolder_entry = QLineEdit()
 		corr_beam1_meas_layout.addWidget(self.corr_beam1_measfolder_entry)
 		corr_beam1_buttons_layout = QHBoxLayout()
 		self.corr_beam1_measfolder_button = QPushButton("Select Folder")
-		self.corr_beam1_measfolder_button.clicked.connect(lambda: self.select_singlefolder("LHCB1", 
-													f"Select LHCB1 Measurement Folder", 
+		self.corr_beam1_measfolder_button.clicked.connect(lambda: self.select_singleitem("LHCB1", 
+													f"Select LHCB1 Response Folder", 
 													"All Folders (*)", 
-													self.corr_beam1_measfolder_entry, self.corr_beam2_measfolder_entry))
+													self.corr_beam1_measfolder_entry, None,
+													True))
 		corr_beam1_buttons_layout.addWidget(self.corr_beam1_measfolder_button)
 		self.corr_beam1_measfolder_remove_button = QPushButton("Remove File")
 		self.corr_beam1_measfolder_remove_button.clicked.connect(lambda: self.remove_singlefolder("LHCB1",
-													self.beam1_neasfolder_entry, self.beam2_measfolder_entry))
+													self.beam1_measfolder_entry, self.beam2_measfolder_entry))
 		corr_beam1_buttons_layout.addWidget(self.corr_beam1_measfolder_remove_button)
 		corr_beam1_meas_layout.addLayout(corr_beam1_buttons_layout)
 		corr_meas_folders_layout.addLayout(corr_beam1_meas_layout)
 
 		# LHCB2 Measurement Folder (vertical layout)
 		corr_beam2_meas_layout = QVBoxLayout()
-		self.corr_beam2_measfolder_label = QLabel("LHCB2 Measurement Folder:")
+		self.corr_beam2_measfolder_label = QLabel("LHCB2 Response Folder:")
 		self.corr_beam2_measfolder_label.setStyleSheet("color: red;")
 		corr_beam2_meas_layout.addWidget(self.corr_beam2_measfolder_label)
 		self.corr_beam2_measfolder_entry = QLineEdit()
 		corr_beam2_meas_layout.addWidget(self.corr_beam2_measfolder_entry)
 		corr_beam2_buttons_layout = QHBoxLayout()
 		self.corr_beam2_measfolder_button = QPushButton("Select Folder")
-		self.corr_beam2_measfolder_button.clicked.connect(lambda: self.select_singlefolder("LHCB2", 
-													f"Select LHCB2 Measurement Folder", 
-													"All Folders (*)", 
-													self.corr_beam1_measfolder_entry, self.corr_beam2_measfolder_entry))
+		self.corr_beam2_measfolder_button.clicked.connect(lambda: self.select_singleitem("LHCB2", 
+													f"Select LHCB2 Response Folder", 
+													"All Files (*)", 
+													None, self.corr_beam2_measfolder_entry,
+													True))
 		corr_beam2_buttons_layout.addWidget(self.corr_beam2_measfolder_button)
 		self.corr_beam2_measfolder_remove_button = QPushButton("Remove File")
 		self.corr_beam2_measfolder_remove_button.clicked.connect(lambda: self.remove_singlefolder("LHCB1",
-													self.beam1_measfolder_entry, self.beam2_measfolder_entry))
+													None, self.beam2_measfolder_entry))
 		corr_beam2_buttons_layout.addWidget(self.corr_beam2_measfolder_remove_button)
 		corr_beam2_meas_layout.addLayout(corr_beam2_buttons_layout)
 		corr_meas_folders_layout.addLayout(corr_beam2_meas_layout)
@@ -599,15 +636,53 @@ class RDTFeeddownGUI(QMainWindow):
 		run_response_group.setLayout(run_response_layout)
 		self.correction_layout.addWidget(run_response_group)
 
-		# Add new Loaded Files section at the bottom of Correction tab
+		# Existing: add the collapsible content
+		correction_main_layout.addWidget(self.correction_content)
+		
+		# NEW: Loaded Files section (outside the collapsible content)
 		loaded_files_group = QGroupBox("Loaded Files")
 		loaded_files_layout = QVBoxLayout()
 		self.correction_loaded_files_list = QListWidget()
 		loaded_files_layout.addWidget(self.correction_loaded_files_list)
+		btn_layout = QHBoxLayout()
+		self.load_file_button = QPushButton("Load File")
+		self.load_file_button.clicked.connect(self.load_selected_correction_files)  # New method to implement
+		btn_layout.addWidget(self.load_file_button)
+		self.remove_file_button = QPushButton("Remove Selected Files")
+		self.remove_file_button.clicked.connect(lambda: self.remove_selected_items(self.correction_loaded_files_list))
+		btn_layout.addWidget(self.remove_file_button)
+		self.select_all_files_checkbox = QCheckBox("Select All Files")
+		self.select_all_files_checkbox.stateChanged.connect(lambda state: self._toggle_select_all(self.correction_loaded_files_list, state))
+		btn_layout.addWidget(self.select_all_files_checkbox)
+		loaded_files_layout.addLayout(btn_layout)
 		loaded_files_group.setLayout(loaded_files_layout)
-		self.correction_layout.addWidget(loaded_files_group)
+		correction_main_layout.addWidget(loaded_files_group)
+		
+		# NEW: Unified Correction Graph Widget below the Loaded Files section
+		self.corrGraphWidget = QWidget()
+		corr_graph_layout = QVBoxLayout(self.corrGraphWidget)
+		self.corrFigure = Figure(figsize=(6,4))
+		self.corrCanvas = FigureCanvas(self.corrFigure)
+		corr_graph_layout.addWidget(self.corrCanvas)
+		self.corrNavToolbar = NavigationToolbar(self.corrCanvas, self)
+		corr_graph_layout.addWidget(self.corrNavToolbar)
+		correction_main_layout.addWidget(self.corrGraphWidget)
 
-		correction_main_layout.addWidget(self.correction_content)
+		 # New: Knob Manager group
+		self.knob_manager_group = QGroupBox("Knob Manager")
+		knob_manager_layout = QVBoxLayout()
+		self.knob_widgets = {}
+		self.update_knobs_button = QPushButton("Update Knobs and Re-Plot")
+		self.update_knobs_button.clicked.connect(self.update_knobs_and_replot)
+		knob_manager_layout.addWidget(self.update_knobs_button)
+		self.knob_manager_group.setLayout(knob_manager_layout)
+		correction_main_layout.addWidget(self.knob_manager_group)
+
+		# Progress bar for correction tab remains below everything
+		self.simcorr_progress = QProgressBar()
+		self.simcorr_progress.setRange(0, 0)
+		self.simcorr_progress.hide()
+		self.layout.addWidget(self.simcorr_progress)
 
 	def change_default_input_path(self):
 		new_path = QFileDialog.getExistingDirectory(self, "Select Default Input Path", self.default_input_path)
@@ -637,15 +712,18 @@ class RDTFeeddownGUI(QMainWindow):
 		if modelpath:
 			self.beam2_model_entry.setText(modelpath)
 
-	def select_singlefolder(self, beam, title_text, filter_text, b1entry, b2entry):
+	def select_singleitem(self, beam, title_text, filter_text, b1entry, b2entry, folder=False):
 		"""
 		Open a file dialog to select the reference measurement folder for the specified beam.
 		"""
 		dialog = QFileDialog(self)
 		dialog.setWindowTitle(title_text)
 		dialog.setDirectory(self.default_input_path)
-		dialog.setFileMode(QFileDialog.Directory)
-		dialog.setOption(QFileDialog.ShowDirsOnly, True)
+		if folder:
+			dialog.setFileMode(QFileDialog.Directory)
+			dialog.setOption(QFileDialog.ShowDirsOnly, True)
+		else:
+			dialog.setFileMode(QFileDialog.ExistingFiles)
 		dialog.setNameFilter(filter_text)
 		if dialog.exec_() == QFileDialog.Accepted:
 			folderpath = dialog.selectedFiles()[0]
@@ -821,15 +899,15 @@ class RDTFeeddownGUI(QMainWindow):
 		for i in range(self.validation_files_list.count()):
 			self.validation_files_list.item(i).setSelected(state == Qt.Checked)
 	
-	def select_multiple_files(self, list_widget):
+	def select_multiple_files(self, list_widget, title="Select Files", filter="JSON Files (*.json)"):
 		"""
 		Allow the user to select multiple files and add them to the file list widget.
 		"""
 		dialog = QFileDialog(self)
-		dialog.setWindowTitle("Select Analysis Files")
+		dialog.setWindowTitle(title)
 		dialog.setDirectory(self.default_input_path)  # Use default output path, adjust if needed
 		dialog.setFileMode(QFileDialog.ExistingFiles)
-		dialog.setNameFilter("JSON Files (*.json)")
+		dialog.setNameFilter(filter)
 
 		# Enable multiple selection in the dialog
 		for view in dialog.findChildren((QtWidgets.QListView, QtWidgets.QTreeView)):
@@ -849,7 +927,7 @@ class RDTFeeddownGUI(QMainWindow):
 		return dialog.selectedFiles()
 
 	def select_analysis_files(self):
-		selected_files = self.select_multiple_files(self.validation_files_list)
+		selected_files = self.select_multiple_files(self.validation_files_list, "Select Analysis Files")
 		if self.validation_files_list.count() > 0:
 			reply = QMessageBox.question(
 				self, 
@@ -1100,6 +1178,7 @@ class RDTFeeddownGUI(QMainWindow):
 		self.corr_b2_reffile = self.corr_beam2_reffolder_entry.text()
 		self.corr_b1_measfile = self.corr_beam1_measfolder_entry.text()
 		self.corr_b2_measfile = self.corr_beam2_measfolder_entry.text()
+		self.corr_responses = {}
 		# Updated knob assignment based on b1andb2same_checkbox toggle
 		if self.b1andb2same_checkbox.isChecked():
 			self.b1_corr_knobname = self.corr_knobname_entry.text()
@@ -1115,19 +1194,45 @@ class RDTFeeddownGUI(QMainWindow):
 			self.b2_corr_knob = self.b2_corr_knob_entry.text() 
 			self.b1_corr_xing = self.b1_corr_xing_entry.text()
 			self.b2_corr_xing = self.b2_corr_xing_entry.text()
-		self.rdt = self.rdt_entry.text()
-		self.rdt_plane = self.rdt_plane_dropdown.currentText()
+		self.rdt = self.corr_rdt_entry.text()
+		self.rdt_plane = self.corr_rdt_plane_dropdown.currentText()
 		self.rdtfolder = rdt_to_order_and_type(self.rdt)
-		try:
-			getrdt_sim("LHCB1", self.corr_b1_reffile, self.corr_b1_measfile, self.b1_corr_xing, 
-			self.b1_corr_knobname, self.b1_corr_knob, self.rdt, self.rdt_plane, self.rdtfolder, log_func=None)
-		except Exception as e:
-			self.log_error(f"Error in getting RDT: {e}")
-		try:
-			getrdt_sim("LHCB2", self.corr_b2_reffile, self.corr_b2_measfile, self.b2_corr_xing, 
-			self.b2_corr_knobname, self.b2_corr_knob, self.rdt, self.rdt_plane, self.rdtfolder, log_func=None)
-		except Exception as e:
-			self.log_error(f"Error in getting RDT: {e}")
+		filenameb1, _ = QFileDialog.getSaveFileName(
+			self,
+			"Save LHCB1 RDT Data",
+			self.default_output_path,
+			"JSON Files (*.json)"
+		)
+		filenameb2, _ = QFileDialog.getSaveFileName(
+			self,
+			"Save LHCB2 RDT Data",
+			self.default_output_path,
+			"JSON Files (*.json)"
+		)
+		if filenameb1:
+			if not filenameb1.lower().endswith(".json"):
+				filenameb1 += ".json"
+			try:
+				b1response = getrdt_sim("LHCB1", self.corr_b1_reffile, self.corr_b1_measfile, self.b1_corr_xing, 
+				self.b1_corr_knobname, self.b1_corr_knob, self.rdt, self.rdt_plane, self.rdtfolder, 
+				log_func=self.log_error)
+				self.corr_responses[filenameb1] = b1response
+				save_RDTdata(b1response, filenameb1)
+				self.correction_loaded_files_list.append(filenameb1)
+			except Exception as e:
+				self.log_error(f"Error in getting RDT: {e}")
+		if filenameb2:
+			if not filenameb2.lower().endswith(".json"):
+				filenameb2 += ".json"
+			try:
+				b2response = getrdt_sim("LHCB2", self.corr_b2_reffile, self.corr_b2_measfile, self.b2_corr_xing, 
+				self.b2_corr_knobname, self.b2_corr_knob, self.rdt, self.rdt_plane, self.rdtfolder, 
+				log_func=self.log_error)
+				self.corr_responses[filenameb2] = b2response
+				save_RDTdata(self.b2response, filenameb2)
+				self.correction_loaded_files_list.append(filenameb2)
+			except Exception as e:
+				self.log_error(f"Error in getting RDT: {e}")
 
 	def toggle_b1andb2same_mode(self, state):
 		is_checked = (state == Qt.Checked)
@@ -1163,3 +1268,136 @@ class RDTFeeddownGUI(QMainWindow):
 		else:
 			self.corr_toggle_button.setArrowType(Qt.RightArrow)
 			self.corr_toggle_button.setText("Expand Section")
+
+	# NEW: New method to plot loaded correction files into the unified graph widget
+	def plot_loaded_correction_files(self):
+		ax = self.corrFigure.gca()  # get axis from unified figure
+		ax.clear()  # clear current content
+		self.b1data, self.b2data = None, None
+		self.b1data = [
+			response.get("metadata", {}).get("b1")
+			for response in self.corr_responses.values()
+			if "b1" in response.get("metadata", {})
+		]
+		self.b2data = [
+			response.get("metadata", {}).get("b2")
+			for response in self.corr_responses.values()
+			if "b2" in response.get("metadata", {})
+		]
+		if self.b1andb2same_checkbox.isChecked():
+			if self.b1data is None or self.b2data is None:
+				self.log_error("Both beams must be loaded for reference measurement.")
+				self.simcorr_progress.hide()
+				return
+		if self.b1data and self.b2data:
+			axes = self.corrFigure.subplots(3, 2, sharey=False)
+			self.corrFigure.subplots_adjust(hspace=0.7, wspace=0.4)
+		else:
+			axes = self.corrFigure.subplots(3, 1, sharey=False)
+			self.corrFigure.subplots_adjust(hspace=0.7)
+		try: 
+			plot_dRDTdknob(self.b1data, self.b2data, self.knob_widgets.items(), self.rdt, self.rdt_plane, 
+				  			axes, 
+				  			log_func=self.log_error)
+			self.corrCanvas.draw()
+		except Exception as e:
+			self.log_error(f"Error plotting correction data: {e}")
+			self.simcorr_progress.hide()
+			return
+
+	def load_selected_correction_files(self):
+		self.b1_response_meas = None
+		self.b2_response_meas = None
+		try:
+			self.b1_response_meas = load_RDTdata(self.b1_match_entry.Text())
+		except Exception as e:
+			self.log_error(f"Error loading LHCB1 response measurement: {e}")
+		try:
+			self.b2_response_meas = load_RDTdata(self.b2_match_entry.Text())
+		except Exception as e:
+			self.log_error(f"Error loading LHCB2 response measurement: {e}")
+		if self.b1_response_meas is None and self.b2_response_meas is None:
+			self.log_error("No data loaded for reference measurement.")
+			self.simcorr_progress.hide()
+			return
+		if self.b1_response_meas:
+			self.b1_response_meas['data'] = {
+				key: value for key, value in self.b1_response_meas['data'].items()
+				if value.get('rdt') == self.rdt and value.get('rdt_plane') == self.rdt_plane
+			}
+		if self.b2_response_meas:
+			self.b2_response_meas['data'] = {
+				key: value for key, value in self.b2_response_meas['data'].items()
+				if value.get('rdt') == self.rdt and value.get('rdt_plane') == self.rdt_plane
+			}
+		if self.b1_response_meas is None and self.b2_response_meas is None:
+			self.b1_match_entry.clear()
+			self.b2_match_entry.clear()
+			self.log_error("No data loaded for reference measurement.")
+			return
+		if self.b1andb2same_checkbox.isChecked():
+			if not self.b1_response_meas or not self.b2_response_meas:
+				self.log_error("Both beams must be loaded for reference measurement.")
+				self.simcorr_progress.hide()
+				return
+
+		selected_files = self.select_multiple_files(self.correction_loaded_files_list, title="Select Response Files")
+		for file in selected_files:
+			if file not in self.corr_responses:
+				self.corr_responses[file] = load_RDTdata(file)
+		metadatas = [
+			{k: v for k, v in response.get("metadata", {}).items()
+			if k not in ["beam", "ref", "knobname"]}
+			for response in self.corr_responses.values()
+		]
+
+		# Now check that they are all equal.
+		if metadatas and all(meta == metadatas[0] for meta in metadatas):
+			self.plot_loaded_correction_files()
+		else:
+			self.log_error("Metadata differ.")
+		self.populate_knob_manager()
+
+	def populate_knob_manager(self):
+		"""
+		Extract knobnames from metadata and create fields for the user to edit knob values.
+		"""
+		layout = self.knob_manager_group.layout()
+		# Clear old input fields
+		for i in reversed(range(layout.count() - 1)):  # leave update button
+			item = layout.itemAt(i).widget()
+			if item:
+				item.deleteLater()
+		self.knob_widgets.clear()
+		# Gather all knobs from loaded metadata
+		all_knobs = set()
+		for file, response in self.corr_responses.items():
+			meta = response.get("metadata", {})
+			knobname = meta.get("knobname")
+			if knobname:
+				all_knobs.add(knobname)
+		# Check for duplicates
+		duplicates = {knob for knob in all_knobs if all_knobs.count(knob) > 1}
+		if duplicates:
+			self.log_error(f"Duplicate knob names found: {', '.join(duplicates)}. Please resolve the duplicates.")
+			return  
+		# Create QLineEdit for each knob
+		for knobname in all_knobs:
+			row_container = QWidget()
+			row_layout = QHBoxLayout(row_container)
+			label = QLabel(f"Knob: {knobname}")
+			val_input = QLineEdit("0")  # default
+			self.knob_widgets[knobname] = val_input
+			row_layout.addWidget(label)
+			row_layout.addWidget(val_input)
+			layout.insertWidget(layout.count() - 1, row_container)
+
+	def update_knobs_and_replot(self):
+		"""
+		Read knob edits, apply them, and replot using these values.
+		"""
+
+		plot_dRDTdknob(self.b1data, self.b2data, self.knob_widgets.items(), self.rdt, self.rdt_plane, axes, 
+								log_func=self.log_error)
+
+

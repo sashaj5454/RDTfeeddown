@@ -287,3 +287,92 @@ def plot_RDT(b1data, b2data, rdt, rdt_plane, axes, log_func=None):
 		return None
 
 	return
+
+def plot_dRDTdknob(b1data, b2data, knoblist, rdt, rdt_plane, axes, log_func=None):
+	"""
+	Updated: Plots RDT shifts on provided axes.
+	If a beam's data is empty, only the labels and callbacks are (re)drawn.
+	"""
+	# Assume axes are always provided.
+	try:
+		# When both beams are given, expecting 2x? layout.
+		if b1data and b2data:
+			ax1, ax2, ax3, ax4 = axes.flatten()
+		else:
+			ax1, ax2 = axes
+
+		def plot_beam_data(axs, data, label):
+			"""
+			Plots the RDT shift data for a single beam into the two provided axes:
+			axs[0] -> dRe and axs[1] -> dIm.
+			If no data available, only axes labels and callbacks are set.
+			"""
+			ax_re, ax_im = axs
+			# If no data, just register callbacks for IP label updates.
+			if not data:
+				# Set titles and labels always.
+				ax_re.set_title(label, pad=20)
+				ax_re.set_ylabel(f'∂Re$f_{{{rdt_plane},{rdt}}}$/∂knob')
+				ax_re.set_xlabel('S [km]')
+				ax_im.set_ylabel(f'∂Im$f_{{{rdt_plane},{rdt}}}$/∂knob')
+				ax_im.set_xlabel('S [km]')
+
+				for ax_ in (ax_re, ax_im):
+					ax_.callbacks.connect('xlim_changed', lambda event, ax=ax_, beam=label: update_ip_labels(ax, beam))
+					ax_.callbacks.connect('ylim_changed', lambda event, ax=ax_, beam=label: update_ip_labels(ax, beam))
+					update_ip_labels(ax_, label)
+				return
+
+			# Else, collect and plot the data.
+			sdat, dredkdat, dimdkdat = [], [], []
+			dredkerr, dimdkerr = [], []
+			firstfile = next(iter(data.keys()))
+			for bpm in data[firstfile]['data'].keys():
+				if not arcBPMcheck(bpm) or badBPMcheck(bpm):
+					continue
+				re_opts, re_errs, im_opts, im_errs = 0,0,0,0
+				s = data[firstfile][bpm]['s']/1000
+				for file in data.keys():
+					# [re_opt, re_cov, re_err, im_opt, im_cov, im_err]
+					re_opt, _, re_err, im_opt, _, im_err = data[file]['data'][bpm]['fitdata']
+					# re_opt[1] => slope in re polynomial fit, re_err[1] => error in that slope
+					re_opts += re_opt[1] * knoblist[file]['metadata']['knobname']
+					re_errs += re_err[1] * knoblist[file]['metadata']['knobname']
+					im_opts += im_opt[1] * knoblist[file]['metadata']['knobname']
+					im_errs += im_err[1] * knoblist[file]['metadata']['knobname']
+				sdat.append(s)
+				dredkdat.append(re_opts)
+				dredkerr.append(re_errs)
+				dimdkdat.append(im_opts)
+				dimdkerr.append(im_errs)
+
+			dredkdat = np.array(dredkdat) 
+			dimdkdat = np.array(dimdkdat) 
+			dredkerr = np.array(dredkerr) 
+			dimdkerr = np.array(dimdkerr) 
+
+			ax_re.plot(sdat, dredkdat)
+			ax_re.errorbar(sdat, dredkdat, yerr=dredkerr, fmt='ro')
+			ax_im.plot(sdat, dimdkdat)
+			ax_im.errorbar(sdat, dimdkdat, yerr=dimdkerr, fmt='ro')
+
+		if b1data and b2data:
+			# Plot B1 (left column)
+			plot_beam_data((ax1, ax3), b1data, "LHCB1")
+			# Plot B2 (right column)
+			plot_beam_data((ax2, ax4), b2data, "LHCB2")
+		elif b1data:
+			# Only B1
+			plot_beam_data((ax1, ax2), b1data, "LHCB1")
+		elif b2data:
+			# Only B2
+			plot_beam_data((ax1, ax2, b2data), "LHCB2")
+		
+	except Exception as e:
+		if log_func:
+			log_func(f"Error plotting dRDTdknob for f<sub>{rdt_plane},{rdt}</sub>: {e}")
+		else:
+			print(f"Error plotting dRDTdknob for f$_{{{rdt_plane},{rdt}}}$: {e}")
+		return None
+
+	return

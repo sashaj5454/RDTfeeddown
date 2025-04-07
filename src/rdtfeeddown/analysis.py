@@ -479,7 +479,7 @@ def getrdt_sim(beam, ref, file, xing, knob_name, knob_strength, rdt, rdt_plane, 
 			if not arcBPMcheck(bpm) or badBPMcheck(bpm):
 				continue
 			bpmdata[bpm] = {}
-			bpmdata[bpm]['s']=float(row["S"])
+			bpmdata[bpm]['s']=float(entry["S"])
 			bpmdata[bpm]['ref']=[]
 			bpmdata[bpm]['data']=[]
 			bpmdata[bpm]['ref'].append([0, entry["AMP"], entry["REAL"], entry["IMAG"]])
@@ -505,7 +505,7 @@ def getrdt_sim(beam, ref, file, xing, knob_name, knob_strength, rdt, rdt_plane, 
 				continue
 			if bpm not in bpmdata:
 				bpmdata[bpm] = {}
-				bpmdata[bpm]['s']=float(row["S"])
+				bpmdata[bpm]['s']=float(entry["S"])
 				bpmdata[bpm]['ref']=[]
 				bpmdata[bpm]['data']=[]
 				bpmdata[bpm]['data'].append([knob_strength, entry["AMP"], entry["REAL"], entry["IMAG"]])
