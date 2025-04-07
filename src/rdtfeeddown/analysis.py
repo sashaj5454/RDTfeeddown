@@ -85,7 +85,7 @@ def readrdtdatafile(cfile, rdt, rdt_plane, rdtfolder, sim, log_func=None):
 				row["IMAG"] = np.imag(row[f"F{rdt}"]) 
 				row["AMP"] = np.abs(row[f"F{rdt}"])
 				raw_data.append([str(row["NAME"]), float(row["AMP"]), float(row["REAL"]), float(row["IMAG"])])
-		except Exception as e:
+		except Exception:
 			raw_data = read_rdt_file(filepath, log_func)
 	else:
 		raw_data = read_rdt_file(filepath, log_func)

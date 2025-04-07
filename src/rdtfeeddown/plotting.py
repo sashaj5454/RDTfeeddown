@@ -97,7 +97,7 @@ def plot_avg_rdt_shift(ax, data, rdt, rdt_plane):
 	"""
 	xing, ampdat, stddat = calculate_avg_rdt_shift(data)
 	ax.set_ylabel(rf"$\sqrt{{\Delta\,\mathrm{{Re}}(f_{{{rdt_plane},{rdt}}})^2+\Delta\,\mathrm{{Im}}(f_{{{rdt_plane},{rdt}}})^2}}$")	
-	ax.set_xlabel(f"Knob trim")
+	ax.set_xlabel("Knob trim")
 	ax.plot(xing, ampdat)
 	ax.errorbar(xing, ampdat, yerr=stddat, fmt='ro')
 
@@ -154,13 +154,13 @@ def plot_RDTshifts(b1data, b2data, rdt, rdt_plane, axes, log_func=None):
 
 			# Plot dRe
 			ax_re.set_ylabel(f'$\partial$Re$f_{{{rdt_plane},{rdt}}}$/$\partial$knob')
-			ax_re.set_xlabel(f'S [km]')
+			ax_re.set_xlabel('S [km]')
 			ax_re.plot(sdat, dredkdat)
 			ax_re.errorbar(sdat, dredkdat, yerr=dredkerr, fmt='ro')
 
 			# Plot dIm
 			ax_im.set_ylabel(f'$\partial$Im$f_{{{rdt_plane},{rdt}}}$/$\partial$knob')
-			ax_im.set_xlabel(f'S [km]')
+			ax_im.set_xlabel('S [km]')
 			ax_im.plot(sdat, dimdkdat)
 			ax_im.errorbar(sdat, dimdkdat, yerr=dimdkerr, fmt='ro')
 

@@ -8,7 +8,8 @@ from PyQt5.QtCore import Qt, QTimer  # Import Qt for the correct constants and Q
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
-from .utils import load_defaults, check_rdt, initialize_statetracker, rdt_to_order_and_type, getmodelBPMs
+from .validation_utils import validate_rdt_and_plane, validate_knob
+from .utils import load_defaults, initialize_statetracker, rdt_to_order_and_type, getmodelBPMs
 from .analysis import write_RDTshifts, getrdt_omc3, fit_BPM, save_RDTdata, load_RDTdata, group_datasets, getrdt_sim
 from .plotting import plot_BPM, plot_RDT, plot_RDTshifts, plot_dRDTdknob  # Assuming you have a plotting module for BPM plotting
 import time  # Import time to get the current timestamp
@@ -103,8 +104,8 @@ class RDTFeeddownGUI(QMainWindow):
 		beam1_buttons_layout = QHBoxLayout()
 		self.beam1_reffolder_button = QPushButton("Select Folder")
 		self.beam1_reffolder_button.clicked.connect(lambda: self.select_singleitem("LHCB1",
-													f"Select LHCB1 Reference Measurement Folder",
-													f"LHCB1 folders (Beam1BunchTurn*);;All Folders (*)",
+													"Select LHCB1 Reference Measurement Folder",
+													"LHCB1 folders (Beam1BunchTurn*);;All Folders (*)",
 													self.beam1_reffolder_entry, self.beam2_reffolder_entry,
 													True))
 		beam1_buttons_layout.addWidget(self.beam1_reffolder_button)
@@ -125,8 +126,8 @@ class RDTFeeddownGUI(QMainWindow):
 		beam2_buttons_layout = QHBoxLayout()
 		self.beam2_reffolder_button = QPushButton("Select Folder")
 		self.beam2_reffolder_button.clicked.connect(lambda: self.select_singleitem("LHCB2", 
-													f"Select LHCB2 Reference Measurement Folder", 
-													f"LHCB2 folders (Beam2BunchTurn*);;All Folders (*)", 
+													"Select LHCB2 Reference Measurement Folder", 
+													"LHCB2 folders (Beam2BunchTurn*);;All Folders (*)", 
 													self.beam1_reffolder_entry, self.beam2_reffolder_entry,
 													True))
 		beam2_buttons_layout.addWidget(self.beam2_reffolder_button)
@@ -462,7 +463,7 @@ class RDTFeeddownGUI(QMainWindow):
 		corr_beam2_buttons_layout = QHBoxLayout()
 		self.corr_beam2_reffolder_button = QPushButton("Select Folder")
 		self.corr_beam2_reffolder_button.clicked.connect(lambda: self.select_singleitem("LHCB2", 
-													f"Select LHCB2 Reference Folder", 
+													"Select LHCB2 Reference Folder", 
 													"All Folders (*)", 
 													None, self.corr_beam2_reffolder_entry,
 													True))
@@ -493,7 +494,7 @@ class RDTFeeddownGUI(QMainWindow):
 		corr_beam1_buttons_layout = QHBoxLayout()
 		self.corr_beam1_measfolder_button = QPushButton("Select Folder")
 		self.corr_beam1_measfolder_button.clicked.connect(lambda: self.select_singleitem("LHCB1", 
-													f"Select LHCB1 Response Folder", 
+													"Select LHCB1 Response Folder", 
 													"All Folders (*)", 
 													self.corr_beam1_measfolder_entry, None,
 													True))
@@ -515,7 +516,7 @@ class RDTFeeddownGUI(QMainWindow):
 		corr_beam2_buttons_layout = QHBoxLayout()
 		self.corr_beam2_measfolder_button = QPushButton("Select Folder")
 		self.corr_beam2_measfolder_button.clicked.connect(lambda: self.select_singleitem("LHCB2", 
-													f"Select LHCB2 Response Folder", 
+													"Select LHCB2 Response Folder", 
 													"All Files (*)", 
 													None, self.corr_beam2_measfolder_entry,
 													True))
@@ -741,33 +742,6 @@ class RDTFeeddownGUI(QMainWindow):
 		else:
 			b2entry.clear()
 
-	def validate_rdt_and_plane(self, rdt, rdt_plane):
-		"""
-		Validate the RDT and RDT Plane combination.
-		"""
-		try:
-			check_rdt(rdt, rdt_plane)
-			return True, ""
-		except Exception as e:
-			return False, str(e)
-
-	def validate_knob(self, ldb, knob):
-		"""
-		Validate the knob by checking its existence in the state tracker.
-		Returns a tuple: (True, knob_setting) if valid, otherwise (False, error_message).
-		"""
-		try:
-			current_timestamp = time.time()  # Get the current timestamp
-			statetracker_knob_name = f"LhcStateTracker:{re.sub('/', ':', knob)}:value"
-			knob_data = ldb.get(statetracker_knob_name, current_timestamp)
-			if statetracker_knob_name not in knob_data:
-				return False, f"Knob '{knob}' not found in the state tracker."
-			knob_setting = knob_data[statetracker_knob_name][1][0]
-			return True, knob_setting
-		except Exception as e:
-			# Log the exception if needed, and return an error without forcing a quit.
-			return False, str(e)
-
 	def validate_knob_button_clicked(self):
 		"""
 		Validate the knob when the "Validate Knob" button is clicked.
@@ -776,8 +750,7 @@ class RDTFeeddownGUI(QMainWindow):
 		if not knob:
 			QMessageBox.critical(self, "Error", "Knob field must be filled!")
 			return
-
-		is_valid_knob, knob_message = self.validate_knob(initialize_statetracker(), knob)
+		is_valid_knob, knob_message = validate_knob(initialize_statetracker(), knob)
 		if is_valid_knob:
 			QMessageBox.information(self, "Knob Validation", "Knob is valid. Setting: " + repr(knob_message))
 		else:
@@ -823,7 +796,11 @@ class RDTFeeddownGUI(QMainWindow):
 			self.ldb = initialize_statetracker()
 		self.rdt = self.rdt_entry.text()
 		self.rdt_plane = self.rdt_plane_dropdown.currentText()
-		self.validate_rdt_and_plane(self.rdt, self.rdt_plane)
+		is_valid_rdt, rdt_message = validate_rdt_and_plane(self.rdt, self.rdt_plane)
+		if not is_valid_rdt:
+			QMessageBox.critical(self, "Error", "Invalid RDT: " + repr(rdt_message))
+			self.input_progress.hide()
+			return
 		self.rdtfolder = rdt_to_order_and_type(self.rdt)
 		self.beam1_model = self.beam1_model_entry.text()
 		self.beam2_model = self.beam2_model_entry.text()
@@ -1197,6 +1174,11 @@ class RDTFeeddownGUI(QMainWindow):
 		self.rdt = self.corr_rdt_entry.text()
 		self.rdt_plane = self.corr_rdt_plane_dropdown.currentText()
 		self.rdtfolder = rdt_to_order_and_type(self.rdt)
+		is_valid_rdt, rdt_message = validate_rdt_and_plane(self.rdt, self.rdt_plane)
+		if not is_valid_rdt:
+			QMessageBox.critical(self, "Error", "Invalid RDT: " + repr(rdt_message))
+			self.input_progress.hide()
+			return
 		filenameb1, _ = QFileDialog.getSaveFileName(
 			self,
 			"Save LHCB1 RDT Data",
@@ -1397,7 +1379,7 @@ class RDTFeeddownGUI(QMainWindow):
 		Read knob edits, apply them, and replot using these values.
 		"""
 
-		plot_dRDTdknob(self.b1data, self.b2data, self.knob_widgets.items(), self.rdt, self.rdt_plane, axes, 
+		plot_dRDTdknob(self.b1data, self.b2data, self.knob_widgets.items(), self.rdt, self.rdt_plane, self.corrFigure, 
 								log_func=self.log_error)
 
 
