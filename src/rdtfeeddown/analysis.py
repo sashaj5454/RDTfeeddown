@@ -61,7 +61,7 @@ def ensure_trailing_slash(path):
 	"""
 	return path if path.endswith('/') else path + '/'
 
-def readrdtdatafile(cfile, rdt, rdt_plane, rdtfolder, sim, log_func=None):
+def readrdtdatafile(cfile, rdt, rdt_plane, rdtfolder, sim=False, log_func=None):
 	"""
 	Reads RDT data from a file and removes outliers based on Z-scores.
 	"""
@@ -72,15 +72,15 @@ def readrdtdatafile(cfile, rdt, rdt_plane, rdtfolder, sim, log_func=None):
 	if sim:
 		try:
 			df = tfs.read(cfile)
-			df_filted = df[df['NAME'].str.contains('BPM')]
-			if df_filted.empty:
+			df_filtered = df[df['NAME'].str.contains('BPM')]
+			if df_filtered.empty:
 				if log_func:
 					log_func(f"No BPM data found in file: {filepath}")
 				else:
 					print(f"No BPM data found in file: {filepath}")
 				return None
 			raw_data = []
-			for index, row in df_filted.iterrows():
+			for index, row in df_filtered.iterrows():
 				row["REAL"] = np.real(row[f"F{rdt}"])
 				row["IMAG"] = np.imag(row[f"F{rdt}"]) 
 				row["AMP"] = np.abs(row[f"F{rdt}"])
@@ -234,9 +234,11 @@ def fit_BPM(fulldata):
 def arcBPMcheck(bpm):
 	bpmtype=bpm.partition('.')[0]
 	if bpmtype!='BPM':
+		print(bpmtype)
 		isARCbpm=False
 	else:
 		bpmindex=bpm.partition('.')[2].rpartition('.')[0].partition('L')[0].partition('R')[0]
+		print(bpmindex)
 		if int(bpmindex)>=10:
 			isARCbpm=True
 		else:
@@ -464,8 +466,11 @@ def getrdt_sim(beam, ref, file, xing, knob_name, knob_strength, rdt, rdt_plane, 
 	bpmdata = {}
 	bpmlist = []
 	# Read the reference data
+	rdtfolder = rdtfolder if rdtfolder.endswith('/') else rdtfolder + '/'
 	try:
-		refdat = readrdtdatafile(ref, rdt, rdt_plane, rdtfolder, log_func)
+		ref = ref if ref.endswith('/') else ref + '/'
+		refdat = tfs.read(f"{ref}rdt/{rdtfolder}f{rdt}_{rdt_plane}.tfs")
+		refdat = refdat[refdat['NAME'].str.contains('BPM')]
 	except FileNotFoundError:
 		msg = f"RDT file not found in reference folder: {ref}."
 		if log_func:
@@ -473,7 +478,7 @@ def getrdt_sim(beam, ref, file, xing, knob_name, knob_strength, rdt, rdt_plane, 
 		raise RuntimeError(msg)
 		return None
 	if refdat is not None:
-		for entry in refdat:
+		for index,entry in refdat.iterrows():
 			bpm = entry["NAME"]
 			bpmlist.append(bpm)
 			if not arcBPMcheck(bpm) or badBPMcheck(bpm):
@@ -491,7 +496,9 @@ def getrdt_sim(beam, ref, file, xing, knob_name, knob_strength, rdt, rdt_plane, 
 		return None
 	# Read the measurement data
 	try:
-		cdat = readrdtdatafile(file, rdt, rdt_plane, rdtfolder, log_func)
+		file = file if file.endswith('/') else file + '/'
+		cdat = tfs.read(f"{ref}rdt/{rdtfolder}f{rdt}_{rdt_plane}.tfs")
+		cdat = cdat[cdat['NAME'].str.contains('BPM')]
 	except FileNotFoundError:
 		msg = f"RDT file not found in measurement folder: {file}."
 		if log_func:
@@ -499,7 +506,7 @@ def getrdt_sim(beam, ref, file, xing, knob_name, knob_strength, rdt, rdt_plane, 
 		raise RuntimeError(msg)
 		return None
 	if cdat is not None:
-		for entry in cdat:
+		for index, entry in cdat.iterrows():
 			bpm = entry["NAME"]
 			if not arcBPMcheck(bpm) or badBPMcheck(bpm):
 				continue
@@ -525,7 +532,7 @@ def getrdt_sim(beam, ref, file, xing, knob_name, knob_strength, rdt, rdt_plane, 
 	intersectedBPMdata = {}
 	# Check if the reference and measurement data have the same number of entries
 	for bpm in bpmlist:
-		if len(bpmdata) != 1 or len(bpmdata[bpm]['data']) != 1:
+		if len(bpmdata[bpm]['ref']) != 1 or len(bpmdata[bpm]['data']) != 1:
 			msg = f"Reference and measurement data for BPM {bpm} do not match."
 			if log_func:
 				log_func(msg)
@@ -537,8 +544,8 @@ def getrdt_sim(beam, ref, file, xing, knob_name, knob_strength, rdt, rdt_plane, 
 		dat = bpmdata[bpm]['data']
 
 		diffdat = [((dat[0][0] - bref[0][0])/xing)/knob_strength, 
-					((dat[0][2] - bref[0][2]))/xing/knob_strength, 
-					((dat[0][3] - bref[0][3]))/xing/knob_strength]
+					((dat[0][2] - bref[0][2])/xing)/knob_strength, 
+					((dat[0][3] - bref[0][3])/xing)/knob_strength]
 		intersectedBPMdata[bpm] = {'s': s, 'diffdata': diffdat}
 	if not intersectedBPMdata:
 		msg = "No BPM data found after intersection."

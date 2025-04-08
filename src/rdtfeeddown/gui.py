@@ -1156,6 +1156,13 @@ class RDTFeeddownGUI(QMainWindow):
 		self.corr_b1_measfile = self.corr_beam1_measfolder_entry.text()
 		self.corr_b2_measfile = self.corr_beam2_measfolder_entry.text()
 		self.corr_responses = {}
+		filenameb1 = ""
+		filenameb2 = ""
+		# Debugging logs
+		print(f"corr_b1_reffile: {self.corr_b1_reffile}")
+		print(f"corr_b1_measfile: {self.corr_b1_measfile}")
+		print(f"corr_b2_reffile: {self.corr_b2_reffile}")
+		print(f"corr_b2_measfile: {self.corr_b2_measfile}")
 		# Updated knob assignment based on b1andb2same_checkbox toggle
 		if self.b1andb2same_checkbox.isChecked():
 			self.b1_corr_knobname = self.corr_knobname_entry.text()
@@ -1179,18 +1186,25 @@ class RDTFeeddownGUI(QMainWindow):
 			QMessageBox.critical(self, "Error", "Invalid RDT: " + repr(rdt_message))
 			self.input_progress.hide()
 			return
-		filenameb1, _ = QFileDialog.getSaveFileName(
-			self,
-			"Save LHCB1 RDT Data",
-			self.default_output_path,
-			"JSON Files (*.json)"
-		)
-		filenameb2, _ = QFileDialog.getSaveFileName(
-			self,
-			"Save LHCB2 RDT Data",
-			self.default_output_path,
-			"JSON Files (*.json)"
-		)
+		if self.corr_b1_reffile and self.corr_b1_measfile:
+			filenameb1, _ = QFileDialog.getSaveFileName(
+				self,
+				"Save LHCB1 RDT Data",
+				self.default_output_path,
+				"JSON Files (*.json)"
+			)
+		if self.corr_b2_reffile and self.corr_b2_measfile:
+			filenameb2, _ = QFileDialog.getSaveFileName(
+				self,
+				"Save LHCB2 RDT Data",
+				self.default_output_path,
+				"JSON Files (*.json)"
+			)
+		if filenameb1 == "" and filenameb2 == "":
+			self.log_error("No output file selected.")
+			self.input_progress.hide()
+			return
+
 		if filenameb1:
 			if not filenameb1.lower().endswith(".json"):
 				filenameb1 += ".json"
@@ -1198,7 +1212,9 @@ class RDTFeeddownGUI(QMainWindow):
 				b1response = getrdt_sim("LHCB1", self.corr_b1_reffile, self.corr_b1_measfile, self.b1_corr_xing, 
 				self.b1_corr_knobname, self.b1_corr_knob, self.rdt, self.rdt_plane, self.rdtfolder, 
 				log_func=self.log_error)
+				print(b1response)
 				self.corr_responses[filenameb1] = b1response
+				print(self.corr_responses)
 				save_RDTdata(b1response, filenameb1)
 				self.correction_loaded_files_list.append(filenameb1)
 			except Exception as e:

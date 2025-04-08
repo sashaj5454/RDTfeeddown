@@ -12,7 +12,7 @@ import json
 
 def rdt_to_order_and_type(
 	rdt: str
-):
+):	
 	rdt_j, rdt_k, rdt_l, rdt_m = map(int, rdt)
 	rdt_type = "normal" if (rdt_l + rdt_m) % 2 == 0 else "skew"
 	orders = dict(((1, "dipole"), 
