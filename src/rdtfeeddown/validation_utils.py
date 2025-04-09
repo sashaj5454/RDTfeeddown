@@ -55,7 +55,7 @@ def validate_knob(ldb, knob):
 def validate_metas(data):
 	metadatas = [
 			{k: v for k, v in response.get("metadata", {}).items()
-			if k not in ["beam", "ref", "knobname"]}
+			if k not in ["beam", "ref", "knob_name"]}
 			for response in data.values()
 		]
 	if not metadatas:

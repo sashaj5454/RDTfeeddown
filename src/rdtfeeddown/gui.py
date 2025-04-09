@@ -1,6 +1,6 @@
 import json
 from PyQt5.QtWidgets import (
-	QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QCheckBox,
+	QApplication, QMainWindow, QGridLayout, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QCheckBox,
 	QFileDialog, QListWidget, QTabWidget, QWidget, QTextEdit, QMessageBox, QProgressBar, QSizePolicy, QToolButton, QGroupBox
 )
 import pyqtgraph as pg
@@ -12,7 +12,7 @@ from matplotlib.figure import Figure
 from .validation_utils import validate_rdt_and_plane, validate_knob, validate_metas
 from .utils import load_defaults, initialize_statetracker, rdt_to_order_and_type, getmodelBPMs
 from .analysis import write_RDTshifts, getrdt_omc3, fit_BPM, save_RDTdata, load_RDTdata, group_datasets, getrdt_sim
-from .plotting import plot_BPM, plot_RDT, plot_RDTshifts, plot_dRDTdknob, zoom_handler  # Assuming you have a plotting module for BPM plotting
+from .plotting import plot_BPM, plot_RDT, plot_RDTshifts, plot_dRDTdknob, clear_layout  # Assuming you have a plotting module for BPM plotting
 import time  # Import time to get the current timestamp
 import re    # Import re for regex substitution
 
@@ -680,11 +680,6 @@ class RDTFeeddownGUI(QMainWindow):
 		self.corrFigure = pg.PlotWidget()
 		self.corrFigure.setBackground('w')  # Set background to white
 		self.corrFigure.showGrid(x=True, y=True)  # Enable grid lines
-		# self.corrFigure = Figure(figsize=(6,4))
-		# self.corrCanvas = FigureCanvas(self.corrFigure)
-		# corr_graph_layout.addWidget(self.corrCanvas)
-		# self.corrNavToolbar = NavigationToolbar(self.corrCanvas, self)
-		corr_graph_layout.addWidget(self.corrNavToolbar)
 		graph_and_knob_layout.addWidget(self.corrGraphWidget)
 		# Knob Manager group
 		self.knob_manager_group = QGroupBox("Knob Manager")
@@ -699,7 +694,7 @@ class RDTFeeddownGUI(QMainWindow):
 
 		# Progress bar for correction tab remains below everything
 		self.simcorr_progress = QProgressBar()
-		self.simcorr_progress.setRange(0, 100)
+		self.simcorr_progress.setRange(0, 0)
 		self.simcorr_progress.hide()
 		self.layout.addWidget(self.simcorr_progress)
 
@@ -1242,10 +1237,10 @@ class RDTFeeddownGUI(QMainWindow):
 		filenameb1 = ""
 		filenameb2 = ""
 		# Debugging logs
-		self.corr_b1_reffile = "/afs/cern.ch/work/s/sahorney/private/LHCoptics/2025_03_a4corr/2025-04-03/LHCB1/Results/trackone_b1_R1_0.sdds"
-		self.corr_b2_reffile = "/afs/cern.ch/work/s/sahorney/private/LHCoptics/2025_03_a4corr/2025-04-03/LHCB2/Results/trackone_b2_R1_0.sdds"
-		self.corr_b1_measfile = "/afs/cern.ch/work/s/sahorney/private/LHCoptics/2025_03_a4corr/2025-04-03/LHCB1/Results/trackone_b1_R1_160.sdds"
-		self.corr_b2_measfile = "/afs/cern.ch/work/s/sahorney/private/LHCoptics/2025_03_a4corr/2025-04-03/LHCB2/Results/trackone_b2_R1_160.sdds"
+		self.corr_b1_reffile = "/afs/cern.ch/work/s/sahorney/private/LHCoptics/2025_03_a4corr/2025-04-03/LHCB1/Results/trackone_b1_R5_0.sdds"
+		self.corr_b2_reffile = "/afs/cern.ch/work/s/sahorney/private/LHCoptics/2025_03_a4corr/2025-04-03/LHCB2/Results/trackone_b2_R5_0.sdds"
+		self.corr_b1_measfile = "/afs/cern.ch/work/s/sahorney/private/LHCoptics/2025_03_a4corr/2025-04-03/LHCB1/Results/trackone_b1_R5_160.sdds"
+		self.corr_b2_measfile = "/afs/cern.ch/work/s/sahorney/private/LHCoptics/2025_03_a4corr/2025-04-03/LHCB2/Results/trackone_b2_R5_160.sdds"
 		# Updated knob assignment based on b1andb2same_checkbox toggle
 		# if self.b1andb2same_checkbox.isChecked():
 		# 	self.b1_corr_knobname = self.corr_knobname_entry.text()
@@ -1264,9 +1259,9 @@ class RDTFeeddownGUI(QMainWindow):
 		# self.rdt = self.corr_rdt_entry.text()
 		# self.rdt_plane = self.corr_rdt_plane_dropdown.currentText()
 		# self.rdtfolder = rdt_to_order_and_type(self.rdt)
-		self.b1_corr_knobname = "MCOSX_R1"
+		self.b1_corr_knobname = "MCOSX_R5"
 		self.b1_corr_knob = "2"
-		self.b2_corr_knobname = "MCOSX_R1"
+		self.b2_corr_knobname = "MCOSX_R5"
 		self.b2_corr_knob = "2" 
 		self.b1_corr_xing = "160"
 		self.b2_corr_xing = "160"
@@ -1292,8 +1287,8 @@ class RDTFeeddownGUI(QMainWindow):
 		# 		self.default_output_path,
 		# 		"JSON Files (*.json)"
 		# 	)
-		filenameb1 =  "testb1.json"
-		filenameb2 =  "testb2.json"
+		filenameb1 =  "/afs/cern.ch/work/s/sahorney/private/LHCoptics/2025_03_a4corr/b1_MCOSX_R5.json"
+		filenameb2 =  "/afs/cern.ch/work/s/sahorney/private/LHCoptics/2025_03_a4corr/b2_MCOSX_R5.json"
 		if filenameb1 == "" and filenameb2 == "":
 			self.log_error("No output file selected.")
 			self.input_progress.hide()
@@ -1366,6 +1361,7 @@ class RDTFeeddownGUI(QMainWindow):
 	# NEW: New method to plot loaded correction files into the unified graph widget
 	def plot_loaded_correction_files(self):
 		self.simcorr_progress.show()
+		QtWidgets.QApplication.processEvents()
 		self.b1_response_meas = None
 		self.b2_response_meas = None
 		# try:
@@ -1379,7 +1375,7 @@ class RDTFeeddownGUI(QMainWindow):
 
 		self.b1_response_meas = load_RDTdata("/afs/cern.ch/work/s/sahorney/private/LHCoptics/2025_03_a4corr/b1_xingsim.json")
 		self.b2_response_meas = load_RDTdata("/afs/cern.ch/work/s/sahorney/private/LHCoptics/2025_03_a4corr/b2_xingsim.json")
-
+		QtWidgets.QApplication.processEvents()
 		if not self.b1_response_meas and not self.b2_response_meas:
 			self.log_error("No data loaded for reference measurement.")
 			self.simcorr_progress.hide()
@@ -1404,7 +1400,7 @@ class RDTFeeddownGUI(QMainWindow):
 				}
 			else:
 				self.b2_response_meas['data'] = {}
-		if not self.b1_response_meas and not self.b2_response_meas is None:
+		if not self.b1_response_meas and not self.b2_response_meas:
 			self.b1_match_entry.clear()
 			self.b2_match_entry.clear()
 			self.log_error("No data loaded for reference measurement.")
@@ -1414,7 +1410,8 @@ class RDTFeeddownGUI(QMainWindow):
 			if not self.b1_response_meas or not self.b2_response_meas:
 				self.log_error("Both beams must be loaded for reference measurement.")
 
-		self.corrFigure.clf()
+		for plot_widget in getattr(self, 'corr_axes', []):
+			plot_widget.clear()
 		self.b1data, self.b2data = None, None
 		try:
 			self.b1data = {
@@ -1437,24 +1434,18 @@ class RDTFeeddownGUI(QMainWindow):
 				self.log_error("Both beams must be loaded for reference measurement.")
 				self.simcorr_progress.hide()
 				return
-		if self.b1data and self.b2data:
-			self.corr_axes = self.corrFigure.subplots(2, 2, sharey=False)
-			self.corrFigure.subplots_adjust(hspace=0.7, wspace=0.4)
-			ax0, ax1, ax2, ax3 = self.corr_axes.flatten()
-		else:
-			self.corr_axes = self.corrFigure.subplots(2, 1, sharey=False)
-			self.corrFigure.subplots_adjust(hspace=0.7)
-			ax0, ax1 = self.corr_axes.flatten()
+		self.setup_corr_figure()
+		QtWidgets.QApplication.processEvents()
 
 		def both_plot():
 			plot_dRDTdknob(self.b1_response_meas, self.b2_response_meas, self.rdt, self.rdt_plane,
 							self.corr_axes, log_func=self.log_error)
 			plot_dRDTdknob(self.b1data, self.b2data, self.rdt, self.rdt_plane, 
-				  			self.corr_axes, self.knob_widgets.items(), 
-				  			log_func=self.log_error)
-			self.corrCanvas.draw_idle()
+							self.corr_axes, self.knob_widgets.items(), 
+							log_func=self.log_error)
+			# self.corrCanvas.draw_idle()
 
-		both_plot()
+		QTimer.singleShot(0, both_plot)
 
 		self.simcorr_progress.hide()
 
@@ -1499,7 +1490,7 @@ class RDTFeeddownGUI(QMainWindow):
 			row_container = QWidget()
 			row_layout = QHBoxLayout(row_container)
 			label = QLabel(f"{knobname}")
-			val_input = QLineEdit("1")  # default
+			val_input = QLineEdit("0")  # default
 			self.knob_widgets[knobname] = val_input
 			row_layout.addWidget(label)
 			row_layout.addWidget(val_input)
@@ -1510,42 +1501,63 @@ class RDTFeeddownGUI(QMainWindow):
 		Read knob edits, apply them, and replot using these values.
 		"""
 		self.simcorr_progress.show()
+
+		for ax in self.corr_axes:
+			for item in ax.listDataItems():
+				print(item, item.name())
+				if hasattr(item, 'name') and item.name() == 'Simulation':
+					ax.removeItem(item)
 		plot_dRDTdknob(self.b1data, self.b2data, self.rdt, self.rdt_plane, self.corr_axes, self.knob_widgets.items(), 
 								log_func=self.log_error)
 		self.simcorr_progress.hide()
 
-def setup_corr_figure(self):
-    """
-    Set up the correction figure with subplots using pyqtgraph or matplotlib.
-    """
-    # Clear the existing layout if it exists
-    if hasattr(self, 'corr_axes_layout'):
-        for i in reversed(range(self.corr_axes_layout.count())):
-            widget = self.corr_axes_layout.itemAt(i).widget()
-            if widget:
-                widget.deleteLater()
+	def setup_corr_figure(self):
+		"""
+		Set up the correction figure with subplots using pyqtgraph.
+		Safely removes any previous layout before setting up a new one.
+		"""
+		clear_layout(self.corrGraphWidget)
+		# Create a new QGridLayout for subplots.
+		self.corr_axes_layout = QGridLayout()
+		self.corrGraphWidget.setLayout(self.corr_axes_layout)
 
-    # Create a new layout for subplots
-    self.corr_axes_layout = QGridLayout()
-    self.corrGraphWidget.setLayout(self.corr_axes_layout)
+		# Create the subplots based on available data.
+		if self.b1data and self.b2data:
+			# Create a 2x2 grid of subplots.
+			self.corr_axes = []
+			for row in range(2):
+				for col in range(2):
+					plot_widget = pg.PlotWidget()
+					plot_widget.setBackground('w')
+					plot_widget.showGrid(x=True, y=True)
+					# Customize ViewBox for zoom and reset
+					view_box = plot_widget.getViewBox()
+					view_box.setMouseMode(pg.ViewBox.RectMode)  # Enable click-and-drag zoom
+					view_box.menu = None  # Disable the default context menu
+					view_box.scene().sigMouseClicked.connect(self.reset_zoom_on_right_click)
+					self.corr_axes_layout.addWidget(plot_widget, row, col)
+					self.corr_axes.append(plot_widget)
+		else:
+			# Create a 2x1 grid of subplots.
+			self.corr_axes = []
+			for row in range(2):
+				plot_widget = pg.PlotWidget()
+				plot_widget.setBackground('w')
+				plot_widget.showGrid(x=True, y=True)
+				# Customize ViewBox for zoom and reset
+				view_box = plot_widget.getViewBox()
+				view_box.setMouseMode(pg.ViewBox.RectMode)  # Enable click-and-drag zoom
+				view_box.menu = None  # Disable the default context menu
+				view_box.scene().sigMouseClicked.connect(self.reset_zoom_on_right_click)
+				self.corr_axes_layout.addWidget(plot_widget, row, 0)
+				self.corr_axes.append(plot_widget)
 
-    if self.b1data and self.b2data:
-        # Create a 2x2 grid of subplots
-        self.corr_axes = []
-        for row in range(2):
-            for col in range(2):
-                plot_widget = pg.PlotWidget()
-                plot_widget.setBackground('w')
-                plot_widget.showGrid(x=True, y=True)
-                self.corr_axes_layout.addWidget(plot_widget, row, col)
-                self.corr_axes.append(plot_widget)
-    else:
-        # Create a 2x1 grid of subplots
-        self.corr_axes = []
-        for row in range(2):
-            plot_widget = pg.PlotWidget()
-            plot_widget.setBackground('w')
-            plot_widget.showGrid(x=True, y=True)
-            self.corr_axes_layout.addWidget(plot_widget, row, 0)
-            self.corr_axes.append(plot_widget)
+		QtWidgets.QApplication.processEvents()  # Force the UI to update.
 
+	def reset_zoom_on_right_click(self, event):
+		"""
+		Reset zoom when the right mouse button is clicked.
+		"""
+		if event.button() == Qt.RightButton:
+			for plot_widget in self.corr_axes:
+				plot_widget.getViewBox().autoRange()

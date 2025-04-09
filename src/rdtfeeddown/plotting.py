@@ -1,6 +1,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from .analysis import polyfunction, calculate_avg_rdt_shift, arcBPMcheck, badBPMcheck
+import pyqtgraph as pg
+from pyqtgraph import ErrorBarItem
 
 IP_POS_DEFAULT = {
 	"LHCB1": {
@@ -25,34 +27,12 @@ IP_POS_DEFAULT = {
 	}
 }
 
-def update_ip_labels(ax, beam):
-	# Remove previous IP lines and texts if present.
-	if hasattr(ax, '_ip_artists'):
-		for artist in ax._ip_artists:
-			try:
-				artist.remove()
-			except Exception:
-				pass
-	artists = []
-	# Get current axis limits.
-	x_min, x_max = ax.get_xlim()
-	_, y_max = ax.get_ylim()
-	for ip in range(1, 9):
-		ip_x = IP_POS_DEFAULT[beam][f"IP{ip}"]
-		# Only draw if within current x limits.
-		if x_min <= ip_x <= x_max:
-			line = ax.axvline(x=ip_x, color="black", linestyle="--")
-			text = ax.text(ip_x, y_max, f"IP{ip}", rotation=0, va="bottom", ha="center")
-			artists.extend([line, text])
-	ax._ip_artists = artists
-
 def plot_BPM(BPM, fulldata, rdt, rdt_plane, ax1=None, ax2=None, log_func=None):
 	try:
 		data = fulldata["data"]
 		diffdata = data[BPM]['diffdata']
 		fitdata = data[BPM]['fitdata']
 		xing, re, im = [], [], []
-		# print(diffdata)
 		for x in range(len(diffdata)):
 			xing.append(diffdata[x][0])
 			re.append(diffdata[x][1])
@@ -112,7 +92,7 @@ def plot_RDTshifts(b1data, b2data, rdt, rdt_plane, axes, log_func=None):
 	"""
 	try:
 		if b1data and b2data:
-			ax1, ax2, ax3, ax4, ax5, ax6 = axes.flatten()
+			ax1, ax2, ax3, ax4, ax5, ax6 = axes
 		else:
 			ax1, ax2, ax3 = axes
 
@@ -298,25 +278,27 @@ def plot_dRDTdknob(b1data, b2data, rdt, rdt_plane, axes, knoblist=None, log_func
 	try:
 		# When both beams are given, expecting 2x? layout.
 		if b1data and b2data:
-			ax1, ax2, ax3, ax4 = axes.flatten()
+			ax1, ax2, ax3, ax4 = axes
 		else:
 			ax1, ax2 = axes
 
 		def plot_beam_data(axs, data, label):
 			ax_re, ax_im = axs
 
-			# Only set title if not already set
-			if not ax_re.get_title():
-				ax_re.set_title(label, pad=20)
-			# Only set labels if not already defined
-			if not ax_re.get_ylabel():
-				ax_re.set_ylabel(f'∂Re$f_{{{rdt_plane},{rdt}}}$/∂knob')
-			if not ax_re.get_xlabel():
-				ax_re.set_xlabel('S [km]')
-			if not ax_im.get_ylabel():
-				ax_im.set_ylabel(f'∂Im$f_{{{rdt_plane},{rdt}}}$/∂knob')
-			if not ax_im.get_xlabel():
-				ax_im.set_xlabel('S [km]')
+			ax_re.setTitle(label)
+
+			# Set labels for the real part plot
+			if not ax_re.getAxis('left').labelText:  # Check if the Y-axis label is already set
+				ax_re.setLabel('left', f'∂Re(f<sub>{rdt_plane},{rdt}</sub>)/∂knob', units='')
+			if not ax_re.getAxis('bottom').labelText:  # Check if the X-axis label is already set
+				ax_re.setLabel('bottom', 'S', units='km')
+
+			# Set labels for the imaginary part plot
+			if not ax_im.getAxis('left').labelText:  # Check if the Y-axis label is already set
+				ax_im.setLabel('left', f'∂Im(f<sub>{rdt_plane},{rdt}</sub>)/∂knob', units='')
+			if not ax_im.getAxis('bottom').labelText:  # Check if the X-axis label is already set
+				ax_im.setLabel('bottom', 'S', units='km')
+
 
 			# Determine data structure
 			is_file_key_structure = isinstance(next(iter(data.values())), dict) and "data" in next(iter(data.values()))
@@ -352,7 +334,6 @@ def plot_dRDTdknob(b1data, b2data, rdt, rdt_plane, axes, knoblist=None, log_func
 				line_label = "Measurement"
 				# Data is directly a BPM dictionary
 				for bpm in data['data'].keys():
-					print(bpm)
 					if not arcBPMcheck(bpm) or badBPMcheck(bpm):
 						continue
 					s = float(data['data'][bpm]['s']) / 1000
@@ -371,14 +352,35 @@ def plot_dRDTdknob(b1data, b2data, rdt, rdt_plane, axes, knoblist=None, log_func
 			dimdkerr = np.array(dimdkerr)
 			# Plot new data lines
 			if line_label == "Simulation":
-				ax_re.plot(sdat, dredkdat, label=line_label)
-				ax_im.plot(sdat, dimdkdat, label=line_label)
+				ax_re.plot(sdat, dredkdat, pen='g', name=line_label)
+				ax_im.plot(sdat, dimdkdat, pen='g', name=line_label)
 			else:
-				ax_re.errorbar(sdat, dredkdat, yerr=dredkerr, fmt='ro', label=line_label)
-				ax_im.errorbar(sdat, dimdkdat, yerr=dimdkerr, fmt='ro', label=line_label)
+				# Plot dRe with error bars
+				error_re = pg.ErrorBarItem(x=sdat, y=dredkdat, left=dredkerr, right=dredkerr, beam=0.1, pen='r')
+				ax_re.addItem(error_re)
+				ax_re.plot(sdat, dredkdat, pen='b', symbol='o', name=line_label)
 
+				# Plot dIm with error bars
+				error_im = pg.ErrorBarItem(x=sdat, y=dimdkdat, left=dimdkerr, right=dimdkerr, beam=0.1, pen='r')
+				ax_im.addItem(error_im)
+				ax_im.plot(sdat, dimdkdat, pen='b', symbol='o', name=line_label)
+			
+			# Draw IP lines if not already drawn
+			for ax in (ax_re, ax_im):
+				if not hasattr(ax, '_ips_drawn'):
+					ax._ips_drawn = set()
+				x_min, x_max = ax.viewRange()[0]
+				_, y_max = ax.viewRange()[1]
+				for ip in range(1, 9):
+					ip_str = f"IP{ip}"
+					ip_x = IP_POS_DEFAULT[label][ip_str]
+					if x_min <= ip_x <= x_max and ip_str not in ax._ips_drawn:
+						line = ax.addLine(x=ip_x, pen={'color': 'k', 'style': 2})
+						text = pg.TextItem(text=ip_str, color='k', anchor=(0.5,0))
+						text.setPos(ip_x, y_max)
+						ax.addItem(text)
+						ax._ips_drawn.add(ip_str)
 
-		
 
 		# Plot for both beams
 		if b1data and b2data:
@@ -396,9 +398,18 @@ def plot_dRDTdknob(b1data, b2data, rdt, rdt_plane, axes, knoblist=None, log_func
 			print(f"Error plotting dRDTdknob for f$_{{{rdt_plane},{rdt}}}$: {e}")
 		return None
 
-def zoom_handler(event, callback, axis):
+
+def clear_layout(widget):
 	"""
-	Handles zoom events and calls the callback only if the event is triggered by zooming.
+	Recursively remove items from a layout.
 	"""
-	if event == axis:  # Check if the event occurred in the specified axis
-		callback()
+	current_layout = widget.layout()
+	if current_layout is not None:
+		# Remove all widgets from the layout
+		while current_layout.count():
+			item = current_layout.takeAt(0)
+			child = item.widget()
+			if child is not None:
+				child.setParent(None)
+		# Optionally, schedule deletion of the layout
+		current_layout.deleteLater()
