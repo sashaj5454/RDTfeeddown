@@ -6,13 +6,11 @@ from PyQt5.QtWidgets import (
 import pyqtgraph as pg
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt, QTimer  # Import Qt for the correct constants and QTimer
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
 from .validation_utils import validate_rdt_and_plane, validate_knob, validate_metas
 from .utils import load_defaults, initialize_statetracker, rdt_to_order_and_type, getmodelBPMs
 from .analysis import write_RDTshifts, getrdt_omc3, fit_BPM, save_RDTdata, load_RDTdata, group_datasets, getrdt_sim
-from .plotting import plot_BPM, plot_RDT, plot_RDTshifts, plot_dRDTdknob, clear_layout  # Assuming you have a plotting module for BPM plotting
+from .plotting import plot_BPM, plot_RDT, plot_RDTshifts, plot_dRDTdknob, clear_layout, setup_blankcanvas  # Assuming you have a plotting module for BPM plotting
 import time  # Import time to get the current timestamp
 import re    # Import re for regex substitution
 
@@ -319,13 +317,10 @@ class RDTFeeddownGUI(QMainWindow):
 		bpm_layout.addWidget(self.graph_bpm_button)
 		bpm_tab_layout.addLayout(bpm_layout)
 
-		# BPM plotting canvas
-		self.bpmFigure = Figure(figsize=(6, 40))
-		self.bpmCanvas = FigureCanvas(self.bpmFigure)
-		bpm_tab_layout.addWidget(self.bpmCanvas)
-		# Add navigation toolbar for interactive zoom/pan
-		self.bpmNavToolbar = NavigationToolbar(self.bpmCanvas, self)
-		bpm_tab_layout.addWidget(self.bpmNavToolbar)
+		# BPM plotting widget
+		self.bpmWidget = pg.PlotWidget()
+		setup_blankcanvas(self.bpmWidget)
+		bpm_tab_layout.addWidget(self.bpmWidget)
 
 		# Add graph tabs for RDT and RDT shifts
 		self.graph_tabs.addTab(self.bpm_tab, "BPM")
@@ -339,21 +334,17 @@ class RDTFeeddownGUI(QMainWindow):
 		self.plot_rdt_button = QPushButton("Plot RDT")
 		self.plot_rdt_button.clicked.connect(self.plot_rdt)
 		rdt_layout.addWidget(self.plot_rdt_button)
-		self.rdtFigure = Figure(figsize=(6,40))
-		self.rdtCanvas = FigureCanvas(self.rdtFigure)
-		rdt_layout.addWidget(self.rdtCanvas)
-		self.rdtNavToolbar = NavigationToolbar(self.rdtCanvas, self)
-		rdt_layout.addWidget(self.rdtNavToolbar)
+		self.rdtWidget = pg.PlotWidget()
+		setup_blankcanvas(self.rdtWidget)
+		rdt_layout.addWidget(self.rdtWidget)
 
 		rdt_shift_layout = QVBoxLayout(self.rdt_shift_tab)
 		self.plot_rdt_shifts_button = QPushButton("Plot RDT Shifts")
 		self.plot_rdt_shifts_button.clicked.connect(self.plot_rdt_shifts)
 		rdt_shift_layout.addWidget(self.plot_rdt_shifts_button)
-		self.rdtShiftFigure = Figure(figsize=(6,20))
-		self.rdtShiftCanvas = FigureCanvas(self.rdtShiftFigure)
-		rdt_shift_layout.addWidget(self.rdtShiftCanvas)
-		self.rdtShiftNavToolbar = NavigationToolbar(self.rdtShiftCanvas, self)
-		rdt_shift_layout.addWidget(self.rdtShiftNavToolbar)
+		self.rdtShiftwidget = pg.PlotWidget()
+		setup_blankcanvas(self.rdtShiftwidget)
+		rdt_shift_layout.addWidget(self.rdtShiftwidget)
 
 		 # Progress bar for plotting
 		self.plot_progress = QProgressBar()
@@ -675,12 +666,9 @@ class RDTFeeddownGUI(QMainWindow):
 		correction_main_layout.addWidget(self.corr_plot_button)
 
 		graph_and_knob_layout = QHBoxLayout()
-		self.corrGraphWidget = QWidget()
-		corr_graph_layout = QVBoxLayout(self.corrGraphWidget)
 		self.corrFigure = pg.PlotWidget()
-		self.corrFigure.setBackground('w')  # Set background to white
-		self.corrFigure.showGrid(x=True, y=True)  # Enable grid lines
-		graph_and_knob_layout.addWidget(self.corrGraphWidget)
+		setup_blankcanvas(self.corrFigure)
+		graph_and_knob_layout.addWidget(self.corrFigure)
 		# Knob Manager group
 		self.knob_manager_group = QGroupBox("Knob Manager")
 		knob_manager_layout = QVBoxLayout()
@@ -1004,12 +992,8 @@ class RDTFeeddownGUI(QMainWindow):
 		if BPM not in data.get("data", {}):
 			QMessageBox.information(self, "BPM Graph", f"BPM '{BPM}' not found in {beam}.")
 			return
-		self.bpmFigure.clear()
-		ax1 = self.bpmFigure.add_subplot(211)
-		ax2 = self.bpmFigure.add_subplot(212)
-		self.bpmFigure.subplots_adjust(hspace=0.7)
+		(ax1, ax2), grid = self.setup_figure(self.bpmWidget, data, None, 2)
 		plot_BPM(BPM, data, self.rdt, self.rdt_plane, ax1=ax1, ax2=ax2, log_func=self.log_error)
-		self.bpmCanvas.draw()
 		self.plot_progress.hide()
 	
 	def save_b1_rdtdata(self):
@@ -1085,16 +1069,11 @@ class RDTFeeddownGUI(QMainWindow):
 			datab2 = self.b2rdtdata["data"]
 		except Exception as e:
 			self.log_error(f"Error accessing LHCB2 RDT data: {e}")
-		self.rdtFigure.clear()
-		if datab1 and datab2:
-			axes = self.rdtFigure.subplots(3, 2, sharey=False)
-			self.rdtFigure.subplots_adjust(hspace=0.7, wspace=0.4)
-		else:
-			axes = self.rdtFigure.subplots(3, 1, sharey=False)
-			self.rdtFigure.subplots_adjust(hspace=0.7)
+
+		self.rdt_axes, self.rdt_axes_layout = self.setup_figure(self.rdtWidget, datab1, datab2, 3)
+		
 		try:
-			plot_RDT(datab1, datab2, self.rdt, self.rdt_plane, axes, log_func=self.log_error)
-			self.rdtCanvas.draw()
+			plot_RDT(datab1, datab2, self.rdt, self.rdt_plane, self.rdt_axes, log_func=self.log_error)
 		except Exception as e:
 			self.log_error(f"Error plotting RDT data: {e}")
 			self.plot_progress.hide()
@@ -1113,16 +1092,11 @@ class RDTFeeddownGUI(QMainWindow):
 			datab2 = self.b2rdtdata["data"]
 		except Exception as e:
 			self.log_error(f"Error accessing LHCB2 RDT data: {e}")
-		self.rdtShiftFigure.clear()
-		if datab1 and datab2:
-			axes = self.rdtShiftFigure.subplots(3, 2, sharey=False)
-			self.rdtShiftFigure.subplots_adjust(hspace=0.7, wspace=0.4)
-		else:
-			axes = self.rdtShiftFigure.subplots(3, 1, sharey=False)
-			self.rdtShiftFigure.subplots_adjust(hspace=0.7)
+
+		self.rdtshift_axes, self.rdtshift_axes_layout = self.setup_figure(self.rdtShiftwidget, datab1, datab2, 3)
+
 		try:
-			plot_RDTshifts(datab1, datab2, self.rdt, self.rdt_plane, axes, log_func=self.log_error)
-			self.rdtShiftCanvas.draw()
+			plot_RDTshifts(datab1, datab2, self.rdt, self.rdt_plane, self.rdtshift_axes, log_func=self.log_error)
 		except Exception as e:
 			self.log_error(f"Error plotting RDT shifts: {e}")
 			self.plot_progress.hide()
@@ -1434,7 +1408,8 @@ class RDTFeeddownGUI(QMainWindow):
 				self.log_error("Both beams must be loaded for reference measurement.")
 				self.simcorr_progress.hide()
 				return
-		self.setup_corr_figure()
+
+		self.corr_axes, grid = self.setup_figure(self.corrFigure, self.b1data, self.b2data, 2)
 		QtWidgets.QApplication.processEvents()
 
 		def both_plot():
@@ -1443,9 +1418,9 @@ class RDTFeeddownGUI(QMainWindow):
 			plot_dRDTdknob(self.b1data, self.b2data, self.rdt, self.rdt_plane, 
 							self.corr_axes, self.knob_widgets.items(), 
 							log_func=self.log_error)
-			# self.corrCanvas.draw_idle()
 
-		QTimer.singleShot(0, both_plot)
+		both_plot()
+		QtWidgets.QApplication.processEvents()
 
 		self.simcorr_progress.hide()
 
@@ -1511,53 +1486,54 @@ class RDTFeeddownGUI(QMainWindow):
 								log_func=self.log_error)
 		self.simcorr_progress.hide()
 
-	def setup_corr_figure(self):
+
+	def setup_figure(self, container, b1data, b2data, rows):
 		"""
-		Set up the correction figure with subplots using pyqtgraph.
+		Set up the container with subplots using pyqtgraph.
 		Safely removes any previous layout before setting up a new one.
 		"""
-		clear_layout(self.corrGraphWidget)
+		clear_layout(container)
 		# Create a new QGridLayout for subplots.
-		self.corr_axes_layout = QGridLayout()
-		self.corrGraphWidget.setLayout(self.corr_axes_layout)
+		grid = QGridLayout()
+		container.setLayout(grid)
+		axes = []
 
 		# Create the subplots based on available data.
-		if self.b1data and self.b2data:
+		if b1data and b2data:
 			# Create a 2x2 grid of subplots.
-			self.corr_axes = []
-			for row in range(2):
+			axes = []
+			for row in range(rows):
 				for col in range(2):
 					plot_widget = pg.PlotWidget()
 					plot_widget.setBackground('w')
 					plot_widget.showGrid(x=True, y=True)
-					# Customize ViewBox for zoom and reset
 					view_box = plot_widget.getViewBox()
+					grid.addWidget(plot_widget, row, col)
+					axes.append(plot_widget)
 					view_box.setMouseMode(pg.ViewBox.RectMode)  # Enable click-and-drag zoom
 					view_box.menu = None  # Disable the default context menu
-					view_box.scene().sigMouseClicked.connect(self.reset_zoom_on_right_click)
-					self.corr_axes_layout.addWidget(plot_widget, row, col)
-					self.corr_axes.append(plot_widget)
+					view_box.scene().sigMouseClicked.connect(lambda event: self.reset_zoom_on_right_click(event, axes))
 		else:
 			# Create a 2x1 grid of subplots.
-			self.corr_axes = []
-			for row in range(2):
+			axes = []
+			for row in range(rows):
 				plot_widget = pg.PlotWidget()
 				plot_widget.setBackground('w')
 				plot_widget.showGrid(x=True, y=True)
-				# Customize ViewBox for zoom and reset
+				grid.addWidget(plot_widget, row, 0)
+				axes.append(plot_widget)
 				view_box = plot_widget.getViewBox()
 				view_box.setMouseMode(pg.ViewBox.RectMode)  # Enable click-and-drag zoom
 				view_box.menu = None  # Disable the default context menu
-				view_box.scene().sigMouseClicked.connect(self.reset_zoom_on_right_click)
-				self.corr_axes_layout.addWidget(plot_widget, row, 0)
-				self.corr_axes.append(plot_widget)
+				view_box.scene().sigMouseClicked.connect(lambda event: self.reset_zoom_on_right_click(event, axes))
+		return axes, grid
 
 		QtWidgets.QApplication.processEvents()  # Force the UI to update.
 
-	def reset_zoom_on_right_click(self, event):
+	def reset_zoom_on_right_click(self, event, axes):
 		"""
 		Reset zoom when the right mouse button is clicked.
 		"""
 		if event.button() == Qt.RightButton:
-			for plot_widget in self.corr_axes:
+			for plot_widget in axes:
 				plot_widget.getViewBox().autoRange()

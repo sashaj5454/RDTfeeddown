@@ -27,6 +27,23 @@ IP_POS_DEFAULT = {
 	}
 }
 
+def plot_ips(axes, label):
+	# Draw IP lines if not already drawn
+	for ax in axes:
+		if not hasattr(ax, '_ips_drawn'):
+			ax._ips_drawn = set()
+		x_min, x_max = ax.viewRange()[0]
+		_, y_max = ax.viewRange()[1]
+		for ip in range(1, 9):
+			ip_str = f"IP{ip}"
+			ip_x = IP_POS_DEFAULT[label][ip_str]
+			if x_min <= ip_x <= x_max and ip_str not in ax._ips_drawn:
+				line = ax.addLine(x=ip_x, pen={'color': 'k', 'style': 2})
+				text = pg.TextItem(text=ip_str, color='k', anchor=(0.5,0))
+				text.setPos(ip_x, y_max)
+				ax.addItem(text)
+				ax._ips_drawn.add(ip_str)
+
 def plot_BPM(BPM, fulldata, rdt, rdt_plane, ax1=None, ax2=None, log_func=None):
 	try:
 		data = fulldata["data"]
@@ -42,11 +59,6 @@ def plot_BPM(BPM, fulldata, rdt, rdt_plane, ax1=None, ax2=None, log_func=None):
 		re = np.array(re)
 		im = np.array(im)
 
-		if ax1 is None or ax2 is None:
-			fig, (ax1, ax2) = plt.subplots(2, 1, sharey=False)
-		else:
-			fig = ax1.figure
-
 		xing_min = np.min(xing)
 		xing_max = np.max(xing)
 		xing_ran = xing_max - xing_min
@@ -54,15 +66,15 @@ def plot_BPM(BPM, fulldata, rdt, rdt_plane, ax1=None, ax2=None, log_func=None):
 		refit = polyfunction(xfit, fitdata[0][0], fitdata[0][1], fitdata[0][2])
 		imfit = polyfunction(xfit, fitdata[3][0], fitdata[3][1], fitdata[3][2])
 
-		ax1.set_ylabel(f"{BPM} Re($f_{{{rdt_plane},{rdt}}}$)")
-		ax1.set_xlabel("Knob trim")
-		ax1.plot(xfit, refit)
-		ax1.plot(xing, re, 'ro')
+		ax1.setLabel('left', f"{BPM} Re(f<sub>{rdt_plane},{rdt}</sub>)")
+		ax1.setLabel('bottom', "Knob trim")
+		ax1.plot(xfit, refit, pen='b')
+		ax1.plot(xing, re, pen=None, symbol='o', symbolPen='r', symbolBrush='r')
 
-		ax2.set_ylabel(f"{BPM} Im($f_{{{rdt_plane},{rdt}}}$)")
-		ax2.set_xlabel("Knob trim")
-		ax2.plot(xfit, imfit)
-		ax2.plot(xing, im, 'ro')
+		ax2.setLabel('left', f"{BPM} Im(f<sub>{rdt_plane},{rdt}</sub>)")
+		ax2.setLabel('bottom', "Knob trim")
+		ax2.plot(xfit, imfit, pen='b')
+		ax2.plot(xing, im, pen=None, symbol='o', symbolPen='r', symbolBrush='r')
 		
 	except Exception as e:
 		if log_func:
@@ -71,17 +83,16 @@ def plot_BPM(BPM, fulldata, rdt, rdt_plane, ax1=None, ax2=None, log_func=None):
 			print(f"Error plotting BPM {BPM}: {e}")
 		return None
 
-	return fig
-
 def plot_avg_rdt_shift(ax, data, rdt, rdt_plane):
 	"""
 	Plot the average RDT shift and standard deviation for given data on the provided axis.
 	"""
 	xing, ampdat, stddat = calculate_avg_rdt_shift(data)
-	ax.set_ylabel(rf"$\sqrt{{\Delta\,\mathrm{{Re}}(f_{{{rdt_plane},{rdt}}})^2+\Delta\,\mathrm{{Im}}(f_{{{rdt_plane},{rdt}}})^2}}$")	
-	ax.set_xlabel("Knob trim")
-	ax.plot(xing, ampdat)
-	ax.errorbar(xing, ampdat, yerr=stddat, fmt='ro')
+	ax.setLabel('left', "√(ΔRe(f<sub>{rdt_plane},{rdt}</sub>)<sup>2</sup> + ΔIm(f<sub>{rdt_plane},{rdt}</sub>)<sup>2</sup>)")
+	ax.setLabel('bottom', "Knob trim")
+	ax.plot(xing, ampdat, pen='b', symbol='o')  # Plot the data points.
+	error_item = pg.ErrorBarItem(x=xing, y=ampdat, top=stddat, bottom=stddat, beam=0.1, pen='r')
+	ax.addItem(error_item)
 
 def plot_RDTshifts(b1data, b2data, rdt, rdt_plane, axes, log_func=None):
 	"""
@@ -105,10 +116,18 @@ def plot_RDTshifts(b1data, b2data, rdt, rdt_plane, axes, log_func=None):
 			"""
 			# Unpack the axes
 			ax_avg, ax_re, ax_im = axs
-
 			 # Set title for the beam column
-			ax_avg.set_title(label, pad=20)
-
+			ax_avg.setTitle(label)
+			# Set labels for the real part plot
+			if not ax_re.getAxis('left').labelText:  # Check if the Y-axis label is already set
+				ax_re.setLabel('left', f'∂Re(f<sub>{rdt_plane},{rdt}</sub>)/∂knob', units='')
+			if not ax_re.getAxis('bottom').labelText:  # Check if the X-axis label is already set
+				ax_re.setLabel('bottom', 'S', units='km')
+			# Set labels for the imaginary part plot
+			if not ax_im.getAxis('left').labelText:  # Check if the Y-axis label is already set
+				ax_im.setLabel('left', f'∂Im(f<sub>{rdt_plane},{rdt}</sub>)/∂knob', units='')
+			if not ax_im.getAxis('bottom').labelText:  # Check if the X-axis label is already set
+				ax_im.setLabel('bottom', 'S', units='km')
 			# Collect data for dRe/dknob and dIm/dknob
 			sdat, dredkdat, dimdkdat = [], [], []
 			dredkerr, dimdkerr = [], []
@@ -134,23 +153,19 @@ def plot_RDTshifts(b1data, b2data, rdt, rdt_plane, axes, log_func=None):
 			# Plot average re^2 + im^2
 			plot_avg_rdt_shift(ax_avg, data, rdt, rdt_plane)
 
-			# Plot dRe
-			ax_re.set_ylabel(f'$\partial$Re$f_{{{rdt_plane},{rdt}}}$/$\partial$knob')
-			ax_re.set_xlabel('S [km]')
-			ax_re.plot(sdat, dredkdat)
-			ax_re.errorbar(sdat, dredkdat, yerr=dredkerr, fmt='ro')
+			# Plot dRe with error bars
+			error_re = pg.ErrorBarItem(x=sdat, y=dredkdat, top=dredkerr, bottom=dredkerr, beam=0.1, pen='r')
+			ax_re.addItem(error_re)
+			ax_re.plot(sdat, dredkdat, pen='b', symbol='o')
 
-			# Plot dIm
-			ax_im.set_ylabel(f'$\partial$Im$f_{{{rdt_plane},{rdt}}}$/$\partial$knob')
-			ax_im.set_xlabel('S [km]')
-			ax_im.plot(sdat, dimdkdat)
-			ax_im.errorbar(sdat, dimdkdat, yerr=dimdkerr, fmt='ro')
+			# Plot dIm with error bars
+			error_im = pg.ErrorBarItem(x=sdat, y=dimdkdat, top=dimdkerr, bottom=dimdkerr, beam=0.1, pen='r')
+			ax_im.addItem(error_im)
+			ax_im.plot(sdat, dimdkdat, pen='b', symbol='o')
 
-			# Instead of statically drawing IP labels, register callbacks to update on zoom.
-			# for ax_ in (ax_re, ax_im):
-			# 	ax_.callbacks.connect('xlim_changed', lambda event, ax=ax_, beam=label: update_ip_labels(ax, beam))
-			# 	ax_.callbacks.connect('ylim_changed', lambda event, ax=ax_, beam=label: update_ip_labels(ax, beam))
-			# 	update_ip_labels(ax_, label)
+			plot_ips((ax_re, ax_im), label)
+
+
 
 		# Case 1: Both Beam 1 and Beam 2 data
 		if b1data  and b2data:
@@ -185,7 +200,7 @@ def plot_RDT(b1data, b2data, rdt, rdt_plane, axes, log_func=None):
 	try:
 		# Decide figure layout
 		if b1data and b2data:
-			ax1, ax2, ax3, ax4, ax5, ax6 = axes.flatten()
+			ax1, ax2, ax3, ax4, ax5, ax6 = axes
 		else:
 			ax1, ax2, ax3 = axes
 
@@ -193,6 +208,13 @@ def plot_RDT(b1data, b2data, rdt, rdt_plane, axes, log_func=None):
 			"""
 			Plots |f|, Re(f), and Im(f) vs. knob trim in three provided axes.
 			"""
+			ax_amp.setTitle(beam_label, pad=20)
+			ax_amp.setLabel('left', f'Δ|f<sub>{rdt_plane},{rdt}</sub>|')
+			ax_amp.setLabel('bottom', 'S', units='km')
+			ax_re.setLabel('left', f'ΔRe(f<sub>{rdt_plane},{rdt}</sub>)')
+			ax_re.setLabel('bottom', 'S', units='km')
+			ax_im.setLabel('left', f'ΔIm(f<sub>{rdt_plane},{rdt}</sub>)')
+			ax_im.setLabel('bottom', 'S', units='km')
 			# Get the crossing angles
 			if not data:
 				return
@@ -203,7 +225,7 @@ def plot_RDT(b1data, b2data, rdt, rdt_plane, axes, log_func=None):
 					xing.append(entry[0])
 
 			 # Set title for the beam column
-			ax_amp.set_title(beam_label, pad=20)
+			ax_amp.setTitle(beam_label, pad=20)
 
 			# For each crossing angle, gather BPM data
 			for angle in xing:
@@ -229,25 +251,15 @@ def plot_RDT(b1data, b2data, rdt, rdt_plane, axes, log_func=None):
 				imdat = np.array(imdat)
 
 				# Plot amplitude
-				ax_amp.set_ylabel(f'$|f_{{{rdt_plane},{rdt}}}|$')
-				ax_amp.set_xlabel(f'S [km]')
-				ax_amp.plot(sdat, ampdat, marker='o')
+				ax_amp.plot(sdat, ampdat, symbol='o')
 
 				# Plot Delta Re
-				ax_re.set_ylabel(f'ΔRe($f_{{{rdt_plane},{rdt}}}$)')
-				ax_re.set_xlabel(f'S [km]')
-				ax_re.plot(sdat, redat, marker='o')
+				ax_re.plot(sdat, redat, symbol='o')
 
 				# Plot Delta Im
-				ax_im.set_ylabel(f'ΔIm($f_{{{rdt_plane},{rdt}}}$)')
-				ax_im.set_xlabel(f'S [km]')
-				ax_im.plot(sdat, imdat, marker='o')
+				ax_im.plot(sdat, imdat, symbol='o')
 
-			# Instead of static IP drawing, register callbacks for zoom updates.
-			# for ax_ in (ax_amp, ax_re, ax_im):
-			# 	ax_.callbacks.connect('xlim_changed', lambda event, ax=ax_, beam=beam_label: update_ip_labels(ax, beam))
-			# 	ax_.callbacks.connect('ylim_changed', lambda event, ax=ax_, beam=beam_label: update_ip_labels(ax, beam))
-			# 	update_ip_labels(ax_, beam_label)
+			plot_ips((ax_amp, ax_re, ax_im), beam_label)
 
 		if b1data and b2data:
 			# Plot B1 (left column)
@@ -356,30 +368,16 @@ def plot_dRDTdknob(b1data, b2data, rdt, rdt_plane, axes, knoblist=None, log_func
 				ax_im.plot(sdat, dimdkdat, pen='g', name=line_label)
 			else:
 				# Plot dRe with error bars
-				error_re = pg.ErrorBarItem(x=sdat, y=dredkdat, left=dredkerr, right=dredkerr, beam=0.1, pen='r')
+				error_re = pg.ErrorBarItem(x=sdat, y=dredkdat, top=dredkerr, bottom=dredkerr, beam=0.1, pen='r')
 				ax_re.addItem(error_re)
 				ax_re.plot(sdat, dredkdat, pen='b', symbol='o', name=line_label)
 
 				# Plot dIm with error bars
-				error_im = pg.ErrorBarItem(x=sdat, y=dimdkdat, left=dimdkerr, right=dimdkerr, beam=0.1, pen='r')
+				error_im = pg.ErrorBarItem(x=sdat, y=dimdkdat, top=dimdkerr, bottom=dimdkerr, beam=0.1, pen='r')
 				ax_im.addItem(error_im)
 				ax_im.plot(sdat, dimdkdat, pen='b', symbol='o', name=line_label)
 			
-			# Draw IP lines if not already drawn
-			for ax in (ax_re, ax_im):
-				if not hasattr(ax, '_ips_drawn'):
-					ax._ips_drawn = set()
-				x_min, x_max = ax.viewRange()[0]
-				_, y_max = ax.viewRange()[1]
-				for ip in range(1, 9):
-					ip_str = f"IP{ip}"
-					ip_x = IP_POS_DEFAULT[label][ip_str]
-					if x_min <= ip_x <= x_max and ip_str not in ax._ips_drawn:
-						line = ax.addLine(x=ip_x, pen={'color': 'k', 'style': 2})
-						text = pg.TextItem(text=ip_str, color='k', anchor=(0.5,0))
-						text.setPos(ip_x, y_max)
-						ax.addItem(text)
-						ax._ips_drawn.add(ip_str)
+			plot_ips((ax_re, ax_im), label)
 
 
 		# Plot for both beams
@@ -413,3 +411,10 @@ def clear_layout(widget):
 				child.setParent(None)
 		# Optionally, schedule deletion of the layout
 		current_layout.deleteLater()
+
+def setup_blankcanvas(plot_widget):
+	plot_widget.setBackground('w')  # Set the background to white
+	# Optional: hide the axes for a completely blank white canvas
+	plot_item = plot_widget.getPlotItem()
+	plot_item.hideAxis('left')
+	plot_item.hideAxis('bottom')
