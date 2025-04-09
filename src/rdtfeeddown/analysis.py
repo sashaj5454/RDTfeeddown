@@ -234,15 +234,14 @@ def fit_BPM(fulldata):
 def arcBPMcheck(bpm):
 	bpmtype=bpm.partition('.')[0]
 	if bpmtype!='BPM':
-		print(bpmtype)
 		isARCbpm=False
 	else:
 		bpmindex=bpm.partition('.')[2].rpartition('.')[0].partition('L')[0].partition('R')[0]
-		print(bpmindex)
 		if int(bpmindex)>=10:
 			isARCbpm=True
 		else:
 			isARCbpm=False
+	# print(f"{bpm} is arc BPM: {isARCbpm}")
 	return isARCbpm
 
 def badBPMcheck(bpm):
@@ -257,6 +256,7 @@ def badBPMcheck(bpm):
 		if bpm==b:
 			badbpm=True
 			break
+	# print(f"{bpm} is bad BPM: {badbpm}")
 	return badbpm
 
 def write_RDTshifts_for_beam(data, rdt, rdt_plane, beam, output_path):
@@ -465,6 +465,8 @@ def group_datasets(datasets, log_func=None):
 def getrdt_sim(beam, ref, file, xing, knob_name, knob_strength, rdt, rdt_plane, rdtfolder, log_func=None):
 	bpmdata = {}
 	bpmlist = []
+	knob_strength = float(knob_strength)
+	xing = float(xing)
 	# Read the reference data
 	rdtfolder = rdtfolder if rdtfolder.endswith('/') else rdtfolder + '/'
 	try:
@@ -480,9 +482,9 @@ def getrdt_sim(beam, ref, file, xing, knob_name, knob_strength, rdt, rdt_plane, 
 	if refdat is not None:
 		for index,entry in refdat.iterrows():
 			bpm = entry["NAME"]
-			bpmlist.append(bpm)
 			if not arcBPMcheck(bpm) or badBPMcheck(bpm):
 				continue
+			bpmlist.append(bpm)
 			bpmdata[bpm] = {}
 			bpmdata[bpm]['s']=float(entry["S"])
 			bpmdata[bpm]['ref']=[]
@@ -497,7 +499,7 @@ def getrdt_sim(beam, ref, file, xing, knob_name, knob_strength, rdt, rdt_plane, 
 	# Read the measurement data
 	try:
 		file = file if file.endswith('/') else file + '/'
-		cdat = tfs.read(f"{ref}rdt/{rdtfolder}f{rdt}_{rdt_plane}.tfs")
+		cdat = tfs.read(f"{file}rdt/{rdtfolder}f{rdt}_{rdt_plane}.tfs")
 		cdat = cdat[cdat['NAME'].str.contains('BPM')]
 	except FileNotFoundError:
 		msg = f"RDT file not found in measurement folder: {file}."
@@ -510,12 +512,7 @@ def getrdt_sim(beam, ref, file, xing, knob_name, knob_strength, rdt, rdt_plane, 
 			bpm = entry["NAME"]
 			if not arcBPMcheck(bpm) or badBPMcheck(bpm):
 				continue
-			if bpm not in bpmdata:
-				bpmdata[bpm] = {}
-				bpmdata[bpm]['s']=float(entry["S"])
-				bpmdata[bpm]['ref']=[]
-				bpmdata[bpm]['data']=[]
-				bpmdata[bpm]['data'].append([knob_strength, entry["AMP"], entry["REAL"], entry["IMAG"]])
+			bpmdata[bpm]['data'].append([knob_strength, entry["AMP"], entry["REAL"], entry["IMAG"]])
 	else:
 		msg = f"Measurement data not found for {file}."
 		if log_func:
@@ -536,16 +533,15 @@ def getrdt_sim(beam, ref, file, xing, knob_name, knob_strength, rdt, rdt_plane, 
 			msg = f"Reference and measurement data for BPM {bpm} do not match."
 			if log_func:
 				log_func(msg)
-			raise RuntimeError(msg)
-			return None
+			continue
 		# Calculate the RDT shifts
 		s = bpmdata[bpm]['s']
 		bref = bpmdata[bpm]['ref']
 		dat = bpmdata[bpm]['data']
-
-		diffdat = [((dat[0][0] - bref[0][0])/xing)/knob_strength, 
+		diffdat = [
 					((dat[0][2] - bref[0][2])/xing)/knob_strength, 
-					((dat[0][3] - bref[0][3])/xing)/knob_strength]
+					((dat[0][3] - bref[0][3])/xing)/knob_strength
+				]
 		intersectedBPMdata[bpm] = {'s': s, 'diffdata': diffdat}
 	if not intersectedBPMdata:
 		msg = "No BPM data found after intersection."

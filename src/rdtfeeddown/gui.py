@@ -3,15 +3,16 @@ from PyQt5.QtWidgets import (
 	QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QCheckBox,
 	QFileDialog, QListWidget, QTabWidget, QWidget, QTextEdit, QMessageBox, QProgressBar, QSizePolicy, QToolButton, QGroupBox
 )
+import pyqtgraph as pg
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt, QTimer  # Import Qt for the correct constants and QTimer
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
-from .validation_utils import validate_rdt_and_plane, validate_knob
+from .validation_utils import validate_rdt_and_plane, validate_knob, validate_metas
 from .utils import load_defaults, initialize_statetracker, rdt_to_order_and_type, getmodelBPMs
 from .analysis import write_RDTshifts, getrdt_omc3, fit_BPM, save_RDTdata, load_RDTdata, group_datasets, getrdt_sim
-from .plotting import plot_BPM, plot_RDT, plot_RDTshifts, plot_dRDTdknob  # Assuming you have a plotting module for BPM plotting
+from .plotting import plot_BPM, plot_RDT, plot_RDTshifts, plot_dRDTdknob, zoom_handler  # Assuming you have a plotting module for BPM plotting
 import time  # Import time to get the current timestamp
 import re    # Import re for regex substitution
 
@@ -375,8 +376,8 @@ class RDTFeeddownGUI(QMainWindow):
 		self.corr_toggle_button.setCheckable(True)
 		self.corr_toggle_button.setChecked(True)
 		self.corr_toggle_button.setArrowType(Qt.DownArrow)
+		self.corr_toggle_button.setFixedHeight(30)
 		self.corr_toggle_button.clicked.connect(self.toggle_correction_content)
-		self.corr_toggle_button.setFixedHeight(30)  # optional: ensure a fixed height for the header
 		header_layout.addWidget(self.corr_toggle_button)
 		header_layout.addStretch()  # keep the header at the top
 		correction_main_layout.addWidget(header_container)
@@ -384,42 +385,8 @@ class RDTFeeddownGUI(QMainWindow):
 		# Collapsible content container – remains below the fixed header.
 		self.correction_content = QWidget()
 		self.correction_layout = QVBoxLayout(self.correction_content)
-
-		 # Insert new group box at the top of the collapsible content
-		measurement_match_group = QGroupBox("Measurement to be matched")
-		match_layout = QHBoxLayout(measurement_match_group)
-		
-		# LHCB1
-		b1_container = QWidget()
-		b1_vlayout = QVBoxLayout(b1_container)
-		b1_label = QLabel("LHCB1 Single Measurement:")
-		self.b1_match_entry = QLineEdit()
-		b1_button = QPushButton("Browse File")
-		b1_button.clicked.connect(lambda: self.select_singleitem("LHCB1",
-															"Select LHCB1 Match File",
-															"JSON Files (*.json);;All Files (*)", 
-															self.b1_match_entry, None))
-		b1_vlayout.addWidget(b1_label)
-		b1_vlayout.addWidget(self.b1_match_entry)
-		b1_vlayout.addWidget(b1_button)
-		match_layout.addWidget(b1_container)
-
-		# LHCB2
-		b2_container = QWidget()
-		b2_vlayout = QVBoxLayout(b2_container)
-		b2_label = QLabel("LHCB2 Single Measurement:")
-		self.b2_match_entry = QLineEdit()
-		b2_button = QPushButton("Browse File")
-		b2_button.clicked.connect(lambda: self.select_singleitem("LHCB2",
-														   	"Select LHCB2 Match File",
-															"JSON Files (*.json);;Select LHCB2 Match File",
-															None, self.b2_match_entry))
-		b2_vlayout.addWidget(b2_label)
-		b2_vlayout.addWidget(self.b2_match_entry)
-		b2_vlayout.addWidget(b2_button)
-		match_layout.addWidget(b2_container)
-		
-		self.correction_layout.insertWidget(0, measurement_match_group)
+		self.correction_content.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
+		correction_main_layout.addWidget(self.correction_content)
 
 		# Reference correction folders
 		corr_folders_group = QtWidgets.QGroupBox("Reference and Measurement Folders")
@@ -642,15 +609,19 @@ class RDTFeeddownGUI(QMainWindow):
 		
 		# NEW: Loaded Files section (outside the collapsible content)
 		loaded_files_group = QGroupBox("Loaded Files")
+		loaded_files_group.setFixedHeight(150)
 		loaded_files_layout = QVBoxLayout()
-		self.correction_loaded_files_list = QListWidget()
+		self.correction_loaded_files_list = QtWidgets.QTreeWidget()
+		self.correction_loaded_files_list.setColumnCount(4)  # 4 columns: Filename and RDT and RDT plane and CORRECTOR
+		self.correction_loaded_files_list.setHeaderLabels(["Filename", "RDT", "RDT plane", "Corrector"])  # Set column headers
 		loaded_files_layout.addWidget(self.correction_loaded_files_list)
+
 		btn_layout = QHBoxLayout()
 		self.load_file_button = QPushButton("Load File")
 		self.load_file_button.clicked.connect(self.load_selected_correction_files)  # New method to implement
 		btn_layout.addWidget(self.load_file_button)
 		self.remove_file_button = QPushButton("Remove Selected Files")
-		self.remove_file_button.clicked.connect(lambda: self.remove_selected_items(self.correction_loaded_files_list))
+		self.remove_file_button.clicked.connect(lambda: self.remove_selected_items(self.correction_loaded_files_list, True))
 		btn_layout.addWidget(self.remove_file_button)
 		self.select_all_files_checkbox = QCheckBox("Select All Files")
 		self.select_all_files_checkbox.stateChanged.connect(lambda state: self._toggle_select_all(self.correction_loaded_files_list, state))
@@ -659,17 +630,63 @@ class RDTFeeddownGUI(QMainWindow):
 		loaded_files_group.setLayout(loaded_files_layout)
 		correction_main_layout.addWidget(loaded_files_group)
 		
-		# NEW: Unified Correction Graph Widget below the Loaded Files section
+		# Create the measurement_match_group widget
+		measurement_match_group = QGroupBox("Measurement to be matched")
+		match_layout = QHBoxLayout(measurement_match_group)
+
+		# LHCB1
+		b1_container = QWidget()
+		b1_vlayout = QVBoxLayout(b1_container)
+		b1_label = QLabel("LHCB1 Single Measurement:")
+		b1_label.setStyleSheet("color: blue;")
+		self.b1_match_entry = QLineEdit()
+		b1_button = QPushButton("Browse File")
+		b1_button.clicked.connect(lambda: self.select_singleitem("LHCB1",
+															"Select LHCB1 Match File",
+															"JSON Files (*.json);;All Files (*)", 
+															self.b1_match_entry, None))
+		b1_vlayout.addWidget(b1_label)
+		b1_vlayout.addWidget(self.b1_match_entry)
+		b1_vlayout.addWidget(b1_button)
+		match_layout.addWidget(b1_container)
+
+		# LHCB2
+		b2_container = QWidget()
+		b2_vlayout = QVBoxLayout(b2_container)
+		b2_label = QLabel("LHCB2 Single Measurement:")
+		b2_label.setStyleSheet("color: red;")
+		self.b2_match_entry = QLineEdit()
+		b2_button = QPushButton("Browse File")
+		b2_button.clicked.connect(lambda: self.select_singleitem("LHCB2",
+															"Select LHCB2 Match File",
+															"JSON Files (*.json);;Select LHCB2 Match File",
+															None, self.b2_match_entry))
+		b2_vlayout.addWidget(b2_label)
+		b2_vlayout.addWidget(self.b2_match_entry)
+		b2_vlayout.addWidget(b2_button)
+		match_layout.addWidget(b2_container)
+
+		# Insert the measurement_match_group widget below the loaded files widget and buttons
+		correction_main_layout.addWidget(measurement_match_group)
+
+		# Add a Plot button below the measurement_match_group (if desired, below the graph)
+		self.corr_plot_button = QPushButton("Plot")
+		self.corr_plot_button.clicked.connect(self.plot_loaded_correction_files)
+		correction_main_layout.addWidget(self.corr_plot_button)
+
+		graph_and_knob_layout = QHBoxLayout()
 		self.corrGraphWidget = QWidget()
 		corr_graph_layout = QVBoxLayout(self.corrGraphWidget)
-		self.corrFigure = Figure(figsize=(6,4))
-		self.corrCanvas = FigureCanvas(self.corrFigure)
-		corr_graph_layout.addWidget(self.corrCanvas)
-		self.corrNavToolbar = NavigationToolbar(self.corrCanvas, self)
+		self.corrFigure = pg.PlotWidget()
+		self.corrFigure.setBackground('w')  # Set background to white
+		self.corrFigure.showGrid(x=True, y=True)  # Enable grid lines
+		# self.corrFigure = Figure(figsize=(6,4))
+		# self.corrCanvas = FigureCanvas(self.corrFigure)
+		# corr_graph_layout.addWidget(self.corrCanvas)
+		# self.corrNavToolbar = NavigationToolbar(self.corrCanvas, self)
 		corr_graph_layout.addWidget(self.corrNavToolbar)
-		correction_main_layout.addWidget(self.corrGraphWidget)
-
-		 # New: Knob Manager group
+		graph_and_knob_layout.addWidget(self.corrGraphWidget)
+		# Knob Manager group
 		self.knob_manager_group = QGroupBox("Knob Manager")
 		knob_manager_layout = QVBoxLayout()
 		self.knob_widgets = {}
@@ -677,11 +694,12 @@ class RDTFeeddownGUI(QMainWindow):
 		self.update_knobs_button.clicked.connect(self.update_knobs_and_replot)
 		knob_manager_layout.addWidget(self.update_knobs_button)
 		self.knob_manager_group.setLayout(knob_manager_layout)
-		correction_main_layout.addWidget(self.knob_manager_group)
+		graph_and_knob_layout.addWidget(self.knob_manager_group)
+		correction_main_layout.addLayout(graph_and_knob_layout)
 
 		# Progress bar for correction tab remains below everything
 		self.simcorr_progress = QProgressBar()
-		self.simcorr_progress.setRange(0, 0)
+		self.simcorr_progress.setRange(0, 100)
 		self.simcorr_progress.hide()
 		self.layout.addWidget(self.simcorr_progress)
 
@@ -901,6 +919,37 @@ class RDTFeeddownGUI(QMainWindow):
 					item = QtWidgets.QListWidgetItem(file)
 					item.setSelected(True)
 					list_widget.addItem(item)
+		return dialog.selectedFiles()
+
+	def select_multiple_treefiles(self, tree_widget, title="Select Files", filter="JSON Files (*.json)"):
+		"""
+		Allow the user to select multiple files and add them to the file tree widget.
+		"""
+		dialog = QFileDialog(self)
+		dialog.setWindowTitle(title)
+		dialog.setDirectory(self.default_input_path)  # Use default output path, adjust if needed
+		dialog.setFileMode(QFileDialog.ExistingFiles)
+		dialog.setNameFilter(filter)
+
+		# Enable multiple selection in the dialog
+		for view in dialog.findChildren((QtWidgets.QListView, QtWidgets.QTreeView)):
+			if isinstance(view.model(), QtWidgets.QFileSystemModel):
+				view.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
+
+		if dialog.exec_() == QFileDialog.Accepted:
+			selected_files = dialog.selectedFiles()
+			existing_files = [
+				tree_widget.topLevelItem(i).text(0)  # Get the filename from the first column
+				for i in range(tree_widget.topLevelItemCount())
+			]
+			for file in selected_files:
+				if file not in existing_files:
+					self.corr_responses[file] = load_RDTdata(file)
+					self.rdt = self.corr_responses[file].get("metadata", {}).get("rdt", "Unknown RDT")
+					self.rdt_plane = self.corr_responses[file].get("metadata", {}).get("rdt_plane", "Unknown Plane")
+					self.corrector = self.corr_responses[file].get("metadata", {}).get("knob_name", "Unknown Corrector")
+					item = QtWidgets.QTreeWidgetItem([file, self.rdt, self.rdt_plane, self.corrector])
+					tree_widget.addTopLevelItem(item)
 		return dialog.selectedFiles()
 
 	def select_analysis_files(self):
@@ -1124,13 +1173,47 @@ class RDTFeeddownGUI(QMainWindow):
 				if directory not in [list_widget.item(i).text() for i in range(list_widget.count())]:
 					list_widget.addItem(directory)
 
-	def remove_selected_items(self, list_widget):
-		for item in list_widget.selectedItems():
-			list_widget.takeItem(list_widget.row(item))
+	def remove_selected_items(self, widget, corr_responses=False):
+		"""
+		Remove selected items from either a QListWidget or QTreeWidget.
+		Optionally delete corresponding entries in corr_responses.
+		"""
+		if isinstance(widget, QtWidgets.QListWidget):
+			# Handle QListWidget
+			for item in widget.selectedItems():
+				if corr_responses:
+					filename = item.text()  # Get the filename from the list widget item
+					if filename in self.corr_responses:
+						del self.corr_responses[filename]
+				widget.takeItem(widget.row(item))
+		elif isinstance(widget, QtWidgets.QTreeWidget):
+			# Handle QTreeWidget
+			for item in widget.selectedItems():
+				if corr_responses:
+					filename = item.text(0)  # Get the filename from the first column
+					if filename in self.corr_responses:
+						del self.corr_responses[filename]
+				index = widget.indexOfTopLevelItem(item)
+				widget.takeTopLevelItem(index)
+		else:
+			self.log_error("Unsupported widget type for remove_selected_items.")
+			raise TypeError("Unsupported widget type. Only QListWidget and QTreeWidget are supported.")
 
-	def _toggle_select_all(self, list_widget, state):
-		for i in range(list_widget.count()):
-			list_widget.item(i).setSelected(state == Qt.Checked)
+	def _toggle_select_all(self, widget, state):
+		"""
+		Toggle selection for all items in either a QTreeWidget or QListWidget based on the checkbox state.
+		"""
+		if isinstance(widget, QtWidgets.QTreeWidget):
+			# Handle QTreeWidget
+			for i in range(widget.topLevelItemCount()):
+				widget.topLevelItem(i).setSelected(state == Qt.Checked)
+		elif isinstance(widget, QtWidgets.QListWidget):
+			# Handle QListWidget
+			for i in range(widget.count()):
+				widget.item(i).setSelected(state == Qt.Checked)
+		else:
+			self.log_error("Unsupported widget type for toggle_select_all.")
+			raise TypeError("Unsupported widget type. Only QTreeWidget and QListWidget are supported.")
 
 	def select_beam1_folders(self):
 		self._select_folders("Beam1BunchTurn (Beam1BunchTurn*);;All Folders (*)", self.beam1_folders_list)
@@ -1151,55 +1234,66 @@ class RDTFeeddownGUI(QMainWindow):
 		self._toggle_select_all(self.beam2_folders_list, state)
 
 	def run_response(self):
-		self.corr_b1_reffile = self.corr_beam1_reffolder_entry.text()
-		self.corr_b2_reffile = self.corr_beam2_reffolder_entry.text()
-		self.corr_b1_measfile = self.corr_beam1_measfolder_entry.text()
-		self.corr_b2_measfile = self.corr_beam2_measfolder_entry.text()
+		# self.corr_b1_reffile = self.corr_beam1_reffolder_entry.text()
+		# self.corr_b2_reffile = self.corr_beam2_reffolder_entry.text()
+		# self.corr_b1_measfile = self.corr_beam1_measfolder_entry.text()
+		# self.corr_b2_measfile = self.corr_beam2_measfolder_entry.text()
 		self.corr_responses = {}
 		filenameb1 = ""
 		filenameb2 = ""
 		# Debugging logs
-		print(f"corr_b1_reffile: {self.corr_b1_reffile}")
-		print(f"corr_b1_measfile: {self.corr_b1_measfile}")
-		print(f"corr_b2_reffile: {self.corr_b2_reffile}")
-		print(f"corr_b2_measfile: {self.corr_b2_measfile}")
+		self.corr_b1_reffile = "/afs/cern.ch/work/s/sahorney/private/LHCoptics/2025_03_a4corr/2025-04-03/LHCB1/Results/trackone_b1_R1_0.sdds"
+		self.corr_b2_reffile = "/afs/cern.ch/work/s/sahorney/private/LHCoptics/2025_03_a4corr/2025-04-03/LHCB2/Results/trackone_b2_R1_0.sdds"
+		self.corr_b1_measfile = "/afs/cern.ch/work/s/sahorney/private/LHCoptics/2025_03_a4corr/2025-04-03/LHCB1/Results/trackone_b1_R1_160.sdds"
+		self.corr_b2_measfile = "/afs/cern.ch/work/s/sahorney/private/LHCoptics/2025_03_a4corr/2025-04-03/LHCB2/Results/trackone_b2_R1_160.sdds"
 		# Updated knob assignment based on b1andb2same_checkbox toggle
-		if self.b1andb2same_checkbox.isChecked():
-			self.b1_corr_knobname = self.corr_knobname_entry.text()
-			self.b2_corr_knobname = self.corr_knobname_entry.text()
-			self.b1_corr_knob = self.corr_knob_entry.text()
-			self.b2_corr_knob = self.corr_knob_entry.text()
-			self.b1_corr_xing = self.corr_xing_entry.text()
-			self.b2_corr_xing = self.corr_xing_entry.text()
-		else:
-			self.b1_corr_knobname = self.b1_corr_knobname_entry.text()
-			self.b1_corr_knob = self.b1_corr_knob_entry.text()
-			self.b2_corr_knobname = self.b2_corr_knobname_entry.text()
-			self.b2_corr_knob = self.b2_corr_knob_entry.text() 
-			self.b1_corr_xing = self.b1_corr_xing_entry.text()
-			self.b2_corr_xing = self.b2_corr_xing_entry.text()
-		self.rdt = self.corr_rdt_entry.text()
-		self.rdt_plane = self.corr_rdt_plane_dropdown.currentText()
+		# if self.b1andb2same_checkbox.isChecked():
+		# 	self.b1_corr_knobname = self.corr_knobname_entry.text()
+		# 	self.b2_corr_knobname = self.corr_knobname_entry.text()
+		# 	self.b1_corr_knob = self.corr_knob_entry.text()
+		# 	self.b2_corr_knob = self.corr_knob_entry.text()
+		# 	self.b1_corr_xing = self.corr_xing_entry.text()
+		# 	self.b2_corr_xing = self.corr_xing_entry.text()
+		# else:
+		# 	self.b1_corr_knobname = self.b1_corr_knobname_entry.text()
+		# 	self.b1_corr_knob = self.b1_corr_knob_entry.text()
+		# 	self.b2_corr_knobname = self.b2_corr_knobname_entry.text()
+		# 	self.b2_corr_knob = self.b2_corr_knob_entry.text() 
+		# 	self.b1_corr_xing = self.b1_corr_xing_entry.text()
+		# 	self.b2_corr_xing = self.b2_corr_xing_entry.text()
+		# self.rdt = self.corr_rdt_entry.text()
+		# self.rdt_plane = self.corr_rdt_plane_dropdown.currentText()
+		# self.rdtfolder = rdt_to_order_and_type(self.rdt)
+		self.b1_corr_knobname = "MCOSX_R1"
+		self.b1_corr_knob = "2"
+		self.b2_corr_knobname = "MCOSX_R1"
+		self.b2_corr_knob = "2" 
+		self.b1_corr_xing = "160"
+		self.b2_corr_xing = "160"
+		self.rdt = "1020"
+		self.rdt_plane = "x"
 		self.rdtfolder = rdt_to_order_and_type(self.rdt)
 		is_valid_rdt, rdt_message = validate_rdt_and_plane(self.rdt, self.rdt_plane)
 		if not is_valid_rdt:
 			QMessageBox.critical(self, "Error", "Invalid RDT: " + repr(rdt_message))
 			self.input_progress.hide()
 			return
-		if self.corr_b1_reffile and self.corr_b1_measfile:
-			filenameb1, _ = QFileDialog.getSaveFileName(
-				self,
-				"Save LHCB1 RDT Data",
-				self.default_output_path,
-				"JSON Files (*.json)"
-			)
-		if self.corr_b2_reffile and self.corr_b2_measfile:
-			filenameb2, _ = QFileDialog.getSaveFileName(
-				self,
-				"Save LHCB2 RDT Data",
-				self.default_output_path,
-				"JSON Files (*.json)"
-			)
+		# if self.corr_b1_reffile and self.corr_b1_measfile:
+		# 	filenameb1, _ = QFileDialog.getSaveFileName(
+		# 		self,
+		# 		"Save LHCB1 RDT Data",
+		# 		self.default_output_path,
+		# 		"JSON Files (*.json)"
+		# 	)
+		# if self.corr_b2_reffile and self.corr_b2_measfile:
+		# 	filenameb2, _ = QFileDialog.getSaveFileName(
+		# 		self,
+		# 		"Save LHCB2 RDT Data",
+		# 		self.default_output_path,
+		# 		"JSON Files (*.json)"
+		# 	)
+		filenameb1 =  "testb1.json"
+		filenameb2 =  "testb2.json"
 		if filenameb1 == "" and filenameb2 == "":
 			self.log_error("No output file selected.")
 			self.input_progress.hide()
@@ -1212,11 +1306,11 @@ class RDTFeeddownGUI(QMainWindow):
 				b1response = getrdt_sim("LHCB1", self.corr_b1_reffile, self.corr_b1_measfile, self.b1_corr_xing, 
 				self.b1_corr_knobname, self.b1_corr_knob, self.rdt, self.rdt_plane, self.rdtfolder, 
 				log_func=self.log_error)
-				print(b1response)
 				self.corr_responses[filenameb1] = b1response
-				print(self.corr_responses)
 				save_RDTdata(b1response, filenameb1)
-				self.correction_loaded_files_list.append(filenameb1)
+				item = QtWidgets.QTreeWidgetItem([filenameb1, self.rdt, self.rdt_plane, self.b1_corr_knobname])
+				self.correction_loaded_files_list.addTopLevelItem(item)
+				self.populate_knob_manager()
 			except Exception as e:
 				self.log_error(f"Error in getting RDT: {e}")
 		if filenameb2:
@@ -1227,8 +1321,10 @@ class RDTFeeddownGUI(QMainWindow):
 				self.b2_corr_knobname, self.b2_corr_knob, self.rdt, self.rdt_plane, self.rdtfolder, 
 				log_func=self.log_error)
 				self.corr_responses[filenameb2] = b2response
-				save_RDTdata(self.b2response, filenameb2)
-				self.correction_loaded_files_list.append(filenameb2)
+				save_RDTdata(b2response, filenameb2)
+				item = QtWidgets.QTreeWidgetItem([filenameb2, self.rdt, self.rdt_plane, self.b2_corr_knobname])
+				self.correction_loaded_files_list.addTopLevelItem(item)
+				self.populate_knob_manager()
 			except Exception as e:
 				self.log_error(f"Error in getting RDT: {e}")
 
@@ -1269,92 +1365,116 @@ class RDTFeeddownGUI(QMainWindow):
 
 	# NEW: New method to plot loaded correction files into the unified graph widget
 	def plot_loaded_correction_files(self):
-		ax = self.corrFigure.gca()  # get axis from unified figure
-		ax.clear()  # clear current content
+		self.simcorr_progress.show()
+		self.b1_response_meas = None
+		self.b2_response_meas = None
+		# try:
+		# 	self.b1_response_meas = load_RDTdata(self.b1_match_entry.text())
+		# except Exception as e:
+		# 	self.log_error(f"Error loading LHCB1 response measurement: {e}")
+		# try:
+		# 	self.b2_response_meas = load_RDTdata(self.b2_match_entry.text())
+		# except Exception as e:
+		# 	self.log_error(f"Error loading LHCB2 response measurement: {e}")
+
+		self.b1_response_meas = load_RDTdata("/afs/cern.ch/work/s/sahorney/private/LHCoptics/2025_03_a4corr/b1_xingsim.json")
+		self.b2_response_meas = load_RDTdata("/afs/cern.ch/work/s/sahorney/private/LHCoptics/2025_03_a4corr/b2_xingsim.json")
+
+		if not self.b1_response_meas and not self.b2_response_meas:
+			self.log_error("No data loaded for reference measurement.")
+			self.simcorr_progress.hide()
+			return
+		if self.b1_response_meas:
+			if (
+				self.b1_response_meas.get('metadata', {}).get('rdt') == self.rdt and
+				self.b1_response_meas.get('metadata', {}).get('rdt_plane') == self.rdt_plane
+			):
+				self.b1_response_meas['data'] = {
+					key: value for key, value in self.b1_response_meas['data'].items()
+				}
+			else:
+				self.b1_response_meas['data'] = {}  # Clear data if metadata doesn't match
+		if self.b2_response_meas:
+			if (
+				self.b2_response_meas.get('metadata', {}).get('rdt') == self.rdt and
+				self.b2_response_meas.get('metadata', {}).get('rdt_plane') == self.rdt_plane
+			):
+				self.b2_response_meas['data'] = {
+					key: value for key, value in self.b2_response_meas['data'].items()
+				}
+			else:
+				self.b2_response_meas['data'] = {}
+		if not self.b1_response_meas and not self.b2_response_meas is None:
+			self.b1_match_entry.clear()
+			self.b2_match_entry.clear()
+			self.log_error("No data loaded for reference measurement.")
+			self.simcorr_progress.hide()
+			return
+		if self.b1andb2same_checkbox.isChecked():
+			if not self.b1_response_meas or not self.b2_response_meas:
+				self.log_error("Both beams must be loaded for reference measurement.")
+
+		self.corrFigure.clf()
 		self.b1data, self.b2data = None, None
-		self.b1data = [
-			response.get("metadata", {}).get("b1")
-			for response in self.corr_responses.values()
-			if "b1" in response.get("metadata", {})
-		]
-		self.b2data = [
-			response.get("metadata", {}).get("b2")
-			for response in self.corr_responses.values()
-			if "b2" in response.get("metadata", {})
-		]
+		try:
+			self.b1data = {
+				file: response
+				for file, response in self.corr_responses.items()
+				if "LHCB1" in response.get("metadata", {}).get('beam')
+			}
+		except Exception as e:
+			self.log_error(f"Error extracting LHCB1 data: {e}")
+		try:
+			self.b2data = {
+				file: response
+				for file, response in self.corr_responses.items()
+				if "LHCB2" in response.get("metadata", {}).get("beam", "")
+			}
+		except Exception as e:
+			self.log_error(f"Error extracting LHCB2 data: {e}")
 		if self.b1andb2same_checkbox.isChecked():
 			if self.b1data is None or self.b2data is None:
 				self.log_error("Both beams must be loaded for reference measurement.")
 				self.simcorr_progress.hide()
 				return
 		if self.b1data and self.b2data:
-			axes = self.corrFigure.subplots(3, 2, sharey=False)
+			self.corr_axes = self.corrFigure.subplots(2, 2, sharey=False)
 			self.corrFigure.subplots_adjust(hspace=0.7, wspace=0.4)
+			ax0, ax1, ax2, ax3 = self.corr_axes.flatten()
 		else:
-			axes = self.corrFigure.subplots(3, 1, sharey=False)
+			self.corr_axes = self.corrFigure.subplots(2, 1, sharey=False)
 			self.corrFigure.subplots_adjust(hspace=0.7)
-		try: 
-			plot_dRDTdknob(self.b1data, self.b2data, self.knob_widgets.items(), self.rdt, self.rdt_plane, 
-				  			axes, 
+			ax0, ax1 = self.corr_axes.flatten()
+
+		def both_plot():
+			plot_dRDTdknob(self.b1_response_meas, self.b2_response_meas, self.rdt, self.rdt_plane,
+							self.corr_axes, log_func=self.log_error)
+			plot_dRDTdknob(self.b1data, self.b2data, self.rdt, self.rdt_plane, 
+				  			self.corr_axes, self.knob_widgets.items(), 
 				  			log_func=self.log_error)
-			self.corrCanvas.draw()
-		except Exception as e:
-			self.log_error(f"Error plotting correction data: {e}")
-			self.simcorr_progress.hide()
-			return
+			self.corrCanvas.draw_idle()
+
+		both_plot()
+
+		self.simcorr_progress.hide()
 
 	def load_selected_correction_files(self):
-		self.b1_response_meas = None
-		self.b2_response_meas = None
-		try:
-			self.b1_response_meas = load_RDTdata(self.b1_match_entry.Text())
-		except Exception as e:
-			self.log_error(f"Error loading LHCB1 response measurement: {e}")
-		try:
-			self.b2_response_meas = load_RDTdata(self.b2_match_entry.Text())
-		except Exception as e:
-			self.log_error(f"Error loading LHCB2 response measurement: {e}")
-		if self.b1_response_meas is None and self.b2_response_meas is None:
-			self.log_error("No data loaded for reference measurement.")
+		self.simcorr_progress.show()
+		if not hasattr(self, 'corr_responses') or self.corr_responses is None:
+			self.corr_responses = {}
+
+		selected_files = self.select_multiple_treefiles(self.correction_loaded_files_list, title="Select Response Files")
+		# Validate metadata and update the UI
+		samemetadata, metadata = validate_metas(self.corr_responses)
+		if samemetadata:
+			for file in selected_files:
+				if file not in self.corr_responses.keys():
+					self.corr_responses[file] = load_RDTdata(file)
+			self.populate_knob_manager()
 			self.simcorr_progress.hide()
-			return
-		if self.b1_response_meas:
-			self.b1_response_meas['data'] = {
-				key: value for key, value in self.b1_response_meas['data'].items()
-				if value.get('rdt') == self.rdt and value.get('rdt_plane') == self.rdt_plane
-			}
-		if self.b2_response_meas:
-			self.b2_response_meas['data'] = {
-				key: value for key, value in self.b2_response_meas['data'].items()
-				if value.get('rdt') == self.rdt and value.get('rdt_plane') == self.rdt_plane
-			}
-		if self.b1_response_meas is None and self.b2_response_meas is None:
-			self.b1_match_entry.clear()
-			self.b2_match_entry.clear()
-			self.log_error("No data loaded for reference measurement.")
-			return
-		if self.b1andb2same_checkbox.isChecked():
-			if not self.b1_response_meas or not self.b2_response_meas:
-				self.log_error("Both beams must be loaded for reference measurement.")
-				self.simcorr_progress.hide()
-				return
-
-		selected_files = self.select_multiple_files(self.correction_loaded_files_list, title="Select Response Files")
-		for file in selected_files:
-			if file not in self.corr_responses:
-				self.corr_responses[file] = load_RDTdata(file)
-		metadatas = [
-			{k: v for k, v in response.get("metadata", {}).items()
-			if k not in ["beam", "ref", "knobname"]}
-			for response in self.corr_responses.values()
-		]
-
-		# Now check that they are all equal.
-		if metadatas and all(meta == metadatas[0] for meta in metadatas):
-			self.plot_loaded_correction_files()
 		else:
-			self.log_error("Metadata differ.")
-		self.populate_knob_manager()
+			self.log_error("Metadata differs so not loading data.")
+			self.simcorr_progress.hide()
 
 	def populate_knob_manager(self):
 		"""
@@ -1371,20 +1491,15 @@ class RDTFeeddownGUI(QMainWindow):
 		all_knobs = set()
 		for file, response in self.corr_responses.items():
 			meta = response.get("metadata", {})
-			knobname = meta.get("knobname")
+			knobname = meta.get("knob_name")
 			if knobname:
 				all_knobs.add(knobname)
-		# Check for duplicates
-		duplicates = {knob for knob in all_knobs if all_knobs.count(knob) > 1}
-		if duplicates:
-			self.log_error(f"Duplicate knob names found: {', '.join(duplicates)}. Please resolve the duplicates.")
-			return  
 		# Create QLineEdit for each knob
 		for knobname in all_knobs:
 			row_container = QWidget()
 			row_layout = QHBoxLayout(row_container)
-			label = QLabel(f"Knob: {knobname}")
-			val_input = QLineEdit("0")  # default
+			label = QLabel(f"{knobname}")
+			val_input = QLineEdit("1")  # default
 			self.knob_widgets[knobname] = val_input
 			row_layout.addWidget(label)
 			row_layout.addWidget(val_input)
@@ -1394,8 +1509,43 @@ class RDTFeeddownGUI(QMainWindow):
 		"""
 		Read knob edits, apply them, and replot using these values.
 		"""
-
-		plot_dRDTdknob(self.b1data, self.b2data, self.knob_widgets.items(), self.rdt, self.rdt_plane, self.corrFigure, 
+		self.simcorr_progress.show()
+		plot_dRDTdknob(self.b1data, self.b2data, self.rdt, self.rdt_plane, self.corr_axes, self.knob_widgets.items(), 
 								log_func=self.log_error)
+		self.simcorr_progress.hide()
 
+def setup_corr_figure(self):
+    """
+    Set up the correction figure with subplots using pyqtgraph or matplotlib.
+    """
+    # Clear the existing layout if it exists
+    if hasattr(self, 'corr_axes_layout'):
+        for i in reversed(range(self.corr_axes_layout.count())):
+            widget = self.corr_axes_layout.itemAt(i).widget()
+            if widget:
+                widget.deleteLater()
+
+    # Create a new layout for subplots
+    self.corr_axes_layout = QGridLayout()
+    self.corrGraphWidget.setLayout(self.corr_axes_layout)
+
+    if self.b1data and self.b2data:
+        # Create a 2x2 grid of subplots
+        self.corr_axes = []
+        for row in range(2):
+            for col in range(2):
+                plot_widget = pg.PlotWidget()
+                plot_widget.setBackground('w')
+                plot_widget.showGrid(x=True, y=True)
+                self.corr_axes_layout.addWidget(plot_widget, row, col)
+                self.corr_axes.append(plot_widget)
+    else:
+        # Create a 2x1 grid of subplots
+        self.corr_axes = []
+        for row in range(2):
+            plot_widget = pg.PlotWidget()
+            plot_widget.setBackground('w')
+            plot_widget.showGrid(x=True, y=True)
+            self.corr_axes_layout.addWidget(plot_widget, row, 0)
+            self.corr_axes.append(plot_widget)
 

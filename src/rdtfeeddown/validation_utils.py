@@ -51,3 +51,17 @@ def validate_knob(ldb, knob):
 	except Exception as e:
 		# Log the exception if needed, and return an error without forcing a quit.
 		return False, str(e)
+
+def validate_metas(data):
+	metadatas = [
+			{k: v for k, v in response.get("metadata", {}).items()
+			if k not in ["beam", "ref", "knobname"]}
+			for response in data.values()
+		]
+	if not metadatas:
+		return False, None
+	# Now check that they are all equal.
+	if metadatas and all(meta == metadatas[0] for meta in metadatas):
+		return True, metadatas[0]
+	else:
+		return False, metadatas[0]
