@@ -1,8 +1,9 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from .analysis import polyfunction, calculate_avg_rdt_shift, arcBPMcheck, badBPMcheck
-import pyqtgraph as pg
-from pyqtgraph import ErrorBarItem
+from pyqtgraph import ErrorBarItem, TextItem
+
+COLOR_LIST = ['#E69F00', '#56B4E9', '#009E73', '#F0E442', '#0072B2', '#D55E00', '#CC79A7']
 
 IP_POS_DEFAULT = {
 	"LHCB1": {
@@ -28,21 +29,27 @@ IP_POS_DEFAULT = {
 }
 
 def plot_ips(axes, label):
-	# Draw IP lines if not already drawn
-	for ax in axes:
-		if not hasattr(ax, '_ips_drawn'):
-			ax._ips_drawn = set()
-		x_min, x_max = ax.viewRange()[0]
-		_, y_max = ax.viewRange()[1]
-		for ip in range(1, 9):
-			ip_str = f"IP{ip}"
-			ip_x = IP_POS_DEFAULT[label][ip_str]
-			if x_min <= ip_x <= x_max and ip_str not in ax._ips_drawn:
-				line = ax.addLine(x=ip_x, pen={'color': 'k', 'style': 2})
-				text = pg.TextItem(text=ip_str, color='k', anchor=(0.5,0))
-				text.setPos(ip_x, y_max)
-				ax.addItem(text)
-				ax._ips_drawn.add(ip_str)
+    for ax in axes:
+        # Disable auto-range once (prevents repeated redraw attempts)
+        ax.getViewBox().enableAutoRange(False)
+
+        # Track which IP lines have been drawn on this axis
+        if not hasattr(ax, '_ips_drawn'):
+            ax._ips_drawn = set()
+
+        x_min, x_max = ax.viewRange()[0]
+        _, y_max = ax.viewRange()[1]
+
+        for ip in range(1, 9):
+            ip_str = f"IP{ip}"
+            ip_x = IP_POS_DEFAULT[label][ip_str]
+            # Only add a line if in current plot range and not already drawn
+            if x_min <= ip_x <= x_max and ip_str not in ax._ips_drawn:
+                line = ax.addLine(x=ip_x, pen={'color': 'k', 'style': 2})
+                text = TextItem(text=ip_str, color='k', anchor=(0.5, 0))
+                text.setPos(ip_x, y_max)
+                ax.addItem(text)
+                ax._ips_drawn.add(ip_str)
 
 def plot_BPM(BPM, fulldata, rdt, rdt_plane, ax1=None, ax2=None, log_func=None):
 	try:
@@ -69,12 +76,12 @@ def plot_BPM(BPM, fulldata, rdt, rdt_plane, ax1=None, ax2=None, log_func=None):
 		ax1.setLabel('left', f"{BPM} Re(f<sub>{rdt_plane},{rdt}</sub>)")
 		ax1.setLabel('bottom', "Knob trim")
 		ax1.plot(xfit, refit, pen='b')
-		ax1.plot(xing, re, pen=None, symbol='o', symbolPen='r', symbolBrush='r')
+		ax1.plot(xing, re, pen=None, symbol='o', symbolPen='r', symbolBrush=None)
 
 		ax2.setLabel('left', f"{BPM} Im(f<sub>{rdt_plane},{rdt}</sub>)")
 		ax2.setLabel('bottom', "Knob trim")
 		ax2.plot(xfit, imfit, pen='b')
-		ax2.plot(xing, im, pen=None, symbol='o', symbolPen='r', symbolBrush='r')
+		ax2.plot(xing, im, pen=None, symbol='o', symbolPen='r', symbolBrush=None)
 		
 	except Exception as e:
 		if log_func:
@@ -88,10 +95,10 @@ def plot_avg_rdt_shift(ax, data, rdt, rdt_plane):
 	Plot the average RDT shift and standard deviation for given data on the provided axis.
 	"""
 	xing, ampdat, stddat = calculate_avg_rdt_shift(data)
-	ax.setLabel('left', "√(ΔRe(f<sub>{rdt_plane},{rdt}</sub>)<sup>2</sup> + ΔIm(f<sub>{rdt_plane},{rdt}</sub>)<sup>2</sup>)")
+	ax.setLabel('left', f"√(ΔRe(f<sub>{rdt_plane},{rdt}</sub>)<sup>2</sup> + ΔIm(f<sub>{rdt_plane},{rdt}</sub>)<sup>2</sup>)")
 	ax.setLabel('bottom', "Knob trim")
 	ax.plot(xing, ampdat, pen='b', symbol='o')  # Plot the data points.
-	error_item = pg.ErrorBarItem(x=xing, y=ampdat, top=stddat, bottom=stddat, beam=0.1, pen='r')
+	error_item = ErrorBarItem(x=xing, y=ampdat, top=stddat, bottom=stddat, beam=0.1, pen='r')
 	ax.addItem(error_item)
 
 def plot_RDTshifts(b1data, b2data, rdt, rdt_plane, axes, log_func=None):
@@ -152,16 +159,15 @@ def plot_RDTshifts(b1data, b2data, rdt, rdt_plane, axes, log_func=None):
 
 			# Plot average re^2 + im^2
 			plot_avg_rdt_shift(ax_avg, data, rdt, rdt_plane)
-
 			# Plot dRe with error bars
-			error_re = pg.ErrorBarItem(x=sdat, y=dredkdat, top=dredkerr, bottom=dredkerr, beam=0.1, pen='r')
+			error_re = ErrorBarItem(x=sdat, y=dredkdat, height=2*dredkerr, beam=0.1, pen='r')
 			ax_re.addItem(error_re)
-			ax_re.plot(sdat, dredkdat, pen='b', symbol='o')
+			ax_re.plot(sdat, dredkdat, pen='b', symbol='o', symbolBrush=None)
 
 			# Plot dIm with error bars
-			error_im = pg.ErrorBarItem(x=sdat, y=dimdkdat, top=dimdkerr, bottom=dimdkerr, beam=0.1, pen='r')
+			error_im = ErrorBarItem(x=sdat, y=dimdkdat, height=2*dimdkerr, beam=0.1, pen='r')
 			ax_im.addItem(error_im)
-			ax_im.plot(sdat, dimdkdat, pen='b', symbol='o')
+			ax_im.plot(sdat, dimdkdat, pen='b', symbol='o', symbolBrush=None)
 
 			plot_ips((ax_re, ax_im), label)
 
@@ -228,7 +234,7 @@ def plot_RDT(b1data, b2data, rdt, rdt_plane, axes, log_func=None):
 			ax_amp.setTitle(beam_label, pad=20)
 
 			# For each crossing angle, gather BPM data
-			for angle in xing:
+			for i, angle in enumerate(xing):
 				sdat, ampdat, redat, imdat = [], [], [], []
 				for bpm in data.keys():
 					if not arcBPMcheck(bpm) or badBPMcheck(bpm):
@@ -250,14 +256,11 @@ def plot_RDT(b1data, b2data, rdt, rdt_plane, axes, log_func=None):
 				redat = np.array(redat)
 				imdat = np.array(imdat)
 
-				# Plot amplitude
-				ax_amp.plot(sdat, ampdat, symbol='o')
+				colour = COLOR_LIST[i % len(COLOR_LIST)]
 
-				# Plot Delta Re
-				ax_re.plot(sdat, redat, symbol='o')
-
-				# Plot Delta Im
-				ax_im.plot(sdat, imdat, symbol='o')
+				ax_amp.plot(sdat, ampdat, symbol='o', symbolPen=colour, symbolBrush=None, pen=colour)
+				ax_re.plot(sdat, redat, symbol='o', symbolPen=colour, symbolBrush=None, pen=colour)
+				ax_im.plot(sdat, imdat, symbol='o', symbolPen=colour, symbolBrush=None, pen=colour)
 
 			plot_ips((ax_amp, ax_re, ax_im), beam_label)
 
@@ -368,15 +371,14 @@ def plot_dRDTdknob(b1data, b2data, rdt, rdt_plane, axes, knoblist=None, log_func
 				ax_im.plot(sdat, dimdkdat, pen='g', name=line_label)
 			else:
 				# Plot dRe with error bars
-				error_re = pg.ErrorBarItem(x=sdat, y=dredkdat, top=dredkerr, bottom=dredkerr, beam=0.1, pen='r')
+				error_re = ErrorBarItem(x=sdat, y=dredkdat, height=2*dredkerr, beam=0.1, pen='r')
 				ax_re.addItem(error_re)
 				ax_re.plot(sdat, dredkdat, pen='b', symbol='o', name=line_label)
 
 				# Plot dIm with error bars
-				error_im = pg.ErrorBarItem(x=sdat, y=dimdkdat, top=dimdkerr, bottom=dimdkerr, beam=0.1, pen='r')
+				error_im = ErrorBarItem(x=sdat, y=dimdkdat, height=2*dimdkerr, beam=0.1, pen='r')
 				ax_im.addItem(error_im)
 				ax_im.plot(sdat, dimdkdat, pen='b', symbol='o', name=line_label)
-			
 			plot_ips((ax_re, ax_im), label)
 
 

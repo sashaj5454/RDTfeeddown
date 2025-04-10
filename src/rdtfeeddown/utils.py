@@ -8,6 +8,9 @@ from zoneinfo import ZoneInfo
 import tfs
 from datetime import datetime
 import json
+import pyqtgraph as pg
+from PyQt5.QtCore import Qt
+from PyQt5.QtCore import QTimer
 	
 
 def rdt_to_order_and_type(
@@ -172,3 +175,21 @@ def csv_to_dict(
 		reader = csv.DictReader(infile, skipinitialspace=True)
 		data = [row for row in reader]
 	return data
+
+class MyViewBox(pg.ViewBox):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._resetting = False
+
+    def mouseClickEvent(self, ev):
+        if ev.button() == Qt.RightButton and not self._resetting:
+            self._resetting = True
+            self.autoRange()
+            ev.accept()  # consume the event
+            # Reset the flag after a short delay to avoid continuous resetting.
+            QTimer.singleShot(50, self._reset_flag)
+        else:
+            super().mouseClickEvent(ev)
+
+    def _reset_flag(self):
+        self._resetting = False

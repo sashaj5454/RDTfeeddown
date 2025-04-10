@@ -8,7 +8,7 @@ from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt, QTimer  # Import Qt for the correct constants and QTimer
 from matplotlib.figure import Figure
 from .validation_utils import validate_rdt_and_plane, validate_knob, validate_metas
-from .utils import load_defaults, initialize_statetracker, rdt_to_order_and_type, getmodelBPMs
+from .utils import load_defaults, initialize_statetracker, rdt_to_order_and_type, getmodelBPMs, MyViewBox
 from .analysis import write_RDTshifts, getrdt_omc3, fit_BPM, save_RDTdata, load_RDTdata, group_datasets, getrdt_sim
 from .plotting import plot_BPM, plot_RDT, plot_RDTshifts, plot_dRDTdknob, clear_layout, setup_blankcanvas  # Assuming you have a plotting module for BPM plotting
 import time  # Import time to get the current timestamp
@@ -668,7 +668,7 @@ class RDTFeeddownGUI(QMainWindow):
 		graph_and_knob_layout = QHBoxLayout()
 		self.corrFigure = pg.PlotWidget()
 		setup_blankcanvas(self.corrFigure)
-		graph_and_knob_layout.addWidget(self.corrFigure)
+		graph_and_knob_layout.addWidget(self.corrFigure, stretch=3)
 		# Knob Manager group
 		self.knob_manager_group = QGroupBox("Knob Manager")
 		knob_manager_layout = QVBoxLayout()
@@ -678,7 +678,7 @@ class RDTFeeddownGUI(QMainWindow):
 		knob_manager_layout.addWidget(self.update_knobs_button)
 		self.knob_manager_group.setLayout(knob_manager_layout)
 		graph_and_knob_layout.addWidget(self.knob_manager_group)
-		correction_main_layout.addLayout(graph_and_knob_layout)
+		correction_main_layout.addLayout(graph_and_knob_layout, stretch=1)
 
 		# Progress bar for correction tab remains below everything
 		self.simcorr_progress = QProgressBar()
@@ -1203,6 +1203,8 @@ class RDTFeeddownGUI(QMainWindow):
 		self._toggle_select_all(self.beam2_folders_list, state)
 
 	def run_response(self):
+		self.simcorr_progress.show()
+		QtWidgets.QApplication.processEvents()
 		# self.corr_b1_reffile = self.corr_beam1_reffolder_entry.text()
 		# self.corr_b2_reffile = self.corr_beam2_reffolder_entry.text()
 		# self.corr_b1_measfile = self.corr_beam1_measfolder_entry.text()
@@ -1245,7 +1247,7 @@ class RDTFeeddownGUI(QMainWindow):
 		is_valid_rdt, rdt_message = validate_rdt_and_plane(self.rdt, self.rdt_plane)
 		if not is_valid_rdt:
 			QMessageBox.critical(self, "Error", "Invalid RDT: " + repr(rdt_message))
-			self.input_progress.hide()
+			self.simcorr_progress.hide()
 			return
 		# if self.corr_b1_reffile and self.corr_b1_measfile:
 		# 	filenameb1, _ = QFileDialog.getSaveFileName(
@@ -1265,7 +1267,7 @@ class RDTFeeddownGUI(QMainWindow):
 		filenameb2 =  "/afs/cern.ch/work/s/sahorney/private/LHCoptics/2025_03_a4corr/b2_MCOSX_R5.json"
 		if filenameb1 == "" and filenameb2 == "":
 			self.log_error("No output file selected.")
-			self.input_progress.hide()
+			self.simcorr_progress.hide()
 			return
 
 		if filenameb1:
@@ -1296,6 +1298,7 @@ class RDTFeeddownGUI(QMainWindow):
 				self.populate_knob_manager()
 			except Exception as e:
 				self.log_error(f"Error in getting RDT: {e}")
+		self.simcorr_progress.hide()
 
 	def toggle_b1andb2same_mode(self, state):
 		is_checked = (state == Qt.Checked)
@@ -1334,6 +1337,10 @@ class RDTFeeddownGUI(QMainWindow):
 
 	# NEW: New method to plot loaded correction files into the unified graph widget
 	def plot_loaded_correction_files(self):
+		self.corr_toggle_button.setChecked(False)
+		self.correction_content.setVisible(False)
+		self.corr_toggle_button.setArrowType(Qt.RightArrow)
+		self.corr_toggle_button.setText("Expand Section")
 		self.simcorr_progress.show()
 		QtWidgets.QApplication.processEvents()
 		self.b1_response_meas = None
@@ -1415,6 +1422,10 @@ class RDTFeeddownGUI(QMainWindow):
 		def both_plot():
 			plot_dRDTdknob(self.b1_response_meas, self.b2_response_meas, self.rdt, self.rdt_plane,
 							self.corr_axes, log_func=self.log_error)
+			for ax in self.corr_axes:
+				ax.getViewBox().enableAutoRange(False)
+				y_min, y_max = ax.viewRange()[1]
+				ax.setYRange(y_min, y_max)
 			plot_dRDTdknob(self.b1data, self.b2data, self.rdt, self.rdt_plane, 
 							self.corr_axes, self.knob_widgets.items(), 
 							log_func=self.log_error)
@@ -1495,6 +1506,8 @@ class RDTFeeddownGUI(QMainWindow):
 		clear_layout(container)
 		# Create a new QGridLayout for subplots.
 		grid = QGridLayout()
+		grid.setSpacing(20)
+		grid.setContentsMargins(5, 5, 5, 5)
 		container.setLayout(grid)
 		axes = []
 
@@ -1504,31 +1517,29 @@ class RDTFeeddownGUI(QMainWindow):
 			axes = []
 			for row in range(rows):
 				for col in range(2):
-					plot_widget = pg.PlotWidget()
+					# Create a PlotWidget with a custom ViewBox.
+					view_box = MyViewBox()
+					plot_widget = pg.PlotWidget(viewBox=view_box)
 					plot_widget.setBackground('w')
 					plot_widget.showGrid(x=True, y=True)
-					view_box = plot_widget.getViewBox()
 					grid.addWidget(plot_widget, row, col)
 					axes.append(plot_widget)
 					view_box.setMouseMode(pg.ViewBox.RectMode)  # Enable click-and-drag zoom
-					view_box.menu = None  # Disable the default context menu
-					view_box.scene().sigMouseClicked.connect(lambda event: self.reset_zoom_on_right_click(event, axes))
+					view_box.menu = None  # Disable default context menu
 		else:
 			# Create a 2x1 grid of subplots.
 			axes = []
 			for row in range(rows):
-				plot_widget = pg.PlotWidget()
+				view_box = MyViewBox()
+				plot_widget = pg.PlotWidget(viewBox=view_box)
 				plot_widget.setBackground('w')
 				plot_widget.showGrid(x=True, y=True)
 				grid.addWidget(plot_widget, row, 0)
 				axes.append(plot_widget)
-				view_box = plot_widget.getViewBox()
 				view_box.setMouseMode(pg.ViewBox.RectMode)  # Enable click-and-drag zoom
-				view_box.menu = None  # Disable the default context menu
-				view_box.scene().sigMouseClicked.connect(lambda event: self.reset_zoom_on_right_click(event, axes))
-		return axes, grid
-
+				view_box.menu = None  # Disable default context menu
 		QtWidgets.QApplication.processEvents()  # Force the UI to update.
+		return axes, grid
 
 	def reset_zoom_on_right_click(self, event, axes):
 		"""
