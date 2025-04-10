@@ -10,7 +10,7 @@ from matplotlib.figure import Figure
 from .validation_utils import validate_rdt_and_plane, validate_knob, validate_metas
 from .utils import load_defaults, initialize_statetracker, rdt_to_order_and_type, getmodelBPMs, MyViewBox
 from .analysis import write_RDTshifts, getrdt_omc3, fit_BPM, save_RDTdata, load_RDTdata, group_datasets, getrdt_sim
-from .plotting import plot_BPM, plot_RDT, plot_RDTshifts, plot_dRDTdknob, clear_layout, setup_blankcanvas  # Assuming you have a plotting module for BPM plotting
+from .plotting import plot_BPM, plot_RDT, plot_RDTshifts, plot_dRDTdknob, setup_blankcanvas  # Assuming you have a plotting module for BPM plotting
 import time  # Import time to get the current timestamp
 import re    # Import re for regex substitution
 
@@ -263,8 +263,9 @@ class RDTFeeddownGUI(QMainWindow):
 		validation_files_layout.addWidget(self.validation_files_label)
 
 		self.validation_files_list = QListWidget()
+		self.validation_files_list.setFixedHeight(100)
 		self.validation_files_list.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
-		validation_files_layout.addWidget(self.validation_files_list)
+		validation_files_layout.addWidget(self.validation_files_list, stretch=1)
 
 		validation_buttons_layout = QHBoxLayout()
 		self.validation_files_button = QPushButton("Add Folders")
@@ -287,8 +288,9 @@ class RDTFeeddownGUI(QMainWindow):
 		self.validation_layout.addWidget(self.load_selected_files_button)
 
 		self.loaded_files_list = QListWidget()
+		self.loaded_files_list.setFixedHeight(100)
 		self.loaded_files_list.setSelectionMode(QtWidgets.QAbstractItemView.NoSelection)
-		self.validation_layout.addWidget(self.loaded_files_list)
+		self.validation_layout.addWidget(self.loaded_files_list, stretch=1)
 
 		# --- Replace Beam Tabs with a Beam Selector and Single Plotting Canvas ---
 		self.graph_tabs = QTabWidget()
@@ -328,7 +330,7 @@ class RDTFeeddownGUI(QMainWindow):
 		self.rdt_shift_tab = QWidget()
 		self.graph_tabs.addTab(self.rdt_tab, "RDT")
 		self.graph_tabs.addTab(self.rdt_shift_tab, "RDT shift")
-		self.validation_layout.addWidget(self.graph_tabs)
+		self.validation_layout.addWidget(self.graph_tabs, stretch=3)
 
 		rdt_layout = QVBoxLayout(self.rdt_tab)
 		self.plot_rdt_button = QPushButton("Plot RDT")
@@ -638,9 +640,12 @@ class RDTFeeddownGUI(QMainWindow):
 
 		# Graph and Knob Manager layout
 		graph_and_knob_layout = QHBoxLayout()
+		self.figureContainer = QWidget()
+		container_layout = QVBoxLayout(self.figureContainer)
 		self.corrFigure = pg.PlotWidget()
 		setup_blankcanvas(self.corrFigure)
-		graph_and_knob_layout.addWidget(self.corrFigure, stretch=3)
+		container_layout.addWidget(self.corrFigure)
+		graph_and_knob_layout.addWidget(self.figureContainer, stretch=3)
 		self.knob_manager_group = QGroupBox("Knob Manager")
 		knob_manager_layout = QVBoxLayout()
 		self.knob_widgets = {}
@@ -1179,66 +1184,57 @@ class RDTFeeddownGUI(QMainWindow):
 	def run_response(self):
 		self.simcorr_progress.show()
 		QtWidgets.QApplication.processEvents()
-		# self.corr_b1_reffile = self.corr_beam1_reffolder_entry.text()
-		# self.corr_b2_reffile = self.corr_beam2_reffolder_entry.text()
-		# self.corr_b1_measfile = self.corr_beam1_measfolder_entry.text()
-		# self.corr_b2_measfile = self.corr_beam2_measfolder_entry.text()
+		self.corr_b1_reffile = self.corr_beam1_reffolder_entry.text()
+		self.corr_b2_reffile = self.corr_beam2_reffolder_entry.text()
+		self.corr_b1_measfile = self.corr_beam1_measfolder_entry.text()
+		self.corr_b2_measfile = self.corr_beam2_measfolder_entry.text()
 		self.corr_responses = {}
-		filenameb1 = ""
-		filenameb2 = ""
-		# Debugging logs
-		self.corr_b1_reffile = "/afs/cern.ch/work/s/sahorney/private/LHCoptics/2025_03_a4corr/2025-04-03/LHCB1/Results/trackone_b1_R5_0.sdds"
-		self.corr_b2_reffile = "/afs/cern.ch/work/s/sahorney/private/LHCoptics/2025_03_a4corr/2025-04-03/LHCB2/Results/trackone_b2_R5_0.sdds"
-		self.corr_b1_measfile = "/afs/cern.ch/work/s/sahorney/private/LHCoptics/2025_03_a4corr/2025-04-03/LHCB1/Results/trackone_b1_R5_160.sdds"
-		self.corr_b2_measfile = "/afs/cern.ch/work/s/sahorney/private/LHCoptics/2025_03_a4corr/2025-04-03/LHCB2/Results/trackone_b2_R5_160.sdds"
 		# Updated knob assignment based on b1andb2same_checkbox toggle
-		# if self.b1andb2same_checkbox.isChecked():
-		# 	self.b1_corr_knobname = self.corr_knobname_entry.text()
-		# 	self.b2_corr_knobname = self.corr_knobname_entry.text()
-		# 	self.b1_corr_knob = self.corr_knob_entry.text()
-		# 	self.b2_corr_knob = self.corr_knob_entry.text()
-		# 	self.b1_corr_xing = self.corr_xing_entry.text()
-		# 	self.b2_corr_xing = self.corr_xing_entry.text()
-		# else:
-		# 	self.b1_corr_knobname = self.b1_corr_knobname_entry.text()
-		# 	self.b1_corr_knob = self.b1_corr_knob_entry.text()
-		# 	self.b2_corr_knobname = self.b2_corr_knobname_entry.text()
-		# 	self.b2_corr_knob = self.b2_corr_knob_entry.text() 
-		# 	self.b1_corr_xing = self.b1_corr_xing_entry.text()
-		# 	self.b2_corr_xing = self.b2_corr_xing_entry.text()
-		# self.rdt = self.corr_rdt_entry.text()
-		# self.rdt_plane = self.corr_rdt_plane_dropdown.currentText()
-		# self.rdtfolder = rdt_to_order_and_type(self.rdt)
-		self.b1_corr_knobname = "MCOSX_R5"
-		self.b1_corr_knob = "2"
-		self.b2_corr_knobname = "MCOSX_R5"
-		self.b2_corr_knob = "2" 
-		self.b1_corr_xing = "160"
-		self.b2_corr_xing = "160"
-		self.rdt = "1020"
-		self.rdt_plane = "x"
-		self.rdtfolder = rdt_to_order_and_type(self.rdt)
+		if self.b1andb2same_checkbox.isChecked():
+			self.b1_corr_knobname = self.corr_knobname_entry.text()
+			self.b2_corr_knobname = self.corr_knobname_entry.text()
+			self.b1_corr_knob = self.corr_knob_entry.text()
+			self.b2_corr_knob = self.corr_knob_entry.text()
+			self.b1_corr_xing = self.corr_xing_entry.text()
+			self.b2_corr_xing = self.corr_xing_entry.text()
+		else:
+			self.b1_corr_knobname = self.b1_corr_knobname_entry.text()
+			self.b1_corr_knob = self.b1_corr_knob_entry.text()
+			self.b2_corr_knobname = self.b2_corr_knobname_entry.text()
+			self.b2_corr_knob = self.b2_corr_knob_entry.text() 
+			self.b1_corr_xing = self.b1_corr_xing_entry.text()
+			self.b2_corr_xing = self.b2_corr_xing_entry.text()
+		self.rdt = self.corr_rdt_entry.text()
+		if not self.rdt:
+			self.log_error("RDT field must be filled!")
+			self.simcorr_progress.hide()
+			return
+		self.rdt_plane = self.corr_rdt_plane_dropdown.currentText()
+		if not self.rdt_plane:
+			self.log_error("RDT plane field must be filled!")
+			self.simcorr_progress.hide()
+			return
 		is_valid_rdt, rdt_message = validate_rdt_and_plane(self.rdt, self.rdt_plane)
 		if not is_valid_rdt:
 			QMessageBox.critical(self, "Error", "Invalid RDT: " + repr(rdt_message))
 			self.simcorr_progress.hide()
 			return
-		# if self.corr_b1_reffile and self.corr_b1_measfile:
-		# 	filenameb1, _ = QFileDialog.getSaveFileName(
-		# 		self,
-		# 		"Save LHCB1 RDT Data",
-		# 		self.default_output_path,
-		# 		"JSON Files (*.json)"
-		# 	)
-		# if self.corr_b2_reffile and self.corr_b2_measfile:
-		# 	filenameb2, _ = QFileDialog.getSaveFileName(
-		# 		self,
-		# 		"Save LHCB2 RDT Data",
-		# 		self.default_output_path,
-		# 		"JSON Files (*.json)"
-		# 	)
-		filenameb1 =  "/afs/cern.ch/work/s/sahorney/private/LHCoptics/2025_03_a4corr/b1_MCOSX_R5.json"
-		filenameb2 =  "/afs/cern.ch/work/s/sahorney/private/LHCoptics/2025_03_a4corr/b2_MCOSX_R5.json"
+		self.rdtfolder = rdt_to_order_and_type(self.rdt)
+		if self.corr_b1_reffile and self.corr_b1_measfile:
+			filenameb1, _ = QFileDialog.getSaveFileName(
+				self,
+				"Save LHCB1 RDT Data",
+				self.default_output_path,
+				"JSON Files (*.json)"
+			)
+		if self.corr_b2_reffile and self.corr_b2_measfile:
+			filenameb2, _ = QFileDialog.getSaveFileName(
+				self,
+				"Save LHCB2 RDT Data",
+				self.default_output_path,
+				"JSON Files (*.json)"
+			)
+
 		if filenameb1 == "" and filenameb2 == "":
 			self.log_error("No output file selected.")
 			self.simcorr_progress.hide()
@@ -1304,17 +1300,15 @@ class RDTFeeddownGUI(QMainWindow):
 		QtWidgets.QApplication.processEvents()
 		self.b1_response_meas = None
 		self.b2_response_meas = None
-		# try:
-		# 	self.b1_response_meas = load_RDTdata(self.b1_match_entry.text())
-		# except Exception as e:
-		# 	self.log_error(f"Error loading LHCB1 response measurement: {e}")
-		# try:
-		# 	self.b2_response_meas = load_RDTdata(self.b2_match_entry.text())
-		# except Exception as e:
-		# 	self.log_error(f"Error loading LHCB2 response measurement: {e}")
-
-		self.b1_response_meas = load_RDTdata("/afs/cern.ch/work/s/sahorney/private/LHCoptics/2025_03_a4corr/b1_xingsim.json")
-		self.b2_response_meas = load_RDTdata("/afs/cern.ch/work/s/sahorney/private/LHCoptics/2025_03_a4corr/b2_xingsim.json")
+		try:
+			self.b1_response_meas = load_RDTdata(self.b1_match_entry.text())
+		except Exception as e:
+			self.log_error(f"Error loading LHCB1 response measurement: {e}")
+		try:
+			self.b2_response_meas = load_RDTdata(self.b2_match_entry.text())
+		except Exception as e:
+			self.log_error(f"Error loading LHCB2 response measurement: {e}")
+			
 		QtWidgets.QApplication.processEvents()
 		if not self.b1_response_meas and not self.b2_response_meas:
 			self.log_error("No data loaded for reference measurement.")
@@ -1374,17 +1368,13 @@ class RDTFeeddownGUI(QMainWindow):
 				self.log_error("Both beams must be loaded for reference measurement.")
 				self.simcorr_progress.hide()
 				return
-
-		self.corr_axes, grid = self.setup_figure(self.corrFigure, self.b1data, self.b2data, 2)
+			
+		self.corr_axes, grid = self.setup_figure(self.figureContainer, self.b1data, self.b2data, 2)
 		QtWidgets.QApplication.processEvents()
 
 		def both_plot():
 			plot_dRDTdknob(self.b1_response_meas, self.b2_response_meas, self.rdt, self.rdt_plane,
 							self.corr_axes, log_func=self.log_error)
-			for ax in self.corr_axes:
-				ax.getViewBox().enableAutoRange(False)
-				y_min, y_max = ax.viewRange()[1]
-				ax.setYRange(y_min, y_max)
 			plot_dRDTdknob(self.b1data, self.b2data, self.rdt, self.rdt_plane, 
 							self.corr_axes, self.knob_widgets.items(), 
 							log_func=self.log_error)
@@ -1449,7 +1439,6 @@ class RDTFeeddownGUI(QMainWindow):
 
 		for ax in self.corr_axes:
 			for item in ax.listDataItems():
-				print(item, item.name())
 				if hasattr(item, 'name') and item.name() == 'Simulation':
 					ax.removeItem(item)
 		plot_dRDTdknob(self.b1data, self.b2data, self.rdt, self.rdt_plane, self.corr_axes, self.knob_widgets.items(), 
@@ -1462,11 +1451,12 @@ class RDTFeeddownGUI(QMainWindow):
 		Set up the container with subplots using pyqtgraph.
 		Safely removes any previous layout before setting up a new one.
 		"""
-		clear_layout(container)
 		# Create a new QGridLayout for subplots.
 		grid = QGridLayout()
-		grid.setSpacing(20)
-		grid.setContentsMargins(5, 5, 5, 5)
+		grid.setSpacing(10)
+		existing_layout = container.layout()
+		if existing_layout:
+			QtWidgets.QWidget().setLayout(existing_layout)
 		container.setLayout(grid)
 		axes = []
 
@@ -1497,6 +1487,7 @@ class RDTFeeddownGUI(QMainWindow):
 				axes.append(plot_widget)
 				view_box.setMouseMode(pg.ViewBox.RectMode)  # Enable click-and-drag zoom
 				view_box.menu = None  # Disable default context menu
+
 		QtWidgets.QApplication.processEvents()  # Force the UI to update.
 		return axes, grid
 

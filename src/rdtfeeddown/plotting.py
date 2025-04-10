@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from .analysis import polyfunction, calculate_avg_rdt_shift, arcBPMcheck, badBPMcheck
 from pyqtgraph import ErrorBarItem, TextItem
+from PyQt5 import QtWidgets
 
 COLOR_LIST = ['#E69F00', '#56B4E9', '#009E73', '#F0E442', '#0072B2', '#D55E00', '#CC79A7']
 
@@ -30,9 +31,6 @@ IP_POS_DEFAULT = {
 
 def plot_ips(axes, label):
     for ax in axes:
-        # Disable auto-range once (prevents repeated redraw attempts)
-        ax.getViewBox().enableAutoRange(False)
-
         # Track which IP lines have been drawn on this axis
         if not hasattr(ax, '_ips_drawn'):
             ax._ips_drawn = set()
@@ -47,7 +45,7 @@ def plot_ips(axes, label):
             if x_min <= ip_x <= x_max and ip_str not in ax._ips_drawn:
                 line = ax.addLine(x=ip_x, pen={'color': 'k', 'style': 2})
                 text = TextItem(text=ip_str, color='k', anchor=(0.5, 0))
-                text.setPos(ip_x, y_max)
+                text.setPos(ip_x, y_max*1.25)
                 ax.addItem(text)
                 ax._ips_drawn.add(ip_str)
 
@@ -76,12 +74,12 @@ def plot_BPM(BPM, fulldata, rdt, rdt_plane, ax1=None, ax2=None, log_func=None):
 		ax1.setLabel('left', f"{BPM} Re(f<sub>{rdt_plane},{rdt}</sub>)")
 		ax1.setLabel('bottom', "Knob trim")
 		ax1.plot(xfit, refit, pen='b')
-		ax1.plot(xing, re, pen=None, symbol='o', symbolPen='r', symbolBrush=None)
+		ax1.plot(xing, re, pen=None, symbol='x', symbolPen='r')
 
 		ax2.setLabel('left', f"{BPM} Im(f<sub>{rdt_plane},{rdt}</sub>)")
 		ax2.setLabel('bottom', "Knob trim")
 		ax2.plot(xfit, imfit, pen='b')
-		ax2.plot(xing, im, pen=None, symbol='o', symbolPen='r', symbolBrush=None)
+		ax2.plot(xing, im, pen=None, symbol='x', symbolPen='r')
 		
 	except Exception as e:
 		if log_func:
@@ -97,9 +95,10 @@ def plot_avg_rdt_shift(ax, data, rdt, rdt_plane):
 	xing, ampdat, stddat = calculate_avg_rdt_shift(data)
 	ax.setLabel('left', f"√(ΔRe(f<sub>{rdt_plane},{rdt}</sub>)<sup>2</sup> + ΔIm(f<sub>{rdt_plane},{rdt}</sub>)<sup>2</sup>)")
 	ax.setLabel('bottom', "Knob trim")
-	ax.plot(xing, ampdat, pen='b', symbol='o')  # Plot the data points.
+	ax.plot(xing, ampdat, pen='b', symbol='x')  # Plot the data points.
 	error_item = ErrorBarItem(x=xing, y=ampdat, top=stddat, bottom=stddat, beam=0.1, pen='r')
 	ax.addItem(error_item)
+	ax.layout.setContentsMargins(5, 20, 5, 5)
 
 def plot_RDTshifts(b1data, b2data, rdt, rdt_plane, axes, log_func=None):
 	"""
@@ -162,12 +161,12 @@ def plot_RDTshifts(b1data, b2data, rdt, rdt_plane, axes, log_func=None):
 			# Plot dRe with error bars
 			error_re = ErrorBarItem(x=sdat, y=dredkdat, height=2*dredkerr, beam=0.1, pen='r')
 			ax_re.addItem(error_re)
-			ax_re.plot(sdat, dredkdat, pen='b', symbol='o', symbolBrush=None)
+			ax_re.plot(sdat, dredkdat, pen='b', symbol='x')
 
 			# Plot dIm with error bars
 			error_im = ErrorBarItem(x=sdat, y=dimdkdat, height=2*dimdkerr, beam=0.1, pen='r')
 			ax_im.addItem(error_im)
-			ax_im.plot(sdat, dimdkdat, pen='b', symbol='o', symbolBrush=None)
+			ax_im.plot(sdat, dimdkdat, pen='b', symbol='x')
 
 			plot_ips((ax_re, ax_im), label)
 
@@ -258,9 +257,9 @@ def plot_RDT(b1data, b2data, rdt, rdt_plane, axes, log_func=None):
 
 				colour = COLOR_LIST[i % len(COLOR_LIST)]
 
-				ax_amp.plot(sdat, ampdat, symbol='o', symbolPen=colour, symbolBrush=None, pen=colour)
-				ax_re.plot(sdat, redat, symbol='o', symbolPen=colour, symbolBrush=None, pen=colour)
-				ax_im.plot(sdat, imdat, symbol='o', symbolPen=colour, symbolBrush=None, pen=colour)
+				ax_amp.plot(sdat, ampdat, symbol='x', symbolPen=colour, pen=colour)
+				ax_re.plot(sdat, redat, symbol='x', symbolPen=colour, pen=colour)
+				ax_im.plot(sdat, imdat, symbol='x', symbolPen=colour, pen=colour)
 
 			plot_ips((ax_amp, ax_re, ax_im), beam_label)
 
@@ -373,12 +372,12 @@ def plot_dRDTdknob(b1data, b2data, rdt, rdt_plane, axes, knoblist=None, log_func
 				# Plot dRe with error bars
 				error_re = ErrorBarItem(x=sdat, y=dredkdat, height=2*dredkerr, beam=0.1, pen='r')
 				ax_re.addItem(error_re)
-				ax_re.plot(sdat, dredkdat, pen='b', symbol='o', name=line_label)
+				ax_re.plot(sdat, dredkdat, pen='b', symbol='x', name=line_label)
 
 				# Plot dIm with error bars
 				error_im = ErrorBarItem(x=sdat, y=dimdkdat, height=2*dimdkerr, beam=0.1, pen='r')
 				ax_im.addItem(error_im)
-				ax_im.plot(sdat, dimdkdat, pen='b', symbol='o', name=line_label)
+				ax_im.plot(sdat, dimdkdat, pen='b', symbol='x',name=line_label)
 			plot_ips((ax_re, ax_im), label)
 
 
@@ -399,20 +398,6 @@ def plot_dRDTdknob(b1data, b2data, rdt, rdt_plane, axes, knoblist=None, log_func
 		return None
 
 
-def clear_layout(widget):
-	"""
-	Recursively remove items from a layout.
-	"""
-	current_layout = widget.layout()
-	if current_layout is not None:
-		# Remove all widgets from the layout
-		while current_layout.count():
-			item = current_layout.takeAt(0)
-			child = item.widget()
-			if child is not None:
-				child.setParent(None)
-		# Optionally, schedule deletion of the layout
-		current_layout.deleteLater()
 
 def setup_blankcanvas(plot_widget):
 	plot_widget.setBackground('w')  # Set the background to white

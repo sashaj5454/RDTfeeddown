@@ -1,12 +1,15 @@
 import time 
 import re
+
 def check_rdt(
 	rdt:str, 
 	rdtplane:str
 ):
+
+
 	if len(rdt) != 4:
 		return False, "The rdt must be exactly 4 characters long."
-
+	print("hello")
 	# Check if all characters are digits
 	if not rdt.isdigit():
 		return False, "The rdt must contain only numeric characters."
@@ -25,13 +28,15 @@ def check_rdt(
 	elif l ==0 and rdtplane != "x":
 		return False, "The rdt does not exist on the vertical plane"
 	
+	return True, ""
+	
 def validate_rdt_and_plane(rdt, rdt_plane):
 	"""
 	Validate the RDT and RDT Plane combination.
 	"""
 	try:
-		check_rdt(rdt, rdt_plane)
-		return True, ""
+		valid, message = check_rdt(rdt, rdt_plane)
+		return valid, message
 	except Exception as e:
 		return False, str(e)
 	
