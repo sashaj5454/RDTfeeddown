@@ -357,34 +357,20 @@ class RDTFeeddownGUI(QMainWindow):
 		self.tabs.addTab(self.correction_tab, "Correction")
 		correction_main_layout = QVBoxLayout(self.correction_tab)
 
-		# Create a header container for the toggle button.
-		header_container = QWidget()
-		header_layout = QHBoxLayout(header_container)
-		header_layout.setContentsMargins(0, 0, 0, 0)
-		self.corr_toggle_button = QToolButton()
-		self.corr_toggle_button.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)  # force text display
-		self.corr_toggle_button.setText("Collapse Section")
-		self.corr_toggle_button.setCheckable(True)
-		self.corr_toggle_button.setChecked(True)
-		self.corr_toggle_button.setArrowType(Qt.DownArrow)
-		self.corr_toggle_button.setFixedHeight(30)
-		self.corr_toggle_button.clicked.connect(self.toggle_correction_content)
-		header_layout.addWidget(self.corr_toggle_button)
-		header_layout.addStretch()  # keep the header at the top
-		correction_main_layout.addWidget(header_container)
+		# Create a QTabWidget for the sub-tabs
+		self.correction_sub_tabs = QTabWidget()
+		correction_main_layout.addWidget(self.correction_sub_tabs)
 
-		# Collapsible content container – remains below the fixed header.
-		self.correction_content = QWidget()
-		self.correction_layout = QVBoxLayout(self.correction_content)
-		self.correction_content.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
-		correction_main_layout.addWidget(self.correction_content)
+		# ------------------- Response Tab -------------------
+		self.response_tab = QWidget()
+		response_tab_layout = QVBoxLayout(self.response_tab)
 
-		# Reference correction folders
+		# Group for reference and measurement folders
 		corr_folders_group = QtWidgets.QGroupBox("Reference and Measurement Folders")
 		corr_folders_group.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
 		corr_folders_layout = QVBoxLayout(corr_folders_group)
 
-		# Replace the individual reference folder groups with a combined horizontal group:
+		# Reference Folders group
 		corr_ref_folders_group = QtWidgets.QGroupBox("Reference Folders")
 		corr_ref_folders_group.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
 		corr_ref_folders_layout = QHBoxLayout()
@@ -396,19 +382,19 @@ class RDTFeeddownGUI(QMainWindow):
 		corr_beam1_ref_layout.addWidget(self.corr_beam1_reffolder_label)
 		self.corr_beam1_reffolder_entry = QLineEdit()
 		corr_beam1_ref_layout.addWidget(self.corr_beam1_reffolder_entry)
-		corr_beam1_buttons_layout = QHBoxLayout()
+		beam1_ref_buttons_layout = QHBoxLayout()
 		self.corr_beam1_reffolder_button = QPushButton("Select Folder")
 		self.corr_beam1_reffolder_button.clicked.connect(lambda: self.select_singleitem("LHCB1", 
-													"Select LHCB1 Reference File", 
-													"All Folders (*)", 
-													self.corr_beam1_reffolder_entry, None,
-													True))
-		corr_beam1_buttons_layout.addWidget(self.corr_beam1_reffolder_button)
+															"Select LHCB1 Reference File", 
+															"All Folders (*)", 
+															self.corr_beam1_reffolder_entry, None,
+															True))
+		beam1_ref_buttons_layout.addWidget(self.corr_beam1_reffolder_button)
 		self.corr_beam1_reffolder_remove_button = QPushButton("Remove File")
 		self.corr_beam1_reffolder_remove_button.clicked.connect(lambda: self.remove_singlefolder("LHCB1",
-													self.beam1_reffolder_entry, self.beam2_reffolder_entry,))
-		corr_beam1_buttons_layout.addWidget(self.corr_beam1_reffolder_remove_button)
-		corr_beam1_ref_layout.addLayout(corr_beam1_buttons_layout)
+															self.corr_beam1_reffolder_entry, self.corr_beam2_reffolder_entry))
+		beam1_ref_buttons_layout.addWidget(self.corr_beam1_reffolder_remove_button)
+		corr_beam1_ref_layout.addLayout(beam1_ref_buttons_layout)
 		corr_ref_folders_layout.addLayout(corr_beam1_ref_layout)
 
 		# LHCB2 Reference Folder (vertical layout)
@@ -418,26 +404,26 @@ class RDTFeeddownGUI(QMainWindow):
 		corr_beam2_ref_layout.addWidget(self.corr_beam2_reffolder_label)
 		self.corr_beam2_reffolder_entry = QLineEdit()
 		corr_beam2_ref_layout.addWidget(self.corr_beam2_reffolder_entry)
-		corr_beam2_buttons_layout = QHBoxLayout()
+		beam2_ref_buttons_layout = QHBoxLayout()
 		self.corr_beam2_reffolder_button = QPushButton("Select Folder")
 		self.corr_beam2_reffolder_button.clicked.connect(lambda: self.select_singleitem("LHCB2", 
-													"Select LHCB2 Reference Folder", 
-													"All Folders (*)", 
-													None, self.corr_beam2_reffolder_entry,
-													True))
-		corr_beam2_buttons_layout.addWidget(self.corr_beam2_reffolder_button)
+															"Select LHCB2 Reference Folder", 
+															"All Folders (*)", 
+															None, self.corr_beam2_reffolder_entry,
+															True))
+		beam2_ref_buttons_layout.addWidget(self.corr_beam2_reffolder_button)
 		self.corr_beam2_reffolder_remove_button = QPushButton("Remove File")
 		self.corr_beam2_reffolder_remove_button.clicked.connect(lambda: self.remove_singlefolder("LHCB2",
-													self.beam2_reffolder_entry, self.beam2_reffolder_entry))
-		corr_beam2_buttons_layout.addWidget(self.corr_beam2_reffolder_remove_button)
-		corr_beam2_ref_layout.addLayout(corr_beam2_buttons_layout)
+															self.corr_beam2_reffolder_entry, self.corr_beam2_reffolder_entry))
+		beam2_ref_buttons_layout.addWidget(self.corr_beam2_reffolder_remove_button)
+		corr_beam2_ref_layout.addLayout(beam2_ref_buttons_layout)
 		corr_ref_folders_layout.addLayout(corr_beam2_ref_layout)
 
 		corr_ref_folders_group.setLayout(corr_ref_folders_layout)
-		# Insert the new reference folders group at the top of the folders layout.
+		# Insert the Reference Folders group at the top
 		corr_folders_layout.insertWidget(0, corr_ref_folders_group)
 
-		# Replace the individual measurement folder groups with a combined horizontal group:
+		# Measurement (Response) Folders group
 		corr_meas_folders_group = QtWidgets.QGroupBox("Response Folders")
 		corr_meas_folders_group.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
 		corr_meas_folders_layout = QHBoxLayout()
@@ -449,19 +435,19 @@ class RDTFeeddownGUI(QMainWindow):
 		corr_beam1_meas_layout.addWidget(self.corr_beam1_measfolder_label)
 		self.corr_beam1_measfolder_entry = QLineEdit()
 		corr_beam1_meas_layout.addWidget(self.corr_beam1_measfolder_entry)
-		corr_beam1_buttons_layout = QHBoxLayout()
+		beam1_meas_buttons_layout = QHBoxLayout()
 		self.corr_beam1_measfolder_button = QPushButton("Select Folder")
 		self.corr_beam1_measfolder_button.clicked.connect(lambda: self.select_singleitem("LHCB1", 
-													"Select LHCB1 Response Folder", 
-													"All Folders (*)", 
-													self.corr_beam1_measfolder_entry, None,
-													True))
-		corr_beam1_buttons_layout.addWidget(self.corr_beam1_measfolder_button)
+															"Select LHCB1 Response Folder", 
+															"All Folders (*)", 
+															self.corr_beam1_measfolder_entry, None,
+															True))
+		beam1_meas_buttons_layout.addWidget(self.corr_beam1_measfolder_button)
 		self.corr_beam1_measfolder_remove_button = QPushButton("Remove File")
 		self.corr_beam1_measfolder_remove_button.clicked.connect(lambda: self.remove_singlefolder("LHCB1",
-													self.beam1_measfolder_entry, self.beam2_measfolder_entry))
-		corr_beam1_buttons_layout.addWidget(self.corr_beam1_measfolder_remove_button)
-		corr_beam1_meas_layout.addLayout(corr_beam1_buttons_layout)
+															self.corr_beam1_measfolder_entry, self.corr_beam2_measfolder_entry))
+		beam1_meas_buttons_layout.addWidget(self.corr_beam1_measfolder_remove_button)
+		corr_beam1_meas_layout.addLayout(beam1_meas_buttons_layout)
 		corr_meas_folders_layout.addLayout(corr_beam1_meas_layout)
 
 		# LHCB2 Measurement Folder (vertical layout)
@@ -471,27 +457,28 @@ class RDTFeeddownGUI(QMainWindow):
 		corr_beam2_meas_layout.addWidget(self.corr_beam2_measfolder_label)
 		self.corr_beam2_measfolder_entry = QLineEdit()
 		corr_beam2_meas_layout.addWidget(self.corr_beam2_measfolder_entry)
-		corr_beam2_buttons_layout = QHBoxLayout()
+		beam2_meas_buttons_layout = QHBoxLayout()
 		self.corr_beam2_measfolder_button = QPushButton("Select Folder")
 		self.corr_beam2_measfolder_button.clicked.connect(lambda: self.select_singleitem("LHCB2", 
-													"Select LHCB2 Response Folder", 
-													"All Files (*)", 
-													None, self.corr_beam2_measfolder_entry,
-													True))
-		corr_beam2_buttons_layout.addWidget(self.corr_beam2_measfolder_button)
+															"Select LHCB2 Response Folder", 
+															"All Files (*)", 
+															None, self.corr_beam2_measfolder_entry,
+															True))
+		beam2_meas_buttons_layout.addWidget(self.corr_beam2_measfolder_button)
 		self.corr_beam2_measfolder_remove_button = QPushButton("Remove File")
-		self.corr_beam2_measfolder_remove_button.clicked.connect(lambda: self.remove_singlefolder("LHCB1",
-													None, self.beam2_measfolder_entry))
-		corr_beam2_buttons_layout.addWidget(self.corr_beam2_measfolder_remove_button)
-		corr_beam2_meas_layout.addLayout(corr_beam2_buttons_layout)
+		self.corr_beam2_measfolder_remove_button.clicked.connect(lambda: self.remove_singlefolder("LHCB2",
+															self.corr_beam2_measfolder_entry, self.corr_beam2_measfolder_entry))
+		beam2_meas_buttons_layout.addWidget(self.corr_beam2_measfolder_remove_button)
+		corr_beam2_meas_layout.addLayout(beam2_meas_buttons_layout)
 		corr_meas_folders_layout.addLayout(corr_beam2_meas_layout)
 
 		corr_meas_folders_group.setLayout(corr_meas_folders_layout)
-		# Insert the new measured folders group at the top of the folders layout.
+		# Insert the Measurement (Response) Folders group as second widget
 		corr_folders_layout.insertWidget(1, corr_meas_folders_group)
-		self.correction_layout.addWidget(corr_folders_group)
+		corr_folders_group.setLayout(corr_folders_layout)
+		response_tab_layout.addWidget(corr_folders_group)
 
-		# --- Parameters and Knob Group (Correction Tab) ---
+		# --- Parameters and Knob Group ---
 		corr_param_group = QtWidgets.QGroupBox("Parameters and Knob")
 		corr_param_layout = QVBoxLayout()
 		self.corr_rdt_label = QLabel("RDT (in form of jklm):")
@@ -504,14 +491,12 @@ class RDTFeeddownGUI(QMainWindow):
 		self.corr_rdt_plane_dropdown.addItems(["x", "y"])
 		corr_param_layout.addWidget(self.corr_rdt_plane_dropdown)
 
-		# Common checkbox above knob entries
 		self.b1andb2same_checkbox = QtWidgets.QCheckBox("LHCB1 same as LHCB2 mode")
 		corr_param_layout.addWidget(self.b1andb2same_checkbox)
 		self.b1andb2same_checkbox.stateChanged.connect(self.toggle_b1andb2same_mode)
 
-		# --- Add separate LHCB1 and LHCB2 knob fields ---
 		separate_knob_layout = QHBoxLayout()
-		# LHCB1 widgets
+		# LHCB1 knob fields
 		lhcb1_layout = QVBoxLayout()
 		self.b1_corr_knobname_label = QLabel("LHCB1 Knob name:")
 		self.b1_corr_knobname_label.setStyleSheet("color: blue;")
@@ -529,7 +514,7 @@ class RDTFeeddownGUI(QMainWindow):
 		self.b1_corr_xing_entry = QLineEdit()
 		lhcb1_layout.addWidget(self.b1_corr_xing_entry)
 		separate_knob_layout.addLayout(lhcb1_layout)
-		# LHCB2 widgets
+		# LHCB2 knob fields
 		lhcb2_layout = QVBoxLayout()
 		self.b2_corr_knobname_label = QLabel("LHCB2 Knob name:")
 		self.b2_corr_knobname_label.setStyleSheet("color: red;")
@@ -548,28 +533,13 @@ class RDTFeeddownGUI(QMainWindow):
 		lhcb2_layout.addWidget(self.b2_corr_xing_entry)
 		separate_knob_layout.addLayout(lhcb2_layout)
 		corr_param_layout.addLayout(separate_knob_layout)
-		# By default show separate fields
-		self.b1_corr_knobname_label.show()
-		self.b1_corr_knobname_entry.show()
-		self.b1_corr_knob_label.show()
-		self.b1_corr_knob_entry.show()
-		self.b1_corr_xing_label.show()
-		self.b1_corr_xing_entry.show()
-		self.b2_corr_knobname_label.show()
-		self.b2_corr_knobname_entry.show()
-		self.b2_corr_knob_label.show()
-		self.b2_corr_knob_entry.show()
-		self.b2_corr_xing_label.show()
-		self.b2_corr_xing_entry.show()
-
-		# --- Unified knob fields (for same mode) ---
+		# Unified knob fields
 		self.corr_knobname_entry_label = QLabel("Shared Knob name:")
 		self.corr_knobname_entry = QLineEdit()
 		self.corr_knob_entry_label = QLabel("Shared Knob value:")
 		self.corr_knob_entry = QLineEdit()
 		self.corr_xing_entry_label = QLabel("Shared XING angle:")
 		self.corr_xing_entry = QLineEdit()
-		# Initially hide unified fields
 		self.corr_knobname_entry_label.hide()
 		self.corr_knobname_entry.hide()
 		self.corr_knob_entry_label.hide()
@@ -584,7 +554,7 @@ class RDTFeeddownGUI(QMainWindow):
 		corr_param_layout.addWidget(self.corr_xing_entry)
 
 		corr_param_group.setLayout(corr_param_layout)
-		self.correction_layout.addWidget(corr_param_group)
+		response_tab_layout.addWidget(corr_param_group)
 
 		# --- Run Button Group ---
 		run_response_group = QtWidgets.QGroupBox("Find Response")
@@ -593,23 +563,25 @@ class RDTFeeddownGUI(QMainWindow):
 		self.run_response_button.clicked.connect(self.run_response)
 		run_response_layout.addWidget(self.run_response_button)
 		run_response_group.setLayout(run_response_layout)
-		self.correction_layout.addWidget(run_response_group)
+		response_tab_layout.addWidget(run_response_group)
 
-		# Existing: add the collapsible content
-		correction_main_layout.addWidget(self.correction_content)
-		
-		# NEW: Loaded Files section (outside the collapsible content)
+		self.response_tab.setLayout(response_tab_layout)
+		self.correction_sub_tabs.addTab(self.response_tab, "Response")
+
+		# ------------------- Graph Tab -------------------
+		self.graph_tab = QWidget()
+		graph_tab_layout = QVBoxLayout(self.graph_tab)
+		# Loaded Files section
 		loaded_files_group = QGroupBox("Loaded Files")
 		loaded_files_group.setFixedHeight(150)
 		loaded_files_layout = QVBoxLayout()
 		self.correction_loaded_files_list = QtWidgets.QTreeWidget()
-		self.correction_loaded_files_list.setColumnCount(4)  # 4 columns: Filename and RDT and RDT plane and CORRECTOR
-		self.correction_loaded_files_list.setHeaderLabels(["Filename", "RDT", "RDT plane", "Corrector"])  # Set column headers
+		self.correction_loaded_files_list.setColumnCount(4)
+		self.correction_loaded_files_list.setHeaderLabels(["Filename", "RDT", "RDT plane", "Corrector"])
 		loaded_files_layout.addWidget(self.correction_loaded_files_list)
-
 		btn_layout = QHBoxLayout()
 		self.load_file_button = QPushButton("Load File")
-		self.load_file_button.clicked.connect(self.load_selected_correction_files)  # New method to implement
+		self.load_file_button.clicked.connect(self.load_selected_correction_files)
 		btn_layout.addWidget(self.load_file_button)
 		self.remove_file_button = QPushButton("Remove Selected Files")
 		self.remove_file_button.clicked.connect(lambda: self.remove_selected_items(self.correction_loaded_files_list, True))
@@ -619,57 +591,56 @@ class RDTFeeddownGUI(QMainWindow):
 		btn_layout.addWidget(self.select_all_files_checkbox)
 		loaded_files_layout.addLayout(btn_layout)
 		loaded_files_group.setLayout(loaded_files_layout)
-		correction_main_layout.addWidget(loaded_files_group)
-		
-		# Create the measurement_match_group widget
+		graph_tab_layout.addWidget(loaded_files_group)
+				
+		# Measurement to be matched group
 		measurement_match_group = QGroupBox("Measurement to be matched")
 		match_layout = QHBoxLayout(measurement_match_group)
 
-		# LHCB1
+		# LHCB1 Single Measurement
 		b1_container = QWidget()
 		b1_vlayout = QVBoxLayout(b1_container)
 		b1_label = QLabel("LHCB1 Single Measurement:")
 		b1_label.setStyleSheet("color: blue;")
+		b1_vlayout.addWidget(b1_label)
 		self.b1_match_entry = QLineEdit()
+		b1_vlayout.addWidget(self.b1_match_entry)
 		b1_button = QPushButton("Browse File")
 		b1_button.clicked.connect(lambda: self.select_singleitem("LHCB1",
 															"Select LHCB1 Match File",
 															"JSON Files (*.json);;All Files (*)", 
 															self.b1_match_entry, None))
-		b1_vlayout.addWidget(b1_label)
-		b1_vlayout.addWidget(self.b1_match_entry)
 		b1_vlayout.addWidget(b1_button)
 		match_layout.addWidget(b1_container)
 
-		# LHCB2
+		# LHCB2 Single Measurement
 		b2_container = QWidget()
 		b2_vlayout = QVBoxLayout(b2_container)
 		b2_label = QLabel("LHCB2 Single Measurement:")
 		b2_label.setStyleSheet("color: red;")
+		b2_vlayout.addWidget(b2_label)
 		self.b2_match_entry = QLineEdit()
+		b2_vlayout.addWidget(self.b2_match_entry)
 		b2_button = QPushButton("Browse File")
 		b2_button.clicked.connect(lambda: self.select_singleitem("LHCB2",
 															"Select LHCB2 Match File",
 															"JSON Files (*.json);;Select LHCB2 Match File",
 															None, self.b2_match_entry))
-		b2_vlayout.addWidget(b2_label)
-		b2_vlayout.addWidget(self.b2_match_entry)
 		b2_vlayout.addWidget(b2_button)
 		match_layout.addWidget(b2_container)
 
-		# Insert the measurement_match_group widget below the loaded files widget and buttons
-		correction_main_layout.addWidget(measurement_match_group)
+		graph_tab_layout.addWidget(measurement_match_group)
 
-		# Add a Plot button below the measurement_match_group (if desired, below the graph)
+		# Plot button
 		self.corr_plot_button = QPushButton("Plot")
 		self.corr_plot_button.clicked.connect(self.plot_loaded_correction_files)
-		correction_main_layout.addWidget(self.corr_plot_button)
+		graph_tab_layout.addWidget(self.corr_plot_button)
 
+		# Graph and Knob Manager layout
 		graph_and_knob_layout = QHBoxLayout()
 		self.corrFigure = pg.PlotWidget()
 		setup_blankcanvas(self.corrFigure)
 		graph_and_knob_layout.addWidget(self.corrFigure, stretch=3)
-		# Knob Manager group
 		self.knob_manager_group = QGroupBox("Knob Manager")
 		knob_manager_layout = QVBoxLayout()
 		self.knob_widgets = {}
@@ -678,7 +649,10 @@ class RDTFeeddownGUI(QMainWindow):
 		knob_manager_layout.addWidget(self.update_knobs_button)
 		self.knob_manager_group.setLayout(knob_manager_layout)
 		graph_and_knob_layout.addWidget(self.knob_manager_group)
-		correction_main_layout.addLayout(graph_and_knob_layout, stretch=1)
+		graph_tab_layout.addLayout(graph_and_knob_layout, stretch=1)
+
+		self.graph_tab.setLayout(graph_tab_layout)
+		self.correction_sub_tabs.addTab(self.graph_tab, "Graph")
 
 		# Progress bar for correction tab remains below everything
 		self.simcorr_progress = QProgressBar()
@@ -1324,23 +1298,8 @@ class RDTFeeddownGUI(QMainWindow):
 		self.corr_xing_entry_label.setVisible(is_checked)
 		self.corr_xing_entry.setVisible(is_checked)
 
-	# New method to toggle the Correction content visibility
-	def toggle_correction_content(self):
-		visible = self.corr_toggle_button.isChecked()
-		self.correction_content.setVisible(visible)
-		if visible:
-			self.corr_toggle_button.setArrowType(Qt.DownArrow)
-			self.corr_toggle_button.setText("Collapse Section")
-		else:
-			self.corr_toggle_button.setArrowType(Qt.RightArrow)
-			self.corr_toggle_button.setText("Expand Section")
-
 	# NEW: New method to plot loaded correction files into the unified graph widget
 	def plot_loaded_correction_files(self):
-		self.corr_toggle_button.setChecked(False)
-		self.correction_content.setVisible(False)
-		self.corr_toggle_button.setArrowType(Qt.RightArrow)
-		self.corr_toggle_button.setText("Expand Section")
 		self.simcorr_progress.show()
 		QtWidgets.QApplication.processEvents()
 		self.b1_response_meas = None
