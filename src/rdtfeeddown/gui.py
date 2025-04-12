@@ -11,6 +11,7 @@ from .validation_utils import validate_rdt_and_plane, validate_knob, validate_me
 from .utils import load_defaults, initialize_statetracker, rdt_to_order_and_type, getmodelBPMs, MyViewBox
 from .analysis import write_RDTshifts, getrdt_omc3, fit_BPM, save_RDTdata, load_RDTdata, group_datasets, getrdt_sim
 from .plotting import plot_BPM, plot_RDT, plot_RDTshifts, plot_dRDTdknob, setup_blankcanvas  # Assuming you have a plotting module for BPM plotting
+from .file_dialog_helpers import select_singleitem, select_multiple_files, select_folders
 import time  # Import time to get the current timestamp
 import re    # Import re for regex substitution
 
@@ -102,7 +103,7 @@ class RDTFeeddownGUI(QMainWindow):
 		beam1_ref_layout.addWidget(self.beam1_reffolder_entry)
 		beam1_buttons_layout = QHBoxLayout()
 		self.beam1_reffolder_button = QPushButton("Select Folder")
-		self.beam1_reffolder_button.clicked.connect(lambda: self.select_singleitem("LHCB1",
+		self.beam1_reffolder_button.clicked.connect(lambda: select_singleitem(self, "LHCB1",
 													"Select LHCB1 Reference Measurement Folder",
 													"LHCB1 folders (Beam1BunchTurn*);;All Folders (*)",
 													self.beam1_reffolder_entry, self.beam2_reffolder_entry,
@@ -124,7 +125,7 @@ class RDTFeeddownGUI(QMainWindow):
 		beam2_ref_layout.addWidget(self.beam2_reffolder_entry)
 		beam2_buttons_layout = QHBoxLayout()
 		self.beam2_reffolder_button = QPushButton("Select Folder")
-		self.beam2_reffolder_button.clicked.connect(lambda: self.select_singleitem("LHCB2", 
+		self.beam2_reffolder_button.clicked.connect(lambda: select_singleitem(self, "LHCB2", 
 													"Select LHCB2 Reference Measurement Folder", 
 													"LHCB2 folders (Beam2BunchTurn*);;All Folders (*)", 
 													self.beam1_reffolder_entry, self.beam2_reffolder_entry,
@@ -386,7 +387,7 @@ class RDTFeeddownGUI(QMainWindow):
 		corr_beam1_ref_layout.addWidget(self.corr_beam1_reffolder_entry)
 		beam1_ref_buttons_layout = QHBoxLayout()
 		self.corr_beam1_reffolder_button = QPushButton("Select Folder")
-		self.corr_beam1_reffolder_button.clicked.connect(lambda: self.select_singleitem("LHCB1", 
+		self.corr_beam1_reffolder_button.clicked.connect(lambda: select_singleitem(self, "LHCB1", 
 															"Select LHCB1 Reference File", 
 															"All Folders (*)", 
 															self.corr_beam1_reffolder_entry, None,
@@ -408,7 +409,7 @@ class RDTFeeddownGUI(QMainWindow):
 		corr_beam2_ref_layout.addWidget(self.corr_beam2_reffolder_entry)
 		beam2_ref_buttons_layout = QHBoxLayout()
 		self.corr_beam2_reffolder_button = QPushButton("Select Folder")
-		self.corr_beam2_reffolder_button.clicked.connect(lambda: self.select_singleitem("LHCB2", 
+		self.corr_beam2_reffolder_button.clicked.connect(lambda: select_singleitem(self, "LHCB2", 
 															"Select LHCB2 Reference Folder", 
 															"All Folders (*)", 
 															None, self.corr_beam2_reffolder_entry,
@@ -439,7 +440,7 @@ class RDTFeeddownGUI(QMainWindow):
 		corr_beam1_meas_layout.addWidget(self.corr_beam1_measfolder_entry)
 		beam1_meas_buttons_layout = QHBoxLayout()
 		self.corr_beam1_measfolder_button = QPushButton("Select Folder")
-		self.corr_beam1_measfolder_button.clicked.connect(lambda: self.select_singleitem("LHCB1", 
+		self.corr_beam1_measfolder_button.clicked.connect(lambda: select_singleitem(self, "LHCB1", 
 															"Select LHCB1 Response Folder", 
 															"All Folders (*)", 
 															self.corr_beam1_measfolder_entry, None,
@@ -461,7 +462,7 @@ class RDTFeeddownGUI(QMainWindow):
 		corr_beam2_meas_layout.addWidget(self.corr_beam2_measfolder_entry)
 		beam2_meas_buttons_layout = QHBoxLayout()
 		self.corr_beam2_measfolder_button = QPushButton("Select Folder")
-		self.corr_beam2_measfolder_button.clicked.connect(lambda: self.select_singleitem("LHCB2", 
+		self.corr_beam2_measfolder_button.clicked.connect(lambda: select_singleitem(self,"LHCB2", 
 															"Select LHCB2 Response Folder", 
 															"All Files (*)", 
 															None, self.corr_beam2_measfolder_entry,
@@ -608,7 +609,7 @@ class RDTFeeddownGUI(QMainWindow):
 		self.b1_match_entry = QLineEdit()
 		b1_vlayout.addWidget(self.b1_match_entry)
 		b1_button = QPushButton("Browse File")
-		b1_button.clicked.connect(lambda: self.select_singleitem("LHCB1",
+		b1_button.clicked.connect(lambda: select_singleitem(self, "LHCB1",
 															"Select LHCB1 Match File",
 															"JSON Files (*.json);;All Files (*)", 
 															self.b1_match_entry, None))
@@ -624,7 +625,7 @@ class RDTFeeddownGUI(QMainWindow):
 		self.b2_match_entry = QLineEdit()
 		b2_vlayout.addWidget(self.b2_match_entry)
 		b2_button = QPushButton("Browse File")
-		b2_button.clicked.connect(lambda: self.select_singleitem("LHCB2",
+		b2_button.clicked.connect(lambda: select_singleitem(self, "LHCB2",
 															"Select LHCB2 Match File",
 															"JSON Files (*.json);;Select LHCB2 Match File",
 															None, self.b2_match_entry))
@@ -692,26 +693,6 @@ class RDTFeeddownGUI(QMainWindow):
 		modelpath = QFileDialog.getExistingDirectory(self, "Select LHCB2 Model", self.default_input_path)
 		if modelpath:
 			self.beam2_model_entry.setText(modelpath)
-
-	def select_singleitem(self, beam, title_text, filter_text, b1entry, b2entry, folder=False):
-		"""
-		Open a file dialog to select the reference measurement folder for the specified beam.
-		"""
-		dialog = QFileDialog(self)
-		dialog.setWindowTitle(title_text)
-		dialog.setDirectory(self.default_input_path)
-		if folder:
-			dialog.setFileMode(QFileDialog.Directory)
-			dialog.setOption(QFileDialog.ShowDirsOnly, True)
-		else:
-			dialog.setFileMode(QFileDialog.ExistingFiles)
-		dialog.setNameFilter(filter_text)
-		if dialog.exec_() == QFileDialog.Accepted:
-			folderpath = dialog.selectedFiles()[0]
-			if beam == "LHCB1":
-				b1entry.setText(folderpath)
-			else:
-				b2entry.setText(folderpath)
 
 	def remove_singlefolder(self, beam, b1entry, b2entry):
 		"""
@@ -856,33 +837,6 @@ class RDTFeeddownGUI(QMainWindow):
 		for i in range(self.validation_files_list.count()):
 			self.validation_files_list.item(i).setSelected(state == Qt.Checked)
 	
-	def select_multiple_files(self, list_widget, title="Select Files", filter="JSON Files (*.json)"):
-		"""
-		Allow the user to select multiple files and add them to the file list widget.
-		"""
-		dialog = QFileDialog(self)
-		dialog.setWindowTitle(title)
-		dialog.setDirectory(self.default_input_path)  # Use default output path, adjust if needed
-		dialog.setFileMode(QFileDialog.ExistingFiles)
-		dialog.setNameFilter(filter)
-
-		# Enable multiple selection in the dialog
-		for view in dialog.findChildren((QtWidgets.QListView, QtWidgets.QTreeView)):
-			if isinstance(view.model(), QtWidgets.QFileSystemModel):
-				view.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
-
-		if dialog.exec_() == QFileDialog.Accepted:
-			selected_files = dialog.selectedFiles()
-			for file in selected_files:
-				if file not in [
-					list_widget.item(i).text()
-					for i in range(list_widget.count())
-				]:
-					item = QtWidgets.QListWidgetItem(file)
-					item.setSelected(True)
-					list_widget.addItem(item)
-		return dialog.selectedFiles()
-
 	def select_multiple_treefiles(self, tree_widget, title="Select Files", filter="JSON Files (*.json)"):
 		"""
 		Allow the user to select multiple files and add them to the file tree widget.
@@ -915,7 +869,7 @@ class RDTFeeddownGUI(QMainWindow):
 		return dialog.selectedFiles()
 
 	def select_analysis_files(self):
-		selected_files = self.select_multiple_files(self.validation_files_list, "Select Analysis Files")
+		selected_files = select_multiple_files(self, self.validation_files_list, "Select Analysis Files")
 		if self.validation_files_list.count() > 0:
 			reply = QMessageBox.question(
 				self, 
@@ -1389,7 +1343,7 @@ class RDTFeeddownGUI(QMainWindow):
 		if not hasattr(self, 'corr_responses') or self.corr_responses is None:
 			self.corr_responses = {}
 
-		selected_files = self.select_multiple_treefiles(self.correction_loaded_files_list, title="Select Response Files")
+		selected_files = select_multiple_treefiles(self.correction_loaded_files_list, title="Select Response Files")
 		# Validate metadata and update the UI
 		samemetadata, metadata = validate_metas(self.corr_responses)
 		if samemetadata:

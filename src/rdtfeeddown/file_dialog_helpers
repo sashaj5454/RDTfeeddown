@@ -1,0 +1,79 @@
+from PyQt5.QtWidgets import QFileDialog, QMessageBox
+from PyQt5 import QtWidgets
+from PyQt5.QtCore import Qt
+
+def select_singleitem(parent, default_dir, title_text, filter_text, folder=False):
+    """
+    Open a file dialog to select a single item (a file or folder).
+    
+    Parameters:
+        parent (QWidget): The parent widget.
+        default_dir (str): Directory where the dialog should start.
+        title_text (str): The window title.
+        filter_text (str): The filter string (e.g. "JSON Files (*.json);;All Files (*)").
+        folder (bool): If True, dialog is configured to select directories.
+    
+    Returns:
+        str or None: The selected file/folder path, or None if cancelled.
+    """
+    dialog = QFileDialog(parent)
+    dialog.setWindowTitle(title_text)
+    dialog.setDirectory(default_dir)
+    if folder:
+        dialog.setFileMode(QFileDialog.Directory)
+        dialog.setOption(QFileDialog.ShowDirsOnly, True)
+    else:
+        dialog.setFileMode(QFileDialog.ExistingFiles)
+    dialog.setNameFilter(filter_text)
+    if dialog.exec_() == QFileDialog.Accepted:
+        return dialog.selectedFiles()[0]
+    return None
+
+def select_multiple_files(parent, default_dir, title="Select Files", filter="JSON Files (*.json)"):
+    """
+    Open a file dialog to select multiple files.
+    
+    Parameters:
+        parent (QWidget): The parent widget.
+        default_dir (str): Directory where the dialog should start.
+        title (str): The window title.
+        filter (str): The filter string.
+    
+    Returns:
+        list: List of selected file paths.
+    """
+    dialog = QFileDialog(parent)
+    dialog.setWindowTitle(title)
+    dialog.setDirectory(default_dir)
+    dialog.setFileMode(QFileDialog.ExistingFiles)
+    dialog.setNameFilter(filter)
+    for view in dialog.findChildren((QtWidgets.QListView, QtWidgets.QTreeView)):
+        view.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
+    if dialog.exec_() == QFileDialog.Accepted:
+        return dialog.selectedFiles()
+    return []
+
+def select_folders(parent, default_dir, name_filter):
+    """
+    Open a file dialog to select one or more directories.
+    
+    Parameters:
+        parent (QWidget): The parent widget.
+        default_dir (str): Directory where the dialog should start.
+        name_filter (str): The filter for folder names.
+    
+    Returns:
+        list: List of selected directory paths.
+    """
+    dialog = QFileDialog(parent)
+    dialog.setOption(QFileDialog.DontUseNativeDialog, True)
+    dialog.setFileMode(QFileDialog.Directory)
+    dialog.setOption(QFileDialog.ShowDirsOnly, True)
+    dialog.setDirectory(default_dir)
+    dialog.setNameFilter(name_filter)
+    for view in dialog.findChildren((QtWidgets.QListView, QtWidgets.QTreeView)):
+        if isinstance(view.model(), QtWidgets.QFileSystemModel):
+            view.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
+    if dialog.exec_() == QFileDialog.Accepted:
+        return dialog.selectedFiles()
+    return []

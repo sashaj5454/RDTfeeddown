@@ -6,5 +6,7 @@ __all__ = [
     "utils",
     "analysis",
     "plotting",
-    "gui"
+    "gui",
+    "file_dialog_helpers",
+    "validation_utils"
 ]
