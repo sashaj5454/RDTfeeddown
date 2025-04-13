@@ -9,8 +9,8 @@ import tfs
 from datetime import datetime
 import json
 import pyqtgraph as pg
-from PyQt5.QtCore import Qt
-from PyQt5.QtCore import QTimer
+from qtpy.QtCore import Qt
+from qtpy.QtCore import QTimer
 	
 
 def rdt_to_order_and_type(

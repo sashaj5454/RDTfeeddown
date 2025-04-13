@@ -1,4 +1,6 @@
 matplotlib
 pytest
 tfs
-PyQt5
+QtPy
+pyqtgraph
+numpy

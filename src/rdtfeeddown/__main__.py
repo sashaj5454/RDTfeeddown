@@ -1,5 +1,5 @@
 from .gui import RDTFeeddownGUI
-from PyQt5.QtWidgets import QApplication
+from qtpy.QtWidgets import QApplication
 
 if __name__ == "__main__":
     try:
