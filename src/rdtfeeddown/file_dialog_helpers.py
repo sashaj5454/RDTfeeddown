@@ -1,5 +1,7 @@
-from qtpy.QtWidgets import QFileDialog, QMessageBox, QListWidgetItem, QListView, QTreeView
-from qtpy.QtCore import Qt
+from qtpy.QtWidgets import (QFileDialog, QMessageBox, QListView, 
+							QTreeView, QAbstractItemView, QListWidgetItem, 
+							QFileSystemModel, QTreeWidgetItem)
+from .data_handler import load_RDTdata
 
 def select_singleitem(
 	parent, 
@@ -60,8 +62,8 @@ def select_multiple_files(parent, default_dir, list_widget, title="Select Files"
 	dialog.setDirectory(default_dir)
 	dialog.setFileMode(QFileDialog.ExistingFiles)
 	dialog.setNameFilter(filter)
-	for view in dialog.findChildren((QtWidgets.QListView, QtWidgets.QTreeView)):
-		view.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
+	for view in dialog.findChildren((QListView, QTreeView)):
+		view.setSelectionMode(QAbstractItemView.ExtendedSelection)
 	if dialog.exec_() == QFileDialog.Accepted:
 		selected_files = dialog.selectedFiles()
 		for file in selected_files:
@@ -69,7 +71,7 @@ def select_multiple_files(parent, default_dir, list_widget, title="Select Files"
 				list_widget.item(i).text()
 				for i in range(list_widget.count())
 			]:
-				item = QtWidgets.QListWidgetItem(file)
+				item = QListWidgetItem(file)
 				item.setSelected(True)
 				list_widget.addItem(item)
 		return dialog.selectedFiles()
@@ -93,9 +95,9 @@ def select_folders(parent, default_dir, name_filter, list_widget):
 	dialog.setOption(QFileDialog.ShowDirsOnly, True)
 	dialog.setDirectory(default_dir)
 	dialog.setNameFilter(name_filter)
-	for view in dialog.findChildren((QtWidgets.QListView, QtWidgets.QTreeView)):
-		if isinstance(view.model(), QtWidgets.QFileSystemModel):
-			view.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
+	for view in dialog.findChildren((QListView, QTreeView)):
+		if isinstance(view.model(), QFileSystemModel):
+			view.setSelectionMode(QAbstractItemView.ExtendedSelection)
 	if dialog.exec_() == QFileDialog.Accepted:
 		selected_dirs = dialog.selectedFiles()
 		for directory in selected_dirs:
@@ -113,9 +115,9 @@ def select_multiple_treefiles(parent, tree_widget, title="Select Files", filter=
 		dialog.setNameFilter(filter)
 
 		# Enable multiple selection in the dialog
-		for view in dialog.findChildren((QtWidgets.QListView, QtWidgets.QTreeView)):
-			if isinstance(view.model(), QtWidgets.QFileSystemModel):
-				view.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
+		for view in dialog.findChildren((QListView, QTreeView)):
+			if isinstance(view.model(), QFileSystemModel):
+				view.setSelectionMode(QAbstractItemView.ExtendedSelection)
 
 		if dialog.exec_() == QFileDialog.Accepted:
 			selected_files = dialog.selectedFiles()
@@ -129,6 +131,6 @@ def select_multiple_treefiles(parent, tree_widget, title="Select Files", filter=
 					parent.rdt = parent.saved_data[file].get("metadata", {}).get("rdt", "Unknown RDT")
 					parent.rdt_plane = parent.saved_data[file].get("metadata", {}).get("rdt_plane", "Unknown Plane")
 					parent.corrector = parent.saved_data[file].get("metadata", {}).get("knob_name", "Unknown Corrector")
-					item = QtWidgets.QTreeWidgetItem([file, parent.rdt, parent.rdt_plane, parent.corrector])
+					item = QTreeWidgetItem([file, parent.rdt, parent.rdt_plane, parent.corrector])
 					tree_widget.addTopLevelItem(item)
 		return dialog.selectedFiles()

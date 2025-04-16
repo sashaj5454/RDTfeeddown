@@ -37,7 +37,10 @@ def filter_outliers(
 	]
 	return filtered_data
 
-def read_rdt_file(filepath, log_func=None):
+def read_rdt_file(
+	filepath, 
+	log_func=None
+):
 	"""
 	Reads RDT data from a file and returns raw data.
 	"""
@@ -55,13 +58,23 @@ def read_rdt_file(filepath, log_func=None):
 			raw_data.append([str(row["NAME"]), float(row["AMP"]), float(row["REAL"]), float(row["IMAG"])])
 	return raw_data
 
-def ensure_trailing_slash(path):
+def ensure_trailing_slash(
+	path
+):
 	"""
 	Ensure the given folder path ends with a "/".
 	"""
 	return path if path.endswith('/') else path + '/'
 
-def readrdtdatafile(cfile, rdt, rdt_plane, rdtfolder, sim=False, log_func=None):
+def readrdtdatafile(
+	cfile, 
+	rdt, 
+	rdt_plane, 
+	rdtfolder, 
+	threshold=3, 
+	sim=False, 
+	log_func=None
+):
 	"""
 	Reads RDT data from a file and removes outliers based on Z-scores.
 	"""
@@ -89,9 +102,14 @@ def readrdtdatafile(cfile, rdt, rdt_plane, rdtfolder, sim=False, log_func=None):
 			raw_data = read_rdt_file(filepath, log_func)
 	else:
 		raw_data = read_rdt_file(filepath, log_func)
-	return filter_outliers(raw_data)
+	return filter_outliers(raw_data, threshold)
 
-def update_bpm_data(bpmdata, data, key, knob_setting):
+def update_bpm_data(
+	bpmdata, 
+	data, 
+	key, 
+	knob_setting
+):
 	"""
 	Updates BPM data dictionary with new data.
 	"""
@@ -99,7 +117,21 @@ def update_bpm_data(bpmdata, data, key, knob_setting):
 		name, amp, re, im = entry
 		bpmdata[name][key].append([knob_setting, amp, re, im])
 
-def getrdt_omc3(ldb, beam, modelbpmlist, bpmdata, ref, flist, knob, rdt, rdt_plane, rdtfolder, sim, propfile, log_func=None):
+def getrdt_omc3(
+	ldb, 
+	beam, 
+	modelbpmlist, 
+	bpmdata, 
+	ref, 
+	flist, 
+	knob, 
+	rdt, 
+	rdt_plane, 
+	rdtfolder, 
+	sim, 
+	propfile, 
+	log_func=None
+):
 	beam_no = modelbpmlist[0][-1]
 	if beam[-1] != beam_no:
 		msg = f"Beam number {beam} does not match the model BPM list."
@@ -364,22 +396,6 @@ def calculate_avg_rdt_shift(data):
 		stddat.append(avg_rdt_shift_err)
 
 	return np.array(xing), np.array(ampdat), np.array(stddat)
-
-def _convert_for_json(obj):
-    import numpy as np
-    if isinstance(obj, np.ndarray):
-        return obj.tolist()
-    if isinstance(obj, tuple):
-        return list(obj)
-    raise TypeError(f"Type {type(obj)} not JSON serializable")
-
-def save_RDTdata(data, filename):
-    with open(filename, 'w') as fout:
-        json.dump(data, fout, default=_convert_for_json)
-
-def load_RDTdata(filename):
-	with open(filename, 'r') as fin:
-		return json.load(fin)
 
 def group_datasets(datasets, log_func=None):
 	if not datasets:

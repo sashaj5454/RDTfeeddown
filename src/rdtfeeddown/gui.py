@@ -1,19 +1,17 @@
 import json
 from qtpy.QtWidgets import (
 	QApplication, QMainWindow, QGridLayout, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QCheckBox,
-	QFileDialog, QListWidget, QTabWidget, QWidget, QTextEdit, QMessageBox, QProgressBar, QSizePolicy, QToolButton, QGroupBox,
-	QTreeWidget
+	QFileDialog, QListWidget, QTabWidget, QWidget, QMessageBox, QProgressBar, QSizePolicy, QGroupBox, QComboBox,
+	QAbstractItemView, QTreeWidgetItem, QTreeWidget, QFileSystemModel
 )
 import pyqtgraph as pg
 from qtpy.QtCore import Qt, QTimer  # Import Qt for the correct constants and QTimer
-from matplotlib.figure import Figure
 from .validation_utils import validate_rdt_and_plane, validate_knob, validate_metas
 from .utils import load_defaults, initialize_statetracker, rdt_to_order_and_type, getmodelBPMs, MyViewBox
-from .analysis import write_RDTshifts, getrdt_omc3, fit_BPM, save_RDTdata, load_RDTdata, group_datasets, getrdt_sim
+from .analysis import getrdt_omc3, fit_BPM, group_datasets, getrdt_sim
 from .plotting import plot_BPM, plot_RDT, plot_RDTshifts, plot_dRDTdknob, setup_blankcanvas  # Assuming you have a plotting module for BPM plotting
 from .file_dialog_helpers import select_singleitem, select_multiple_files, select_folders, select_multiple_treefiles
-import time  # Import time to get the current timestamp
-import re    # Import re for regex substitution
+from .data_handler import load_selected_files, load_RDTdata, save_RDTdata
 
 class RDTFeeddownGUI(QMainWindow):
 	def __init__(self):
@@ -92,15 +90,15 @@ class RDTFeeddownGUI(QMainWindow):
 		beam_model_group.setLayout(beam_model_layout)
 		self.input_layout.addWidget(beam_model_group)
 
-		# --- Folders Group ---
+		# --- Reference and Measurement Folders Group ---
 		folders_group = QGroupBox("Reference and Measurement Folders")
 		folders_layout = QVBoxLayout()
 
-		# Replace the individual reference folder groups with a combined horizontal group:
+		# --- Ref Models Group ---
 		ref_folders_group = QGroupBox("Reference Folders")
 		ref_folders_layout = QHBoxLayout()
 
-		# LHCB1 Reference Folder (vertical layout)
+		# LHCB1 Reference Folder
 		beam1_ref_layout = QVBoxLayout()
 		self.beam1_reffolder_label = QLabel("LHCB1 Reference Measurement Folder:")
 		self.beam1_reffolder_label.setStyleSheet("color: blue;")
@@ -122,7 +120,7 @@ class RDTFeeddownGUI(QMainWindow):
 		beam1_ref_layout.addLayout(beam1_buttons_layout)
 		ref_folders_layout.addLayout(beam1_ref_layout)
 
-		# LHCB2 Reference Folder (vertical layout)
+		# LHCB2 Reference Folder
 		beam2_ref_layout = QVBoxLayout()
 		self.beam2_reffolder_label = QLabel("LHCB2 Reference Measurement Folder:")
 		self.beam2_reffolder_label.setStyleSheet("color: red;")
@@ -145,12 +143,12 @@ class RDTFeeddownGUI(QMainWindow):
 		ref_folders_layout.addLayout(beam2_ref_layout)
 
 		ref_folders_group.setLayout(ref_folders_layout)
-		# Insert the new reference folders group at the top of the folders layout.
-		folders_layout.insertWidget(0, ref_folders_group)
+		folders_layout.addWidget(ref_folders_group)
 
-		# Measurement Folders for LHCB1 and LHCB2
+		# --- Measurements Group ---
 		measure_group = QGroupBox("Measurement Folders")
 		measure_layout = QHBoxLayout()
+
 		# LHCB1 Measurement Folders
 		beam1_folders_layout = QVBoxLayout()
 		self.beam1_folders_label = QLabel("LHCB1 Measurement Folders:")
@@ -171,7 +169,8 @@ class RDTFeeddownGUI(QMainWindow):
 		beam1_buttons_layout.addWidget(self.beam1_select_all_checkbox)
 		beam1_folders_layout.addLayout(beam1_buttons_layout)
 		measure_layout.addLayout(beam1_folders_layout)
-		# LHCB2 Measurement Folders (similar)
+
+		# LHCB2 Measurement Folders
 		beam2_folders_layout = QVBoxLayout()
 		self.beam2_folders_label = QLabel("LHCB2 Measurement Folders:")
 		self.beam2_folders_label.setStyleSheet("color: red;")
@@ -212,11 +211,9 @@ class RDTFeeddownGUI(QMainWindow):
 		param_layout.addWidget(self.knob_label)          # "Knob:"
 		self.knob_entry = QLineEdit("LHCBEAM/IP2-XING-V-MURAD")
 		param_layout.addWidget(self.knob_entry)
-		# New simulation mode checkbox
 		self.simulation_checkbox = QCheckBox("Simulation Mode")
 		param_layout.addWidget(self.simulation_checkbox)
 		self.simulation_checkbox.stateChanged.connect(self.toggle_simulation_mode)
-		# New properties file input and browse button (hidden by default)
 		self.simulation_file_entry = QLineEdit()
 		self.simulation_file_entry.setPlaceholderText("Select properties file")
 		self.simulation_file_entry.hide()
@@ -260,7 +257,7 @@ class RDTFeeddownGUI(QMainWindow):
 		self.layout.addWidget(self.input_progress)
 
 	def buildValidationTab(self):
-		 # Validation Tab
+		# ===== Validation Tab with separated sections =====
 		self.validation_tab = QWidget()
 		self.tabs.addTab(self.validation_tab, "Validation")
 		self.validation_layout = QVBoxLayout(self.validation_tab)
@@ -291,16 +288,16 @@ class RDTFeeddownGUI(QMainWindow):
 		validation_files_layout.addLayout(validation_buttons_layout)
 		self.validation_layout.addLayout(validation_files_layout)
 
-		self.load_selected_files_button = QPushButton("Load Selected Files")
-		self.load_selected_files_button.clicked.connect(self.load_selected_files)
-		self.validation_layout.addWidget(self.load_selected_files_button)
+		load_selected_files_button = QPushButton("Load Selected Files")
+		load_selected_files_button.clicked.connect(load_selected_files)
+		self.validation_layout.addWidget(load_selected_files_button)
 
 		self.loaded_files_list = QListWidget()
 		self.loaded_files_list.setFixedHeight(100)
 		self.loaded_files_list.setSelectionMode(QAbstractItemView.NoSelection)
 		self.validation_layout.addWidget(self.loaded_files_list, stretch=1)
 
-		# --- Replace Beam Tabs with a Beam Selector and Single Plotting Canvas ---
+		# --- Graphing sub tabs ---
 		self.graph_tabs = QTabWidget()
 		self.bpm_tab = QWidget()
 		bpm_tab_layout = QVBoxLayout(self.bpm_tab)
@@ -315,7 +312,7 @@ class RDTFeeddownGUI(QMainWindow):
 		bpm_tab_layout.addLayout(beam_selector_layout)
 
 		self.bpm_search_entry = QLineEdit()
-		self.update_bpm_search_entry()  # initialize with the correct default
+		self.update_bpm_search_entry() 
 		self.bpm_search_entry.setPlaceholderText("Enter BPM search term")
 		bpm_layout = QHBoxLayout()
 		bpm_layout.addWidget(self.bpm_search_entry)
@@ -363,7 +360,7 @@ class RDTFeeddownGUI(QMainWindow):
 		self.layout.addWidget(self.plot_progress)
 	
 	def buildCorrectionTab(self):
-		# Correction Tab
+		# ===== Correction Tab with separated sections =====
 		self.correction_tab = QWidget()
 		self.tabs.addTab(self.correction_tab, "Correction")
 		correction_main_layout = QVBoxLayout(self.correction_tab)
@@ -911,27 +908,6 @@ class RDTFeeddownGUI(QMainWindow):
 				filename += ".json"
 			save_RDTdata(self.b2rdtdata, filename)
 			self.analysis_output_files.append(filename)
-
-	def load_selected_files(self):
-		self.plot_progress.show()
-		QApplication.processEvents()
-		# Load selected file paths from the validation files list into the loaded files list
-		selected_files = [self.validation_files_list.item(i).text() for i in range(self.validation_files_list.count()) 
-						if self.validation_files_list.item(i).isSelected()]
-		self.loaded_files_list.clear()
-		loaded_output_data = []
-		for file in selected_files:
-			self.loaded_files_list.addItem(file)
-			data = load_RDTdata(file)
-			loaded_output_data.append(data)
-		results = group_datasets(loaded_output_data, self.log_error)
-		if len(results) < 4:
-			QMessageBox.critical(self, "Error", "Not enough data from group_datasets.")
-			return
-		self.b1rdtdata, self.b2rdtdata, self.rdt, self.rdt_plane = results
-		if self.b1rdtdata is None and self.b2rdtdata is None:
-			self.loaded_files_list.clear()
-			return
 
 	def update_bpm_search_entry(self):
 		# Set default BPM value based on the selected beam.
