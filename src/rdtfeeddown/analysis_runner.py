@@ -129,7 +129,119 @@ def run_response(parent):
     parent.simcorr_progress.hide()
 
 def run_response_logic(beam1_reffolder, beam2_reffolder, beam1_measfolder, beam2_measfolder, rdt, rdt_plane, b1andb2same, knob_name, knob_value, xing, b1_knob_name, b1_knob_value, b1_xing, b2_knob_name, b2_knob_value, b2_xing, log_func):
-    # Placeholder for the actual response logic
-    # This function should contain the core logic for running the response analysis
-    # and return the results (b1_response_meas, b2_response_meas)
+    if corr_b1_reffile and corr_b1_measfile:
+			filenameb1, _ = QFileDialog.getSaveFileName(
+				self,
+				"Save LHCB1 RDT Data",
+				default_output_path,
+				"JSON Files (*.json)"
+			)
+		if corr_b2_reffile and corr_b2_measfile:
+			filenameb2, _ = QFileDialog.getSaveFileName(
+				self,
+ 
+
+				"Save LHCB2 RDT Data",
+ 
+
+				default_output_path,
+ 
+
+				"JSON Files (*.json)"
+ 
+
+			)
+ 
+
+
+ 
+
+		if filenameb1 == "" and filenameb2 == "":
+ 
+
+			log_error("No output file selected.")
+ 
+
+			simcorr_progress.hide()
+ 
+
+			return
+ 
+
+
+ 
+
+		if filenameb1:
+ 
+
+			if not filenameb1.lower().endswith(".json"):
+ 
+
+				filenameb1 += ".json"
+ 
+
+			try:
+ 
+
+				b1response = getrdt_sim("LHCB1", corr_b1_reffile, corr_b1_measfile, b1_corr_xing, 
+ 
+
+				b1_corr_knobname, b1_corr_knob, rdt, rdt_plane, rdtfolder, 
+ 
+
+				log_func=log_error)
+ 
+
+				corr_responses[filenameb1] = b1response
+ 
+
+				save_RDTdata(b1response, filenameb1)
+ 
+
+				item = QTreeWidgetItem([filenameb1, rdt, rdt_plane, b1_corr_knobname])
+ 
+
+				correction_loaded_files_list.addTopLevelItem(item)
+ 
+
+				populate_knob_manager()
+ 
+
+			except Exception as e:
+ 
+
+				log_error(f"Error in getting RDT: {e}")
+ 
+
+		if filenameb2:
+ 
+
+			if not filenameb2.lower().endswith(".json"):
+ 
+
+				filenameb2 += ".json"
+ 
+
+			try:
+ 
+
+				b2response = getrdt_sim("LHCB2", corr_b2_reffile, corr_b2_measfile, b2_corr_xing, 
+ 
+
+				b2_corr_knobname, b2_corr_knob, rdt, rdt_plane, rdtfolder, 
+ 
+
+				log_func=log_error)
+ 
+
+				corr_responses[filenameb2] = b2response
+ 
+
+				save_RDTdata(b2response, filenameb2)
+				item = QTreeWidgetItem([filenameb2, rdt, rdt_plane, b2_corr_knobname])
+				correction_loaded_files_list.addTopLevelItem(item)
+				populate_knob_manager()
+			except Exception as e:
+				log_error(f"Error in getting RDT: {e}")
+		simcorr_progress.hide()
     pass
