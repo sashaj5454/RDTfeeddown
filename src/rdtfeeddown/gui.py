@@ -805,7 +805,6 @@ class RDTFeeddownGUI(QMainWindow):
 			if not filename.lower().endswith(".json"):
 				filename += ".json"
 			save_RDTdata(self.b2rdtdata, filename)
-			self.analysis_output_files.append(filename)
 
 	def update_bpm_search_entry(self):
 		# Set default BPM value based on the selected beam.
