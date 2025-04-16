@@ -8,8 +8,8 @@ import pyqtgraph as pg
 from qtpy.QtCore import Qt, QTimer  # Import Qt for the correct constants and QTimer
 from .validation_utils import validate_rdt_and_plane, validate_knob, validate_metas
 from .utils import load_defaults, initialize_statetracker, rdt_to_order_and_type, getmodelBPMs, MyViewBox
-from .analysis import getrdt_omc3, fit_BPM, group_datasets, getrdt_sim
-from .plotting import plot_BPM, plot_RDT, plot_RDTshifts, plot_dRDTdknob, setup_blankcanvas  # Assuming you have a plotting module for BPM plotting
+from .analysis_runner import run_analysis, run_response
+from .plotting_handler import plot_BPM, plot_RDT, plot_RDTshifts, plot_dRDTdknob, setup_blankcanvas
 from .file_dialog_helpers import select_singleitem, select_multiple_files, select_folders, select_multiple_treefiles
 from .data_handler import load_selected_files, load_RDTdata, save_RDTdata
 
@@ -321,8 +321,7 @@ class RDTFeeddownGUI(QMainWindow):
 		bpm_layout.addWidget(self.search_bpm_button)
 		self.graph_bpm_button = QPushButton("Graph BPM")
 		self.graph_bpm_button.clicked.connect(self.graph_bpm)
-		bpm_layout.addWidget(self.graph_bpm_button)
-		bpm_tab_layout.addLayout(bpm_layout)
+		bpm_layout.addLayout(bpm_layout)
 
 		# BPM plotting widget
 		self.bpmWidget = pg.PlotWidget()
@@ -703,114 +702,13 @@ class RDTFeeddownGUI(QMainWindow):
 			QMessageBox.critical(self, "Knob Validation", "Invalid Knob: " + repr(knob_message))
 
 	def run_analysis(self):
-		# Divide heavy processing into steps for better UI responsiveness:
-		self.current_step = 0
-		self.analysis_steps = [
-			self.analysis_step1,  # e.g., initialization and first data processing
-			self.analysis_step2,  # e.g., fitting/BPM processing
-			self.analysis_step3,   # e.g., fitting/BPM processing
-			self.analysis_step4,  # e.g., writing output files
-		]
-		self.run_next_step()
+		run_analysis(self)
 
 	def update_validation_files_widget(self):
 		# Update the validation_files_list widget with analysis_output_files
 		for f in self.analysis_output_files:
 			if f not in [self.validation_files_list.item(i).text() for i in range(self.validation_files_list.count())]:
 				self.validation_files_list.addItem(f)
-
-	def run_next_step(self):
-		try:
-			if self.current_step < len(self.analysis_steps):
-				self.analysis_steps[self.current_step]()  # execute current step
-				self.current_step += 1
-				QTimer.singleShot(0, self.run_next_step)     # schedule next step ASAP
-			else:
-				self.update_validation_files_widget()  # show analysis output files in the widget
-				QMessageBox.information(self, "Run Analysis", "Analysis completed successfully!")
-		except Exception as e:
-			self.input_progress.hide()
-			QMessageBox.critical(self, "Analysis Error", f"Step {self.current_step+1} failed: {e}")
-
-	def analysis_step1(self):
-		self.input_progress.show()
-		QApplication.processEvents()
-		# Initialize variables and validate inputs
-		if self.simulation_checkbox.isChecked():
-			self.ldb = None
-		else:
-			self.ldb = initialize_statetracker()
-		self.rdt = self.rdt_entry.text()
-		self.rdt_plane = self.rdt_plane_dropdown.currentText()
-		is_valid_rdt, rdt_message = validate_rdt_and_plane(self.rdt, self.rdt_plane)
-		if not is_valid_rdt:
-			QMessageBox.critical(self, "Error", "Invalid RDT: " + repr(rdt_message))
-			self.input_progress.hide()
-			return
-		self.rdtfolder = rdt_to_order_and_type(self.rdt)
-		self.beam1_model = self.beam1_model_entry.text()
-		self.beam2_model = self.beam2_model_entry.text()
-		self.beam1_reffolder = self.beam1_reffolder_entry.text()
-		self.beam2_reffolder = self.beam2_reffolder_entry.text()
-		self.beam1_folders = [self.beam1_folders_list.item(i).text() for i in range(self.beam1_folders_list.count())]
-		self.beam2_folders = [self.beam2_folders_list.item(i).text() for i in range(self.beam2_folders_list.count())]
-		self.knob = self.knob_entry.text()
-		self.output_path = self.default_output_path
-
-	def analysis_step2(self):
-		# Process LHCB1 data
-		if self.beam1_model and self.beam1_folders:
-			b1modelbpmlist, b1bpmdata = getmodelBPMs(self.beam1_model)
-			self.b1rdtdata = getrdt_omc3(self.ldb, "b1", b1modelbpmlist, b1bpmdata,
-										  self.beam1_reffolder, self.beam1_folders,
-										  self.knob, self.rdt, self.rdt_plane, 
-										  self.rdtfolder,
-										  self.simulation_checkbox.isChecked(), 
-										  self.simulation_file_entry.text(),
-										  self.log_error)
-			self.b1rdtdata = fit_BPM(self.b1rdtdata)
-
-	def analysis_step3(self):
-		# Process LHCB2 data and write output files:
-		if self.beam2_model and self.beam2_folders:
-			b2modelbpmlist, b2bpmdata = getmodelBPMs(self.beam2_model)
-			self.b2rdtdata = getrdt_omc3(self.ldb, "b2", b2modelbpmlist, b2bpmdata,
-										  self.beam2_reffolder, self.beam2_folders,
-										  self.knob, self.rdt, self.rdt_plane, 
-										  self.rdtfolder, 
-										  self.simulation_checkbox.isChecked(), 
-										  self.simulation_file_entry.text(),
-										  self.log_error)
-			self.b2rdtdata = fit_BPM(self.b2rdtdata)
-	
-	def analysis_step4(self):			
-		# Prompt to save LHCB1 RDT data just before calling write_RDTshifts
-		self.analysis_output_files = []
-		if self.beam1_model and self.beam1_folders:
-			self.save_b1_rdtdata()
-			# write_RDTshifts(self.b1rdtdata, self.rdt, self.rdt_plane, "b1", self.output_path, self.log_error)
-		if self.beam2_model and self.beam2_folders:
-			self.save_b2_rdtdata()
-			# write_RDTshifts(self.b2rdtdata, self.rdt, self.rdt_plane, "b2", self.output_path, self.log_error)
-
-		loaded_output_data = []
-		self.loaded_files_list.clear()
-		for f in self.analysis_output_files:
-			if f not in [self.loaded_files_list.item(i).text() for i in range(self.loaded_files_list.count())]:
-				self.loaded_files_list.addItem(f)
-			data = load_RDTdata(f)
-			loaded_output_data.append(data)
-		results = group_datasets(loaded_output_data, self.log_error)
-		if len(results) < 4:
-			QMessageBox.critical(self, "Error", "Not enough data from group_datasets.")
-			self.input_progress.hide()
-			return
-		self.b1rdtdata, self.b2rdtdata, self.rdt, self.rdt_plane = results
-		if self.b1rdtdata is None and self.b2rdtdata is None:
-			self.loaded_files_list.clear()
-			self.input_progress.hide()
-			return
-		self.input_progress.hide()
 
 	def log_error(self, error_msg):
 		QMessageBox.critical(self, "Error", error_msg)
@@ -1053,93 +951,7 @@ class RDTFeeddownGUI(QMainWindow):
 		self._toggle_select_all(self.beam2_folders_list, state)
 
 	def run_response(self):
-		self.simcorr_progress.show()
-		QApplication.processEvents()
-		self.corr_b1_reffile = self.corr_beam1_reffolder_entry.text()
-		self.corr_b2_reffile = self.corr_beam2_reffolder_entry.text()
-		self.corr_b1_measfile = self.corr_beam1_measfolder_entry.text()
-		self.corr_b2_measfile = self.corr_beam2_measfolder_entry.text()
-		self.corr_responses = {}
-		# Updated knob assignment based on b1andb2same_checkbox toggle
-		if self.b1andb2same_checkbox.isChecked():
-			self.b1_corr_knobname = self.corr_knobname_entry.text()
-			self.b2_corr_knobname = self.corr_knobname_entry.text()
-			self.b1_corr_knob = self.corr_knob_entry.text()
-			self.b2_corr_knob = self.corr_knob_entry.text()
-			self.b1_corr_xing = self.corr_xing_entry.text()
-			self.b2_corr_xing = self.corr_xing_entry.text()
-		else:
-			self.b1_corr_knobname = self.b1_corr_knobname_entry.text()
-			self.b1_corr_knob = self.b1_corr_knob_entry.text()
-			self.b2_corr_knobname = self.b2_corr_knobname_entry.text()
-			self.b2_corr_knob = self.b2_corr_knob_entry.text() 
-			self.b1_corr_xing = self.b1_corr_xing_entry.text()
-			self.b2_corr_xing = self.b2_corr_xing_entry.text()
-		self.rdt = self.corr_rdt_entry.text()
-		if not self.rdt:
-			self.log_error("RDT field must be filled!")
-			self.simcorr_progress.hide()
-			return
-		self.rdt_plane = self.corr_rdt_plane_dropdown.currentText()
-		if not self.rdt_plane:
-			self.log_error("RDT plane field must be filled!")
-			self.simcorr_progress.hide()
-			return
-		is_valid_rdt, rdt_message = validate_rdt_and_plane(self.rdt, self.rdt_plane)
-		if not is_valid_rdt:
-			QMessageBox.critical(self, "Error", "Invalid RDT: " + repr(rdt_message))
-			self.simcorr_progress.hide()
-			return
-		self.rdtfolder = rdt_to_order_and_type(self.rdt)
-		if self.corr_b1_reffile and self.corr_b1_measfile:
-			filenameb1, _ = QFileDialog.getSaveFileName(
-				self,
-				"Save LHCB1 RDT Data",
-				self.default_output_path,
-				"JSON Files (*.json)"
-			)
-		if self.corr_b2_reffile and self.corr_b2_measfile:
-			filenameb2, _ = QFileDialog.getSaveFileName(
-				self,
-				"Save LHCB2 RDT Data",
-				self.default_output_path,
-				"JSON Files (*.json)"
-			)
-
-		if filenameb1 == "" and filenameb2 == "":
-			self.log_error("No output file selected.")
-			self.simcorr_progress.hide()
-			return
-
-		if filenameb1:
-			if not filenameb1.lower().endswith(".json"):
-				filenameb1 += ".json"
-			try:
-				b1response = getrdt_sim("LHCB1", self.corr_b1_reffile, self.corr_b1_measfile, self.b1_corr_xing, 
-				self.b1_corr_knobname, self.b1_corr_knob, self.rdt, self.rdt_plane, self.rdtfolder, 
-				log_func=self.log_error)
-				self.corr_responses[filenameb1] = b1response
-				save_RDTdata(b1response, filenameb1)
-				item = QTreeWidgetItem([filenameb1, self.rdt, self.rdt_plane, self.b1_corr_knobname])
-				self.correction_loaded_files_list.addTopLevelItem(item)
-				self.populate_knob_manager()
-			except Exception as e:
-				self.log_error(f"Error in getting RDT: {e}")
-		if filenameb2:
-			if not filenameb2.lower().endswith(".json"):
-				filenameb2 += ".json"
-			try:
-				b2response = getrdt_sim("LHCB2", self.corr_b2_reffile, self.corr_b2_measfile, self.b2_corr_xing, 
-				self.b2_corr_knobname, self.b2_corr_knob, self.rdt, self.rdt_plane, self.rdtfolder, 
-				log_func=self.log_error)
-				self.corr_responses[filenameb2] = b2response
-				save_RDTdata(b2response, filenameb2)
-				item = QTreeWidgetItem([filenameb2, self.rdt, self.rdt_plane, self.b2_corr_knobname])
-				self.correction_loaded_files_list.addTopLevelItem(item)
-				self.populate_knob_manager()
-			except Exception as e:
-				self.log_error(f"Error in getting RDT: {e}")
-		self.simcorr_progress.hide()
+		run_response(self)
 
 	def toggle_b1andb2same_mode(self, state):
 		is_checked = (state == Qt.Checked)

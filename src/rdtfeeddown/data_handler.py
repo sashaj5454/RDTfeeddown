@@ -38,3 +38,29 @@ def save_RDTdata(data, filename):
 def load_RDTdata(filename):
 	with open(filename, 'r') as fin:
 		return json.load(fin)
+
+def save_b1_rdtdata(parent):
+	filename, _ = QFileDialog.getSaveFileName(
+		parent,
+		"Save LHCB1 RDT Data",
+		parent.default_output_path,
+		"JSON Files (*.json)"
+	)
+	if filename:
+		if not filename.lower().endswith(".json"):
+			filename += ".json"
+		save_RDTdata(parent.b1rdtdata, filename)
+		parent.analysis_output_files.append(filename)
+
+def save_b2_rdtdata(parent):
+	filename, _ = QFileDialog.getSaveFileName(
+		parent,
+		"Save LHCB2 RDT Data",
+		parent.default_output_path,
+		"JSON Files (*.json)"
+	)
+	if filename:
+		if not filename.lower().endswith(".json"):
+			filename += ".json"
+		save_RDTdata(parent.b2rdtdata, filename)
+		parent.analysis_output_files.append(filename)
