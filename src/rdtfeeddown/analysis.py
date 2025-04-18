@@ -46,6 +46,7 @@ def read_rdt_file(
 	"""
 	raw_data = []
 	rt = tfs.read(filepath)
+	beam_no = rt["Command"][-1]
 	rt_filtered = rt[rt['NAME'].str.contains('BPM')]
 	if rt_filtered.empty:
 		if log_func:
@@ -56,7 +57,7 @@ def read_rdt_file(
 
 	for index, row in rt_filtered.iterrows():
 			raw_data.append([str(row["NAME"]), float(row["AMP"]), float(row["REAL"]), float(row["IMAG"])])
-	return raw_data
+	return raw_data, beam_no
 
 def ensure_trailing_slash(
 	path
@@ -85,6 +86,7 @@ def readrdtdatafile(
 	if sim:
 		try:
 			df = tfs.read(cfile)
+			beam_no = df["Command"][-1]
 			df_filtered = df[df['NAME'].str.contains('BPM')]
 			if df_filtered.empty:
 				if log_func:
@@ -99,10 +101,10 @@ def readrdtdatafile(
 				row["AMP"] = np.abs(row[f"F{rdt}"])
 				raw_data.append([str(row["NAME"]), float(row["AMP"]), float(row["REAL"]), float(row["IMAG"])])
 		except Exception:
-			raw_data = read_rdt_file(filepath, log_func)
+			raw_data, beam_no = read_rdt_file(filepath, log_func)
 	else:
-		raw_data = read_rdt_file(filepath, log_func)
-	return filter_outliers(raw_data, threshold)
+		raw_data, beam_no = read_rdt_file(filepath, log_func)
+	return filter_outliers(raw_data, threshold), beam_no
 
 def update_bpm_data(
 	bpmdata, 
@@ -151,12 +153,12 @@ def getrdt_omc3(
 			regex_str = entry.get("MATCH", "")
 			if re.fullmatch(fr"^{regex_str}$", os.path.basename(ref)):
 				refk = float(entry.get("KNOB", 0))  # Default to 0 if "KNOB" is missing
+				if refk is None:
+					msg = f"Reference knob for {ref} not found in mapping dictionary."
+					if log_func:
+						log_func(msg)
+					raise RuntimeError(msg)
 				break
-		if refk is None:
-			msg = f"Reference knob for {ref} not found in mapping dictionary."
-			if log_func:
-				log_func(msg)
-			raise RuntimeError(msg)
 	else:  # Fallback to original method if not found
 		refk = get_analysis_knobsetting(ldb, knob, ref, log_func)
 		if refk is None:
@@ -165,7 +167,10 @@ def getrdt_omc3(
 				log_func(msg)
 			raise RuntimeError(msg)
 	try:
-		refdat = readrdtdatafile(ref, rdt, rdt_plane, rdtfolder, log_func)
+		refdat, beam_no = readrdtdatafile(ref, rdt, rdt_plane, rdtfolder, sim=sim, log_func=log_func)
+		if beam_no != beam[-1]:
+			log_func(f"Wrong beam used.")
+			raise RuntimeError(f"Wrong beam used.")
 	except FileNotFoundError:
 		msg = f"RDT file not found in reference folder: {ref}."
 		if log_func:
@@ -188,7 +193,10 @@ def getrdt_omc3(
 		else:  # Fallback to original method if not found
 			ksetting = get_analysis_knobsetting(ldb, knob, f, log_func)
 		try:
-			cdat = readrdtdatafile(f, rdt, rdt_plane, rdtfolder, log_func)
+			cdat, beam_no = readrdtdatafile(f, rdt, rdt_plane, rdtfolder,sim=sim, log_func=log_func)
+			if beam_no != beam[-1]:
+				log_func(f"Wrong beam used.")
+				raise RuntimeError(f"Wrong beam used.")
 		except FileNotFoundError:
 			msg = f"RDT file not found in measurement folder: {f}."
 			if log_func:

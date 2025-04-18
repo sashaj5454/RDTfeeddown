@@ -70,3 +70,22 @@ def validate_metas(data):
 		return True, metadatas[0]
 	else:
 		return False, metadatas[0]
+	
+def validate_file_structure(data, required_metadata, log_func=None):
+    required_keys = ['metadata', 'data']
+    if not isinstance(data, dict):
+        if log_func:
+            log_func("Data is not a dictionary.")
+        return False
+    for key in required_keys:
+        if key not in data:
+            if log_func:
+                log_func(f"Missing {key} in correction file.")
+            return False
+    metadata = data['metadata']
+    for key in required_metadata:
+        if key not in metadata:
+            if log_func:
+                log_func(f"Missing {key} in correction file metadata.")
+            return False
+    return True

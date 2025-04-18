@@ -1,6 +1,7 @@
 import json
-from qtpy.QtWidgets import QApplication, QMessageBox
+from qtpy.QtWidgets import QApplication, QMessageBox, QFileDialog
 from .analysis import group_datasets
+from .validation_utils import validate_file_structure
 
 def load_selected_files(parent):
 		parent.plot_progress.show()
@@ -13,7 +14,13 @@ def load_selected_files(parent):
 		for file in selected_files:
 			parent.loaded_files_list.addItem(file)
 			data = load_RDTdata(file)
+			valid = validate_file_structure(data, ['beam', 'ref', 'rdt', 'rdt_plane', 'knob'], parent.log_error)
+			if not valid:
+				continue
 			loaded_output_data.append(data)
+		if not loaded_output_data:
+			QMessageBox.critical(parent, "Error", "No valid data found.")
+			return
 		results = group_datasets(loaded_output_data, parent.log_error)
 		if len(results) < 4:
 			QMessageBox.critical(parent, "Error", "Not enough data from group_datasets.")

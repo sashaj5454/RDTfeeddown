@@ -1,9 +1,12 @@
 from .gui import RDTFeeddownGUI
 from qtpy.QtWidgets import QApplication
+from .config import dark_stylesheet
+
 
 if __name__ == "__main__":
     try:
         app = QApplication([])
+        app.setStyleSheet(dark_stylesheet)
         window = RDTFeeddownGUI()
         window.show()
         app.exec_()

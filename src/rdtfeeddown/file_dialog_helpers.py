@@ -2,6 +2,7 @@ from qtpy.QtWidgets import (QFileDialog, QMessageBox, QListView,
 							QTreeView, QAbstractItemView, QListWidgetItem, 
 							QFileSystemModel, QTreeWidgetItem)
 from .data_handler import load_RDTdata
+from .validation_utils import validate_file_structure
 
 def select_singleitem(
 	parent, 
@@ -127,10 +128,15 @@ def select_multiple_treefiles(parent, tree_widget, title="Select Files", filter=
 			]
 			for file in selected_files:
 				if file not in existing_files:
-					parent.saved_data[file] = load_RDTdata(file)
-					parent.rdt = parent.saved_data[file].get("metadata", {}).get("rdt", "Unknown RDT")
-					parent.rdt_plane = parent.saved_data[file].get("metadata", {}).get("rdt_plane", "Unknown Plane")
-					parent.corrector = parent.saved_data[file].get("metadata", {}).get("knob_name", "Unknown Corrector")
-					item = QTreeWidgetItem([file, parent.rdt, parent.rdt_plane, parent.corrector])
+					saved_data[file] = load_RDTdata(file)
+					valid = validate_file_structure(saved_data[file], ['beam', 'ref', 'rdt', 'rdt_plane', 'knob_name'], parent.log_error)
+					if not valid:
+						del saved_data[file]
+						continue
+					parent.rdt = saved_data[file].get("metadata", {}).get("rdt", "Unknown RDT")
+					parent.rdt_plane = saved_data[file].get("metadata", {}).get("rdt_plane", "Unknown Plane")
+					parent.corrector = saved_data[file].get("metadata", {}).get("knob_name", "Unknown Corrector")
+					beam = saved_data[file].get("metadata", {}).get("beam", "Unknown Beam")
+					item = QTreeWidgetItem([file, beam, parent.rdt, parent.rdt_plane, parent.corrector])
 					tree_widget.addTopLevelItem(item)
 		return dialog.selectedFiles()
