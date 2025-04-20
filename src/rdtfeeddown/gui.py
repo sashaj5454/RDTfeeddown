@@ -327,6 +327,7 @@ class RDTFeeddownGUI(QMainWindow):
 		self.bpm_search_entry = QLineEdit()
 		self.update_bpm_search_entry() 
 		self.bpm_search_entry.setPlaceholderText("Enter BPM search term")
+		self.bpm_search_entry.returnPressed.connect(self.graph_bpm)
 		bpm_layout = QHBoxLayout()
 		bpm_layout.addWidget(self.bpm_search_entry)
 		self.search_bpm_button = QPushButton("Search BPM")

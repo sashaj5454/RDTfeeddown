@@ -111,7 +111,7 @@ def select_multiple_treefiles(parent, tree_widget, title="Select Files", filter=
 		"""
 		dialog = QFileDialog(parent)
 		dialog.setWindowTitle(title)
-		dialog.setDirectory(parent.default_input_path)  # Use default output path, adjust if needed
+		dialog.setDirectory(parent.default_output_path)  # Use default output path, adjust if needed
 		dialog.setFileMode(QFileDialog.ExistingFiles)
 		dialog.setNameFilter(filter)
 

@@ -33,6 +33,10 @@ def run_analysis(parent):
 	if not parent.simulation_checkbox.isChecked():
 		ldb = initialize_statetracker()
 		is_valid_knob, knob_message = validate_knob(ldb, knob)
+		if not is_valid_knob:
+			QMessageBox.critical(parent, "Error", f"Invalid Knob: {knob_message}")
+			parent.input_progress.hide()
+			return
 	if not is_valid_knob:
 		QMessageBox.critical(parent, "Error", f"Invalid Knob: {knob_message}")
 		parent.input_progress.hide()
@@ -68,6 +72,7 @@ def run_analysis(parent):
 		QMessageBox.information(parent, "Analysis Complete", "Analysis completed successfully.")
 	except Exception as e:
 		parent.log_error(f"Error running analysis: {e}")
+		parent.input_progress.hide()
 	parent.input_progress.hide()
 
 def run_analysis_logic(parent, ldb, beam1_model, beam2_model, beam1_reffolder, beam2_reffolder, beam1_folders, beam2_folders, rdt, rdt_plane, rdt_folder, knob):
@@ -108,7 +113,7 @@ def run_analysis_logic(parent, ldb, beam1_model, beam2_model, beam1_reffolder, b
 		if f not in [parent.loaded_files_list.item(i).text() for i in range(parent.loaded_files_list.count())]:
 			parent.loaded_files_list.addItem(f)
 		data = load_RDTdata(f)
-		valid = validate_file_structure(data, ['beam', 'ref', 'rdt', 'rdt_plane', 'knob_name'], parent.log_error)
+		valid = validate_file_structure(data, ['beam', 'ref', 'rdt', 'rdt_plane', 'knob'], parent.log_error)
 		if not valid:
 			QMessageBox.critical(parent, "Error", f"Invalid file structure for {f}.")
 			parent.input_progress.hide()
@@ -221,7 +226,6 @@ def run_response_logic(parent, default_output_path, beam1_reffolder, beam2_reffo
 		log_func("No output file selected.")
 		parent.simcorr_progress.hide()
 		return
-	print(filenameb1)
 	if filenameb1:
 		if not filenameb1.lower().endswith(".json"):
 			filenameb1 += ".json"

@@ -6,7 +6,8 @@ from qtpy.QtWidgets import QApplication
 from .config import DARK_BACKGROUND_COLOR
 
 COLOR_LIST = ['#FFA500', '#87CEFA', '#00FA9A', '#FFFF00', '#00BFFF', '#FF4500', '#FF66CC']
-line_color = "#1e90ff"
+b1_line_color = "#00ccff"
+b2_line_color = 'r'
 
 IP_POS_DEFAULT = {
 	"LHCB1": {
@@ -73,15 +74,20 @@ def plot_BPM(BPM, fulldata, rdt, rdt_plane, ax1=None, ax2=None, log_func=None):
 		refit = polyfunction(xfit, fitdata[0][0], fitdata[0][1], fitdata[0][2])
 		imfit = polyfunction(xfit, fitdata[3][0], fitdata[3][1], fitdata[3][2])
 
+		if fulldata["metadata"]["beam"] == "b1":
+			line_color = b1_line_color
+		else:
+			line_color = b2_line_color
+
 		ax1.setLabel('left', f"<span style='color:white;'>{BPM} ΔRe(f<sub>{rdt_plane},{rdt}</sub>)")
 		ax1.setLabel('bottom', "Knob trim")
 		ax1.plot(xfit, refit, pen=line_color)
-		ax1.plot(xing, re, pen=None, symbol='x', symbolPen='r')
+		ax1.plot(xing, re, pen=None, symbol='x', symbolPen=line_color)
 
 		ax2.setLabel('left', f"<span style='color:white;'>{BPM} ΔIm(f<sub>{rdt_plane},{rdt}</sub>)")
 		ax2.setLabel('bottom', "Knob trim")
 		ax2.plot(xfit, imfit, pen=line_color)
-		ax2.plot(xing, im, pen=None, symbol='x', symbolPen='r')
+		ax2.plot(xing, im, pen=None, symbol='x', symbolPen=line_color)
 		
 	except Exception as e:
 		if log_func:
@@ -90,15 +96,15 @@ def plot_BPM(BPM, fulldata, rdt, rdt_plane, ax1=None, ax2=None, log_func=None):
 			print(f"Error plotting BPM {BPM}: {e}")
 		return None
 
-def plot_avg_rdt_shift(ax, data, rdt, rdt_plane):
+def plot_avg_rdt_shift(ax, data, line_color, rdt, rdt_plane):
 	"""
 	Plot the average RDT shift and standard deviation for given data on the provided axis.
 	"""
 	xing, ampdat, stddat = calculate_avg_rdt_shift(data)
 	ax.setLabel('left', f"<span style='color:white;'>√(ΔRe(f<sub>{rdt_plane},{rdt}</sub>)<sup>2</sup> + ΔIm(f<sub>{rdt_plane},{rdt}</sub>)<sup>2</sup>)")
 	ax.setLabel('bottom', "Knob trim")
-	ax.plot(xing, ampdat, pen=line_color, symbol='x', symbolPen='r')  # Plot the data points.
-	error_item = ErrorBarItem(x=xing, y=ampdat, top=stddat, bottom=stddat, beam=0.1, pen='r')
+	ax.plot(xing, ampdat, pen=line_color, symbol='x', symbolPen=line_color)  # Plot the data points.
+	error_item = ErrorBarItem(x=xing, y=ampdat, top=stddat, bottom=stddat, beam=0.1, pen=line_color)
 	ax.addItem(error_item)
 
 def plot_RDTshifts(b1data, b2data, rdt, rdt_plane, axes, log_func=None):
@@ -156,18 +162,22 @@ def plot_RDTshifts(b1data, b2data, rdt, rdt_plane, axes, log_func=None):
 			dimdkdat = np.array(dimdkdat)
 			dredkerr = np.array(dredkerr)
 			dimdkerr = np.array(dimdkerr)
+			if label == "LHCB1":
+				line_color = b1_line_color
+			else:
+				line_color = b2_line_color
 
 			# Plot average re^2 + im^2
-			plot_avg_rdt_shift(ax_avg, data, rdt, rdt_plane)
+			plot_avg_rdt_shift(ax_avg, data, line_color, rdt, rdt_plane)
 			# Plot dRe with error bars
-			error_re = ErrorBarItem(x=sdat, y=dredkdat, height=2*dredkerr, beam=0.1, pen='r')
+			error_re = ErrorBarItem(x=sdat, y=dredkdat, height=2*dredkerr, beam=0.1, pen=line_color)
 			ax_re.addItem(error_re)
-			ax_re.plot(sdat, dredkdat, pen=line_color, symbol='x', symbolPen='r')
+			ax_re.plot(sdat, dredkdat, pen=line_color, symbol='x', symbolPen=line_color)
 
 			# Plot dIm with error bars
-			error_im = ErrorBarItem(x=sdat, y=dimdkdat, height=2*dimdkerr, beam=0.1, pen='r')
+			error_im = ErrorBarItem(x=sdat, y=dimdkdat, height=2*dimdkerr, beam=0.1, pen=line_color)
 			ax_im.addItem(error_im)
-			ax_im.plot(sdat, dimdkdat, pen=line_color, symbol='x', symbolPen='r')
+			ax_im.plot(sdat, dimdkdat, pen=line_color, symbol='x', symbolPen=line_color)
 
 			plot_ips((ax_re, ax_im), label)
 
@@ -371,15 +381,19 @@ def plot_dRDTdknob(b1data, b2data, rdt, rdt_plane, axes, knoblist=None, log_func
 				ax_re.plot(sdat, dredkdat, pen='g', name=line_label)
 				ax_im.plot(sdat, dimdkdat, pen='g', name=line_label)
 			else:
+				if label == "LHCB1":
+					line_color = b1_line_color
+				else:
+					line_color = b2_line_color
 				# Plot dRe with error bars
-				error_re = ErrorBarItem(x=sdat, y=dredkdat, height=2*dredkerr, beam=0.1, pen='r')
+				error_re = ErrorBarItem(x=sdat, y=dredkdat, height=2*dredkerr, beam=0.1, pen=line_color)
 				ax_re.addItem(error_re)
-				ax_re.plot(sdat, dredkdat, pen=line_color, symbol='x', symbolPen='r', name=line_label)
+				ax_re.plot(sdat, dredkdat, pen=line_color, symbol='x', symbolPen=line_color, name=line_label)
 
 				# Plot dIm with error bars
-				error_im = ErrorBarItem(x=sdat, y=dimdkdat, height=2*dimdkerr, beam=0.1, pen='r')
+				error_im = ErrorBarItem(x=sdat, y=dimdkdat, height=2*dimdkerr, beam=0.1, pen=line_color)
 				ax_im.addItem(error_im)
-				ax_im.plot(sdat, dimdkdat, pen=line_color, symbol='x', symbolPen='r', name=line_label)
+				ax_im.plot(sdat, dimdkdat, pen=line_color, symbol='x', symbolPen=line_color, name=line_label)
 			plot_ips((ax_re, ax_im), label)
 
 
