@@ -140,3 +140,4 @@ def select_multiple_treefiles(parent, tree_widget, title="Select Files", filter=
 					item = QTreeWidgetItem([file, beam, parent.rdt, parent.rdt_plane, parent.corrector])
 					tree_widget.addTopLevelItem(item)
 		return dialog.selectedFiles()
+

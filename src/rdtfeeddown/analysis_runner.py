@@ -78,7 +78,7 @@ def run_analysis(parent):
 def run_analysis_logic(parent, ldb, beam1_model, beam2_model, beam1_reffolder, beam2_reffolder, beam1_folders, beam2_folders, rdt, rdt_plane, rdt_folder, knob):
 	if beam1_model and beam1_folders:
 			b1modelbpmlist, b1bpmdata = getmodelBPMs(beam1_model)
-			parent.b1rdtdata = getrdt_omc3(ldb, "b1", b1modelbpmlist, b1bpmdata,
+			parent.b1rdtdata = getrdt_omc3(ldb, "LHCB1", b1modelbpmlist, b1bpmdata,
 										  beam1_reffolder, beam1_folders,
 										  knob, rdt, rdt_plane, 
 										  rdt_folder,
@@ -89,7 +89,7 @@ def run_analysis_logic(parent, ldb, beam1_model, beam2_model, beam1_reffolder, b
 	QApplication.processEvents()
 	if beam2_model and beam2_folders:
 		b2modelbpmlist, b2bpmdata = getmodelBPMs(beam2_model)
-		parent.b2rdtdata = getrdt_omc3(ldb, "b2", b2modelbpmlist, b2bpmdata,
+		parent.b2rdtdata = getrdt_omc3(ldb, "LHCB2", b2modelbpmlist, b2bpmdata,
 										beam2_reffolder, beam2_folders,
 										knob, rdt, rdt_plane, 
 										rdt_folder, 
@@ -102,10 +102,8 @@ def run_analysis_logic(parent, ldb, beam1_model, beam2_model, beam1_reffolder, b
 	parent.analysis_output_files = []
 	if beam1_model and beam1_folders:
 		save_b1_rdtdata(parent)
-		# write_RDTshifts(self.b1rdtdata, self.rdt, self.rdt_plane, "b1", self.output_path, self.log_error)
 	if beam2_model and beam2_folders:
 		save_b2_rdtdata(parent)
-		# write_RDTshifts(self.b2rdtdata, self.rdt, self.rdt_plane, "b2", self.output_path, self.log_error)
 
 	loaded_output_data = []
 	parent.loaded_files_list.clear()

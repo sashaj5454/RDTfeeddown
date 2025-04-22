@@ -414,56 +414,56 @@ def group_datasets(datasets, log_func=None):
 	if len(datasets) == 1:
 		# If only one dataset, return it as is
 		dataset = datasets[0]
-		beam = dataset['metadata'].get('beam')
-		if beam is None:
+		beam_no = dataset['metadata'].get('beam')[-1]
+		if beam_no is None:
 			if log_func:
 				log_func("Dataset metadata missing the 'beam' key.")
 			else:
 				raise ValueError("Dataset metadata missing the 'beam' key.")
-		if beam.lower() == 'b1':
+		if beam_no== '1':
 			grouped_b1['metadata'] = dataset['metadata']
 			grouped_b1['data'] = dataset['data']
 			return grouped_b1, None, grouped_b1['metadata']['rdt'], grouped_b1['metadata']['rdt_plane']
-		elif beam.lower() == 'b2':
+		elif beam_no == '2':
 			grouped_b2['metadata'] = dataset['metadata']
 			grouped_b2['data'] = dataset['data']
 			return None, grouped_b2, grouped_b2['metadata']['rdt'], grouped_b2['metadata']['rdt_plane']
 	for data in datasets:
-		beam = data['metadata'].get('beam')
-		if beam is None:
+		beam_no = data['metadata'].get('beam')[-1]
+		if beam_no is None:
 			if log_func:
 				log_func("Dataset metadata missing the 'beam' key.")
 			else:
 				raise ValueError("Dataset metadata missing the 'beam' key.")
 		# Group by the beam value: for example, "b1" or "b2"
-		if beam.lower() == 'b1':
+		if beam_no == '1':
 			# Set reference metadata if not set
 			if grouped_b1['metadata'] is None:
 				grouped_b1['metadata'] = data['metadata']
 			# Check for consistency with already grouped metadata:
 			elif data['metadata'] != grouped_b1['metadata']:
 				if log_func:
-					log_func("Datasets for beam b1 have differing metadata; cannot group them together.")
+					log_func("Datasets for beam LHCB1 have differing metadata; cannot group them together.")
 				else:
-					raise ValueError("Datasets for beam 1 have differing metadata; cannot group them together.")
+					raise ValueError("Datasets for LHCB2 have differing metadata; cannot group them together.")
 				return None, None, None, None
 			# Merge the data dictionaries
 			grouped_b1['data'].update(data['data'])
-		elif beam.lower() == 'b2':
+		elif beam_no == '2':
 			if grouped_b2['metadata'] is None:
 				grouped_b2['metadata'] = data['metadata']
 			elif data['metadata'] != grouped_b2['metadata']:
 				if log_func:
-					log_func("Datasets for beam b2 have differing metadata; cannot group them together.")
+					log_func("Datasets for LHCB2 have differing metadata; cannot group them together.")
 				else:
-					raise ValueError("Datasets for beam 2 have differing metadata; cannot group them together.")
+					raise ValueError("Datasets for LHCB2 have differing metadata; cannot group them together.")
 				return None, None, None, None
 			grouped_b2['data'].update(data['data'])
 		else:
 			if log_func:
-				log_func(f"Unexpected beam value: {beam}")
+				log_func(f"Unexpected beam value: LHCB{beam_no}")
 			else:
-				raise ValueError(f"Unexpected beam value: {beam}")
+				raise ValueError(f"Unexpected beam value: LHCB{beam_no}")
 	if {k: v for k, v in grouped_b1['metadata'].items() if k != 'beam' and k != 'ref'} != \
 		{k: v for k, v in grouped_b2['metadata'].items() if k != 'beam' and k != 'ref'}:
 			if log_func:

@@ -1,3 +1,5 @@
+from qtpy.QtGui import QIcon, QPixmap, QPainter, QColor
+from qtpy.QtCore import QSize, Qt
 DARK_BACKGROUND_COLOR = "#2e2e2e"
 plot_colour = "#5C62D6"
 run_colour = "green"
@@ -52,7 +54,71 @@ QCheckBox::indicator {{
     background-color: #3c3c3c;
 }}
 QCheckBox::indicator:checked {{
-    background-color: #f2f2f2;
+    image: url(:/icons/Images/tick.png);
+}}
+QToolTip {{
+    color: white;
+    background-color: #2e2e2e;
+    border: 1px solid white;
+}}
+"""
+
+def recolor_icon(icon, color, size=QSize(28, 28)):
+    # Get a pixmap from the icon (using its actual size)
+    pixmap = icon.pixmap(icon.actualSize(size))
+    
+    # Create a new pixmap with a transparent background
+    new_pixmap = QPixmap(pixmap.size())
+    new_pixmap.fill(Qt.transparent)
+    
+    # Set up a QPainter to recolor the pixmap
+    painter = QPainter(new_pixmap)
+    # Draw the original pixmap
+    painter.drawPixmap(0, 0, pixmap)
+    
+    # Set composition mode to tint the pixmap
+    painter.setCompositionMode(QPainter.CompositionMode_SourceIn)
+    painter.fillRect(new_pixmap.rect(), QColor(color))
+    painter.end()
+    
+    return QIcon(new_pixmap)
+
+minimize_stylesheet = f"""
+#minimizeButton {{
+			background-color: #3c3c3c;
+			color: white;
+			border: none;
+			padding: 5px;
+			border-radius: 3px;
+		}}
+#minimizeButton:hover {{
+    background-color: #484848;
+}}
+"""
+
+maximize_stylesheet = f"""
+#maximizeButton {{
+            background-color: #3c3c3c;
+            color: white;
+            border: none;
+            padding: 5px;
+            border-radius: 3px;
+        }}  
+#maximizeButton:hover {{
+    background-color: #484848;
+}}
+"""
+
+close_stylesheet = f"""
+#closeButton {{
+            background-color: #3c3c3c;
+            color: white;
+            border: none;
+            padding: 5px;
+            border-radius: 3px;
+        }}
+#closeButton:hover {{
+    background-color: #484848;
 }}
 """
 

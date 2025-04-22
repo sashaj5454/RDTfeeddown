@@ -2,10 +2,10 @@ import json
 from qtpy.QtWidgets import (
 	QApplication, QMainWindow, QGridLayout, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QCheckBox,
 	QFileDialog, QListWidget, QTabWidget, QWidget, QMessageBox, QProgressBar, QSizePolicy, QGroupBox, QComboBox,
-	QAbstractItemView, QTreeWidget
+	QAbstractItemView, QTreeWidget, QTreeWidgetItem, QToolButton, QStyle
 )
 import pyqtgraph as pg
-from qtpy.QtCore import Qt   # Import Qt for the correct constants and QTimer
+from qtpy.QtCore import Qt, QSize   # Import Qt for the correct constants and QTimer
 from .validation_utils import validate_knob, validate_metas, validate_file_structure
 from .utils import load_defaults, initialize_statetracker, MyViewBox
 from .analysis_runner import run_analysis, run_response
@@ -13,19 +13,25 @@ from .analysis import group_datasets
 from .plotting import plot_BPM, plot_RDT, plot_RDTshifts, plot_dRDTdknob, setup_blankcanvas
 from .file_dialog_helpers import select_singleitem, select_multiple_files, select_folders, select_multiple_treefiles
 from .data_handler import load_selected_files, load_RDTdata
-from .config import DARK_BACKGROUND_COLOR, plot_stylesheet, run_stylesheet, remove_stylesheet, b1_stylesheet, b2_stylesheet
+from .config import recolor_icon, DARK_BACKGROUND_COLOR, minimize_stylesheet, maximize_stylesheet, close_stylesheet, plot_stylesheet, run_stylesheet, remove_stylesheet, b1_stylesheet, b2_stylesheet
 pg.setConfigOption('foreground', 'w')
 
 class RDTFeeddownGUI(QMainWindow):
 	def __init__(self):
 		super().__init__()
-		self.setWindowTitle("RDT Feeddown Analysis")
+		self.setWindowFlags(Qt.FramelessWindowHint | Qt.Window)
+		# Main layout
 		self.central_widget = QWidget()
 		self.setCentralWidget(self.central_widget)
 		self.layout = QVBoxLayout(self.central_widget)
+		self.layout.setContentsMargins(0, 0, 0, 0)
+
+		# Add the custom title bar
+		self.layout.addWidget(self.create_custom_title_bar())
+
+		# Add the rest of the GUI
 		self.tabs = QTabWidget()
 		self.layout.addWidget(self.tabs)
-		self.rdt, self.rdt_plane, self.corr_responses = None, None, {}
 		self.buildInputTab()
 		self.buildValidationTab()
 		self.buildCorrectionTab()
@@ -41,11 +47,13 @@ class RDTFeeddownGUI(QMainWindow):
 		paths_layout.addWidget(self.input_path_label)
 		self.change_input_path_button = QPushButton("Change Input Path")
 		self.change_input_path_button.clicked.connect(self.change_default_input_path)
+		self.change_input_path_button.setToolTip("Select the default input path for analysis files, see Help for how to set it before launch")
 		paths_layout.addWidget(self.change_input_path_button)
 		self.output_path_label = QLabel(f"Default Output Path: {self.default_output_path}")
 		paths_layout.addWidget(self.output_path_label)
 		self.change_output_path_button = QPushButton("Change Output Path")
 		self.change_output_path_button.clicked.connect(self.change_default_output_path)
+		self.change_output_path_button.setToolTip("Select the default output path for analysis files, see Help for how to set it before launch")
 		paths_layout.addWidget(self.change_output_path_button)
 		paths_group.setLayout(paths_layout)
 		self.input_layout.addWidget(paths_group)
@@ -75,6 +83,7 @@ class RDTFeeddownGUI(QMainWindow):
 													"Select LHCB1 Model",
 													self.beam1_model_entry, None,
 													folder=True))
+		self.beam1_model_button.setToolTip("Select LHCB1 model folder - needed only for valid BPM list")
 		beam1_layout.addWidget(self.beam1_model_button)
 		beam_model_layout.addLayout(beam1_layout)
 		# LHCB2
@@ -89,6 +98,7 @@ class RDTFeeddownGUI(QMainWindow):
 													"Select LHCB2 Model",
 													None, self.beam2_model_entry,
 													folder=True))
+		self.beam2_model_button.setToolTip("Select LHCB2 model folder - needed only for valid BPM list")
 		beam2_layout.addWidget(self.beam2_model_button)
 		beam_model_layout.addLayout(beam2_layout)
 		beam_model_group.setLayout(beam_model_layout)
@@ -116,6 +126,7 @@ class RDTFeeddownGUI(QMainWindow):
 													self.beam1_reffolder_entry, self.beam2_reffolder_entry,
 													"LHCB1 folders (Beam1BunchTurn*);;All Folders (*)",
 													folder = True))
+		self.beam1_reffolder_button.setToolTip("Select LHCB1 OMC analysis folder to be used as the reference")
 		beam1_buttons_layout.addWidget(self.beam1_reffolder_button)
 		self.beam1_reffolder_remove_button = QPushButton("Remove File")
 		self.beam1_reffolder_remove_button.setStyleSheet(remove_stylesheet)
@@ -139,6 +150,7 @@ class RDTFeeddownGUI(QMainWindow):
 													self.beam1_reffolder_entry, self.beam2_reffolder_entry,
 													"LHCB2 folders (Beam2BunchTurn*);;All Folders (*)",
 													folder = True))
+		self.beam2_reffolder_button.setToolTip("Select LHCB2 OMC analysis folder to be used as the reference")
 		beam2_buttons_layout.addWidget(self.beam2_reffolder_button)
 		self.beam2_reffolder_remove_button = QPushButton("Remove File")
 		self.beam2_reffolder_remove_button.setStyleSheet(remove_stylesheet)
@@ -167,6 +179,7 @@ class RDTFeeddownGUI(QMainWindow):
 		beam1_buttons_layout = QHBoxLayout()
 		self.beam1_folders_button = QPushButton("Add Folders")
 		self.beam1_folders_button.clicked.connect(self.select_beam1_folders)
+		self.beam1_folders_button.setToolTip("Select LHCB1 OMC analysis folders to be used as comparison with reference - needs more than 3 different xing angles")
 		beam1_buttons_layout.addWidget(self.beam1_folders_button)
 		self.beam1_remove_button = QPushButton("Remove Selected")
 		self.beam1_remove_button.setStyleSheet(remove_stylesheet)
@@ -190,6 +203,7 @@ class RDTFeeddownGUI(QMainWindow):
 		beam2_buttons_layout = QHBoxLayout()
 		self.beam2_folders_button = QPushButton("Add Folders")
 		self.beam2_folders_button.clicked.connect(self.select_beam2_folders)
+		self.beam2_folders_button.setToolTip("Select LHCB2 OMC analysis folders to be used as comparison with reference - needs more than 3 different xing angles")
 		beam2_buttons_layout.addWidget(self.beam2_folders_button)
 		self.beam2_remove_button = QPushButton("Remove Selected")
 		self.beam2_remove_button.setStyleSheet(remove_stylesheet)
@@ -217,7 +231,7 @@ class RDTFeeddownGUI(QMainWindow):
 		self.rdt_plane_dropdown = QComboBox()
 		self.rdt_plane_dropdown.addItems(["x", "y"])
 		param_layout.addWidget(self.rdt_plane_dropdown)
-		self.knob_label = QLabel("Xing knob name:")
+		self.knob_label = QLabel("Xing Knob Name:")
 		param_layout.addWidget(self.knob_label)          # "Knob:"
 		self.knob_entry = QLineEdit("LHCBEAM/IP2-XING-V-MURAD")
 		param_layout.addWidget(self.knob_entry)
@@ -234,6 +248,7 @@ class RDTFeeddownGUI(QMainWindow):
 		param_layout.addWidget(self.simulation_file_button)
 		self.validate_knob_button = QPushButton("Validate Knob")
 		self.validate_knob_button.clicked.connect(self.validate_knob_button_clicked)
+		self.validate_knob_button.setToolTip("Only required if want to check if knob exists in Timber!!!")
 		param_layout.addWidget(self.validate_knob_button)
 		param_group.setLayout(param_layout)
 		self.input_layout.addWidget(param_group)
@@ -288,12 +303,14 @@ class RDTFeeddownGUI(QMainWindow):
 		validation_files_layout.addLayout(validation_buttons_layout)
 		self.validation_layout.addLayout(validation_files_layout)
 
-		load_selected_files_button = QPushButton("Load Selected Files")
+		load_selected_files_button = QPushButton("Load Selected Files For Plotting")
 		load_selected_files_button.clicked.connect(lambda: load_selected_files(self))
+		load_selected_files_button.setToolTip("Load selected analysis files for plotting (if files are not loaded, plotting of them is not possible)")
 		self.validation_layout.addWidget(load_selected_files_button)
 
-		self.loaded_files_list = QListWidget()
-		self.loaded_files_list.setFixedHeight(100)
+		self.loaded_files_list = QTreeWidget()
+		self.loaded_files_list.setHeaderLabels(["Filename", "Beam", "RDT", "RDT plane", "Xing Knob Name"])
+		self.loaded_files_list.setFixedHeight(100) 
 		self.loaded_files_list.setSelectionMode(QAbstractItemView.NoSelection)
 		self.validation_layout.addWidget(self.loaded_files_list, stretch=1)
 
@@ -319,6 +336,7 @@ class RDTFeeddownGUI(QMainWindow):
 		bpm_layout.addWidget(self.bpm_search_entry)
 		self.search_bpm_button = QPushButton("Search BPM")
 		self.search_bpm_button.clicked.connect(self.search_bpm)
+		self.search_bpm_button.setToolTip("Only required if want to check if BPM exists in data")
 		bpm_layout.addWidget(self.search_bpm_button)
 		self.graph_bpm_button = QPushButton("Plot BPM")
 		self.graph_bpm_button.setStyleSheet(plot_stylesheet)
@@ -400,6 +418,7 @@ class RDTFeeddownGUI(QMainWindow):
 															"Select LHCB1 Reference File", 
 															self.corr_beam1_reffolder_entry, None,
 															folder=True))
+		self.corr_beam1_reffolder_button.setToolTip("Select LHCB1 OMC analysis folder to be used as the reference")
 		beam1_ref_buttons_layout.addWidget(self.corr_beam1_reffolder_button)
 		self.corr_beam1_reffolder_remove_button = QPushButton("Remove File")
 		self.corr_beam1_reffolder_remove_button.setStyleSheet(remove_stylesheet)
@@ -422,6 +441,7 @@ class RDTFeeddownGUI(QMainWindow):
 															"Select LHCB2 Reference Folder", 
 															None, self.corr_beam2_reffolder_entry,
 															folder=True))
+		self.corr_beam2_reffolder_button.setToolTip("Select LHCB2 OMC analysis folder to be used as the reference")
 		beam2_ref_buttons_layout.addWidget(self.corr_beam2_reffolder_button)
 		self.corr_beam2_reffolder_remove_button = QPushButton("Remove File")
 		self.corr_beam2_reffolder_remove_button.setStyleSheet(remove_stylesheet)
@@ -453,6 +473,7 @@ class RDTFeeddownGUI(QMainWindow):
 															"Select LHCB1 Response Folder", 
 															self.corr_beam1_measfolder_entry, None,
 															folder=True))
+		self.corr_beam1_measfolder_button.setToolTip("Select LHCB1 OMC analysis folder which only has a different XING angle to the reference")
 		beam1_meas_buttons_layout.addWidget(self.corr_beam1_measfolder_button)
 		self.corr_beam1_measfolder_remove_button = QPushButton("Remove File")
 		self.corr_beam1_measfolder_remove_button.setStyleSheet(remove_stylesheet)
@@ -475,6 +496,7 @@ class RDTFeeddownGUI(QMainWindow):
 															"Select LHCB2 Response Folder", 
 															None, self.corr_beam2_measfolder_entry,
 															folder=True))
+		self.corr_beam2_measfolder_button.setToolTip("Select LHCB2 OMC analysis folder which only has a different XING angle to the reference")
 		beam2_meas_buttons_layout.addWidget(self.corr_beam2_measfolder_button)
 		self.corr_beam2_measfolder_remove_button = QPushButton("Remove File")
 		self.corr_beam2_measfolder_remove_button.setStyleSheet(remove_stylesheet)
@@ -510,6 +532,7 @@ class RDTFeeddownGUI(QMainWindow):
 		separate_knob_layout = QHBoxLayout()
 		# LHCB1 knob fields
 		lhcb1_layout = QVBoxLayout()
+		h_layout = QHBoxLayout()
 		self.b1_corr_knobname_label = QLabel("LHCB1 Corrector name:")
 		self.b1_corr_knobname_label.setStyleSheet(b1_stylesheet)
 		lhcb1_layout.addWidget(self.b1_corr_knobname_label)
@@ -519,11 +542,13 @@ class RDTFeeddownGUI(QMainWindow):
 		self.b1_corr_knob_label.setStyleSheet(b1_stylesheet)
 		lhcb1_layout.addWidget(self.b1_corr_knob_label)
 		self.b1_corr_knob_entry = QLineEdit()
+		self.b1_corr_knob_entry.setToolTip("Enter the corrector value for LHCB1 (should be same for both reference and response)")
 		lhcb1_layout.addWidget(self.b1_corr_knob_entry)
-		self.b1_corr_xing_label = QLabel("LHCB1 XING angle:")
+		self.b1_corr_xing_label = QLabel("LHCB1 difference in XING angle:")
 		self.b1_corr_xing_label.setStyleSheet(b1_stylesheet)
 		lhcb1_layout.addWidget(self.b1_corr_xing_label)
 		self.b1_corr_xing_entry = QLineEdit()
+		self.b1_corr_xing_entry.setToolTip("Enter the difference in xing angle for LHCB1 (between reference and response)")
 		lhcb1_layout.addWidget(self.b1_corr_xing_entry)
 		separate_knob_layout.addLayout(lhcb1_layout)
 		# LHCB2 knob fields
@@ -537,11 +562,13 @@ class RDTFeeddownGUI(QMainWindow):
 		self.b2_corr_knob_label.setStyleSheet(b2_stylesheet)
 		lhcb2_layout.addWidget(self.b2_corr_knob_label)
 		self.b2_corr_knob_entry = QLineEdit()
+		self.b2_corr_knob_entry.setToolTip("Enter the corrector value for LHCB2 (should be same for both reference and response)")
 		lhcb2_layout.addWidget(self.b2_corr_knob_entry)
-		self.b2_corr_xing_label = QLabel("LHCB2 XING angle:")
+		self.b2_corr_xing_label = QLabel("LHCB2 difference in XING angle:")
 		self.b2_corr_xing_label.setStyleSheet(b2_stylesheet)
 		lhcb2_layout.addWidget(self.b2_corr_xing_label)
 		self.b2_corr_xing_entry = QLineEdit()
+		self.b2_corr_xing_entry.setToolTip("Enter the difference in xing angle for LHCB2 (between reference and response)")
 		lhcb2_layout.addWidget(self.b2_corr_xing_entry)
 		separate_knob_layout.addLayout(lhcb2_layout)
 		corr_param_layout.addLayout(separate_knob_layout)
@@ -550,7 +577,8 @@ class RDTFeeddownGUI(QMainWindow):
 		self.corr_knobname_entry = QLineEdit()
 		self.corr_knob_entry_label = QLabel("Shared Corrector value:")
 		self.corr_knob_entry = QLineEdit()
-		self.corr_xing_entry_label = QLabel("Shared XING angle:")
+		self.corr_knob_entry.setToolTip("Enter the corrector value (should be same for both reference and response)")
+		self.corr_xing_entry_label = QLabel("Shared difference in XING angle:")
 		self.corr_xing_entry = QLineEdit()
 		self.corr_knobname_entry_label.hide()
 		self.corr_knobname_entry.hide()
@@ -571,7 +599,7 @@ class RDTFeeddownGUI(QMainWindow):
 		# --- Run Button Group ---
 		run_response_group = QGroupBox("Find Response")
 		run_response_layout = QVBoxLayout()
-		self.run_response_button = QPushButton("Find response")
+		self.run_response_button = QPushButton("Find Response")
 		self.run_response_button.setStyleSheet(run_stylesheet)
 		self.run_response_button.clicked.connect(self.run_response)
 		run_response_layout.addWidget(self.run_response_button)
@@ -585,7 +613,7 @@ class RDTFeeddownGUI(QMainWindow):
 		self.graph_tab = QWidget()
 		graph_tab_layout = QVBoxLayout(self.graph_tab)
 		# Loaded Files section
-		loaded_files_group = QGroupBox("Loaded Files")
+		loaded_files_group = QGroupBox("Loaded Corrector Response Files")
 		loaded_files_group.setFixedHeight(150)
 		loaded_files_layout = QVBoxLayout()
 		self.correction_loaded_files_list = QTreeWidget()
@@ -596,8 +624,9 @@ class RDTFeeddownGUI(QMainWindow):
 		self.correction_loaded_files_list.itemSelectionChanged.connect(lambda: self.update_select_all_checkbox(self.correction_loaded_files_list, self.select_all_files_checkbox))
 
 		btn_layout = QHBoxLayout()
-		self.load_file_button = QPushButton("Load File")
+		self.load_file_button = QPushButton("Load Files")
 		self.load_file_button.clicked.connect(self.load_selected_correction_files)
+		self.load_file_button.setToolTip("Load selected response files to use to match to the analysis files")
 		btn_layout.addWidget(self.load_file_button)
 		self.remove_file_button = QPushButton("Remove Selected Files")
 		self.remove_file_button.setStyleSheet(remove_stylesheet)
@@ -611,40 +640,42 @@ class RDTFeeddownGUI(QMainWindow):
 		graph_tab_layout.addWidget(loaded_files_group)
 				
 		# Measurement to be matched group
-		measurement_match_group = QGroupBox("Measurement to be matched")
+		measurement_match_group = QGroupBox("Measurements to be matched")
 		match_layout = QHBoxLayout(measurement_match_group)
 
 		# LHCB1 Single Measurement
 		b1_container = QWidget()
 		b1_vlayout = QVBoxLayout(b1_container)
-		b1_label = QLabel("LHCB1 Single Measurement:")
+		b1_label = QLabel("LHCB1 Analysis File To Match:")
 		b1_label.setStyleSheet(b1_stylesheet)
 		b1_vlayout.addWidget(b1_label)
 		self.b1_match_entry = QLineEdit()
 		b1_vlayout.addWidget(self.b1_match_entry)
 		b1_button = QPushButton("Browse File")
 		b1_button.clicked.connect(lambda: select_singleitem(self, "LHCB1",
-															"Select LHCB1 Match File",
+															"Select LHCB1 Analysis File",
 															self.b1_match_entry, None,
-															"JSON Files (*.json);;All Files (*)" 
+															"JSON Files (*.json)" 
 															))
+		b1_button.setToolTip("Select LHCB1 analysis file outputted in the Validation tab from the measurements to be matched to with the response files")
 		b1_vlayout.addWidget(b1_button)
 		match_layout.addWidget(b1_container)
 
 		# LHCB2 Single Measurement
 		b2_container = QWidget()
 		b2_vlayout = QVBoxLayout(b2_container)
-		b2_label = QLabel("LHCB2 Single Measurement:")
+		b2_label = QLabel("LHCB2 Analysis File To Match:")
 		b2_label.setStyleSheet(b2_stylesheet)
 		b2_vlayout.addWidget(b2_label)
 		self.b2_match_entry = QLineEdit()
 		b2_vlayout.addWidget(self.b2_match_entry)
 		b2_button = QPushButton("Browse File")
 		b2_button.clicked.connect(lambda: select_singleitem(self, "LHCB2",
-															"Select LHCB2 Match File",
+															"Select LHCB2 Analysis File",
 															None, self.b2_match_entry,
-															"JSON Files (*.json);;Select LHCB2 Match File"
+															"JSON Files (*.json)"
 															))
+		b2_button.setToolTip("Select LHCB2 analysis file outputted in the Validation tab from the measurements to be matched to with the response files")
 		b2_vlayout.addWidget(b2_button)
 		match_layout.addWidget(b2_container)
 
@@ -751,7 +782,7 @@ class RDTFeeddownGUI(QMainWindow):
 				loaded_output_data = []
 				self.loaded_files_list.clear()
 				for file in selected_files:
-					self.loaded_files_list.addItem(file)
+					# self.loaded_files_list.addItem(file)
 					data = load_RDTdata(file)
 					valid = validate_file_structure(data, ['beam', 'ref', 'rdt', 'rdt_plane', 'knob'], self.log_error)
 					if not valid:
@@ -762,6 +793,13 @@ class RDTFeeddownGUI(QMainWindow):
 								self.validation_files_list.takeItem(row)
 							continue
 					loaded_output_data.append(data)
+					metadata = data.get("metadata", {})
+					beam     = metadata.get("beam", "")
+					rdt_val  = metadata.get("rdt", "")
+					rdt_plane= metadata.get("rdt_plane", "")
+					knob     = metadata.get("knob", "")
+					item = QTreeWidgetItem([file, beam, rdt_val, rdt_plane, knob])
+					self.loaded_files_list.addTopLevelItem(item)
 				if not loaded_output_data:
 					self.loaded_files_list.clear()
 					QMessageBox.critical(self, "Error", "No valid data loaded.")
@@ -877,14 +915,10 @@ class RDTFeeddownGUI(QMainWindow):
 	# New method to toggle simulation mode UI changes
 	def toggle_simulation_mode(self, state):
 		if state == Qt.Checked:
-			# self.knob_entry.hide()
-			# self.knob_label.hide()
 			self.validate_knob_button.hide()
 			self.simulation_file_entry.show()
 			self.simulation_file_button.show()
 		else:
-			# self.knob_entry.show()
-			# self.knob_label.show()
 			self.validate_knob_button.show()
 			self.simulation_file_entry.hide()
 			self.simulation_file_button.hide()
@@ -1026,7 +1060,7 @@ class RDTFeeddownGUI(QMainWindow):
 			if (
 				self.b1_response_meas.get('metadata', {}).get('rdt') == self.rdt and
 				self.b1_response_meas.get('metadata', {}).get('rdt_plane') == self.rdt_plane and
-				self.b1_response_meas.get('metadata', {}).get('beam') == "b1"
+				self.b1_response_meas.get('metadata', {}).get('beam')[-1] == "1"
 			):
 				self.b1_response_meas['data'] = {
 					key: value for key, value in self.b1_response_meas['data'].items()
@@ -1040,7 +1074,7 @@ class RDTFeeddownGUI(QMainWindow):
 			if (
 				self.b2_response_meas.get('metadata', {}).get('rdt') == self.rdt and
 				self.b2_response_meas.get('metadata', {}).get('rdt_plane') == self.rdt_plane and
-				self.b2_response_meas.get('metadata', {}).get('beam') == "b2"
+				self.b2_response_meas.get('metadata', {}).get('beam')[-1] == "2"
 			):
 				self.b2_response_meas['data'] = {
 					key: value for key, value in self.b2_response_meas['data'].items()
@@ -1228,3 +1262,119 @@ class RDTFeeddownGUI(QMainWindow):
 		if event.button() == Qt.RightButton:
 			for plot_widget in axes:
 				plot_widget.getViewBox().autoRange()
+
+	def create_custom_title_bar(self):
+		# Create a custom title bar widget
+		title_bar = QWidget()
+		title_bar_layout = QHBoxLayout()
+		title_bar_layout.setContentsMargins(0, 0, 0, 0)
+
+		# Add the help button
+		help_button = QToolButton()
+		help_button.setObjectName("helpButton")  # Set a unique object name
+		help_button.setIcon(self.style().standardIcon(QStyle.SP_MessageBoxQuestion))
+		help_button.setToolTip("Click for Help")
+		help_button.clicked.connect(self.show_help)
+		title_bar_layout.addWidget(help_button)
+
+		title_bar_layout.addStretch()
+
+		# Add the title text
+		title_label = QLabel("RDT Feeddown Analysis")
+		title_label.setStyleSheet("color: white; font-weight: bold;")
+		title_bar_layout.addWidget(title_label)
+
+		title_bar_layout.addStretch()
+
+		# Add minimize button
+		minimize_button = QToolButton()
+		minimize_button.setObjectName("minimizeButton")  # Set a unique object name
+		style = self.style().standardIcon(QStyle.SP_TitleBarMinButton)
+		cust_style = recolor_icon(style, "white",QSize(30,30))
+		minimize_button.setIcon(cust_style)
+		minimize_button.setToolTip("Minimize")
+		minimize_button.clicked.connect(self.showMinimized)
+		minimize_button.setStyleSheet(minimize_stylesheet)
+		title_bar_layout.addWidget(minimize_button)
+
+		# Add maximize/restore button
+		self.maximize_button = QToolButton()
+		self.maximize_button.setObjectName("maximizeButton")  # Set a unique object name
+		style2 = self.style().standardIcon(QStyle.SP_TitleBarMaxButton)
+		cust_style2 = recolor_icon(style2, "white")
+		self.maximize_button.setIcon(cust_style2)
+		self.maximize_button.clicked.connect(self.toggle_maximize_restore)
+		self.maximize_button.setToolTip("Maximize/Restore")
+		self.maximize_button.setStyleSheet(maximize_stylesheet)
+		title_bar_layout.addWidget(self.maximize_button)
+
+		# Add close button
+		close_button = QToolButton()
+		close_button.setObjectName("closeButton")  # Set a unique object name
+		style3 = self.style().standardIcon(QStyle.SP_TitleBarCloseButton)
+		cust_style3 = recolor_icon(style3, "white", QSize(30,30))
+		close_button.setIcon(cust_style3)
+		close_button.setToolTip("Close")
+		close_button.clicked.connect(self.close)
+		close_button.setStyleSheet(close_stylesheet)
+		title_bar_layout.addWidget(close_button)
+
+		# Set the layout for the title bar
+		title_bar.setLayout(title_bar_layout)
+		title_bar.setStyleSheet("background-color: #2e2e2e;")
+
+		return title_bar
+	
+	def show_help(self):
+		help_text = """
+<html>
+<body>
+  <p><b>RDT Feeddown Analysis Help:</b></p>
+  <ul style="padding-left: 0;">
+    <li style="margin-bottom: 1em;">To change the default input/output paths before launching, create a file called "defaults.json" in the cwd, formatted as follows:.</li>
+    <div style="background-color: #252526; font-family: monospace; padding: 10px; border-radius: 5px;">
+      <pre>
+<span style="color: #9cdcfe;">{</span>
+  <span style="color: #ce9178;">"default_input_path"</span>: <span style="color: #dcdCAA;">"[insert input path here]"</span>,
+  <span style="color: #ce9178;">"default_output_path"</span>: <span style="color: #dcdCAA;">"[insert output path here]"</span>
+<span style="color: #9cdcfe;">}</span>
+      </pre>
+    </div>
+	<li style="margin-bottom: 1em;">To create a properties csv file, if in simulation mode in the Analysis tab since no Timber data, it must be in the format:</li>
+	<div style="background-color: #252526; font-family: monospace; padding: 10px; border-radius: 5px;">
+	<pre>
+<span style="color:#569cd6">MATCH,</span> <span style="color:#dcdcaa">KNOB</span>
+<span style="color:#569cd6">[insert regex string corresponding to chosen folder paths],</span> <span style="color:#dcdcaa">[insert XING knob value]</span>
+    </pre>
+	</div>
+    <li style="margin-bottom: 1em;">Use the Validation tab to see results of analysis on file selections.</li>
+    <li style="margin-bottom: 1em;">Use the Graph tab to view BPM, RDT, and RDT shift plots.</li>
+    <li style="margin-bottom: 1em;">Use the Response sub-tab of the Correction tab to quantify response caused by changing XING angle for a specific corrector.</li>
+	<li style="margin-bottom: 1em;">Use the Graph sub-tab of the Correction tab use output of the response tab to match with analysis of measurement.</li>
+  </ul>
+</body>
+</html>
+		"""
+		QMessageBox.information(self, "Help", help_text)
+
+	def mousePressEvent(self, event):
+		if event.button() == Qt.LeftButton:
+			self.drag_position = event.globalPos() - self.frameGeometry().topLeft()
+			event.accept()
+
+	def mouseMoveEvent(self, event):
+		if event.buttons() == Qt.LeftButton:
+			self.move(event.globalPos() - self.drag_position)
+			event.accept()
+
+	def toggle_maximize_restore(self):
+		style = self.style().standardIcon(QStyle.SP_TitleBarMaxButton)
+		cust_style = recolor_icon(style, "white")
+		style2 = self.style().standardIcon(QStyle.SP_TitleBarNormalButton)
+		cust_style2 = recolor_icon(style2, "white", QSize(30,30))
+		if self.isMaximized():
+			self.showNormal()
+			self.maximize_button.setIcon(cust_style)
+		else:
+			self.showMaximized()
+			self.maximize_button.setIcon(cust_style2)

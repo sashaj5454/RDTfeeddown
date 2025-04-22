@@ -1,34 +1,50 @@
 import json
-from qtpy.QtWidgets import QApplication, QMessageBox, QFileDialog
+from qtpy.QtWidgets import QApplication, QMessageBox, QFileDialog, QTreeWidgetItem
 from .analysis import group_datasets
 from .validation_utils import validate_file_structure
 
 def load_selected_files(parent):
 		parent.plot_progress.show()
 		QApplication.processEvents()
-		# Load selected file paths from the validation files list into the loaded files list
-		selected_files = [parent.validation_files_list.item(i).text() for i in range(parent.validation_files_list.count()) 
-						if parent.validation_files_list.item(i).isSelected()]
+		selected_files = [parent.validation_files_list.item(i).text(0) 
+					for i in range(parent.validation_files_list.topLevelItemCount()) 
+					if parent.validation_files_list.topLevelItem(i).isSelected()]
+	
+		# Clear the loaded files tree widget
 		parent.loaded_files_list.clear()
 		loaded_output_data = []
 		for file in selected_files:
-			parent.loaded_files_list.addItem(file)
 			data = load_RDTdata(file)
 			valid = validate_file_structure(data, ['beam', 'ref', 'rdt', 'rdt_plane', 'knob'], parent.log_error)
 			if not valid:
 				continue
 			loaded_output_data.append(data)
+			# Extract metadata for columns
+			metadata = data.get("metadata", {})
+			beam     = metadata.get("beam", "")
+			rdt_val  = metadata.get("rdt", "")
+			rdt_plane= metadata.get("rdt_plane", "")
+			knob     = metadata.get("knob", "")
+			
+			# Create a tree widget item with all columns
+			item = QTreeWidgetItem([file, beam, rdt_val, rdt_plane, knob])
+			parent.loaded_files_list.addTopLevelItem(item)
+
 		if not loaded_output_data:
 			QMessageBox.critical(parent, "Error", "No valid data found.")
+			parent.plot_progress.hide()
 			return
+
 		results = group_datasets(loaded_output_data, parent.log_error)
 		if len(results) < 4:
 			QMessageBox.critical(parent, "Error", "Not enough data from group_datasets.")
+			parent.plot_progress.hide()
 			return
+
 		parent.b1rdtdata, parent.b2rdtdata, parent.rdt, parent.rdt_plane = results
 		if parent.b1rdtdata is None and parent.b2rdtdata is None:
 			parent.loaded_files_list.clear()
-			return
+		parent.plot_progress.hide()
 		
 def _convert_for_json(obj):
     import numpy as np
