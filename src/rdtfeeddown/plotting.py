@@ -32,6 +32,12 @@ IP_POS_DEFAULT = {
 	}
 }
 
+def set_axis_label(axis, position, text, color="white"):
+    """
+    Set the axis label with consistent color for math text.
+    """
+    axis.setLabel(position, f"<span style='color:{color};'>{text}</span>")
+
 def plot_ips(axes, label):
     for ax in axes:
         # Track which IP lines have been drawn on this axis
@@ -57,6 +63,7 @@ def plot_BPM(BPM, fulldata, rdt, rdt_plane, ax1=None, ax2=None, log_func=None):
 		data = fulldata["data"]
 		diffdata = data[BPM]['diffdata']
 		fitdata = data[BPM]['fitdata']
+		knob = fulldata["metadata"]["knob"]
 		xing, re, im = [], [], []
 		for x in range(len(diffdata)):
 			xing.append(diffdata[x][0])
@@ -79,13 +86,13 @@ def plot_BPM(BPM, fulldata, rdt, rdt_plane, ax1=None, ax2=None, log_func=None):
 		else:
 			line_color = b2_line_color
 
-		ax1.setLabel('left', f"<span style='color:white;'>{BPM} ΔRe(f<sub>{rdt_plane},{rdt}</sub>)")
-		ax1.setLabel('bottom', "Knob trim")
+		set_axis_label(ax1,'left', f"{BPM} ΔRe(f<sub>{rdt_plane},{rdt}</sub>)")
+		ax1.setLabel('bottom', f"{knob} trim")
 		ax1.plot(xfit, refit, pen=line_color)
 		ax1.plot(xing, re, pen=None, symbol='x', symbolPen=line_color)
 
-		ax2.setLabel('left', f"<span style='color:white;'>{BPM} ΔIm(f<sub>{rdt_plane},{rdt}</sub>)")
-		ax2.setLabel('bottom', "Knob trim")
+		set_axis_label(ax2, 'left', f"{BPM} ΔIm(f<sub>{rdt_plane},{rdt}</sub>)")
+		ax2.setLabel('bottom', f"{knob} trim")
 		ax2.plot(xfit, imfit, pen=line_color)
 		ax2.plot(xing, im, pen=None, symbol='x', symbolPen=line_color)
 		
@@ -96,18 +103,18 @@ def plot_BPM(BPM, fulldata, rdt, rdt_plane, ax1=None, ax2=None, log_func=None):
 			print(f"Error plotting BPM {BPM}: {e}")
 		return None
 
-def plot_avg_rdt_shift(ax, data, line_color, rdt, rdt_plane):
+def plot_avg_rdt_shift(ax, data, line_color, rdt, rdt_plane, knob):
 	"""
 	Plot the average RDT shift and standard deviation for given data on the provided axis.
 	"""
 	xing, ampdat, stddat = calculate_avg_rdt_shift(data)
-	ax.setLabel('left', f"<span style='color:white;'>√(ΔRe(f<sub>{rdt_plane},{rdt}</sub>)<sup>2</sup> + ΔIm(f<sub>{rdt_plane},{rdt}</sub>)<sup>2</sup>)")
-	ax.setLabel('bottom', "Knob trim")
+	set_axis_label(ax, 'left', f"√(ΔRe(f<sub>{rdt_plane},{rdt}</sub>)<sup>2</sup> + ΔIm(f<sub>{rdt_plane},{rdt}</sub>)<sup>2</sup>)")
+	set_axis_label(ax, 'bottom', f"{knob} trim")
 	ax.plot(xing, ampdat, pen=line_color, symbol='x', symbolPen=line_color)  # Plot the data points.
 	error_item = ErrorBarItem(x=xing, y=ampdat, top=stddat, bottom=stddat, beam=0.1, pen=line_color)
 	ax.addItem(error_item)
 
-def plot_RDTshifts(b1data, b2data, rdt, rdt_plane, axes, log_func=None):
+def plot_RDTshifts(b1data, b2data, rdt, rdt_plane, axes, knob, log_func=None):
 	"""
 	Plots RDT shifts. Handles three layouts:
 	1) Only b1data provided: 3x1 figure (Beam 1 only).
@@ -120,7 +127,7 @@ def plot_RDTshifts(b1data, b2data, rdt, rdt_plane, axes, log_func=None):
 		else:
 			ax1, ax2, ax3 = axes
 
-		def plot_beam_data(axs, data, label):
+		def plot_beam_data(axs, data, label, knob=knob):
 			"""
 			Plots the RDT shift data for a single beam into the three provided axes:
 			axs[0] => Average re^2 + im^2
@@ -133,12 +140,12 @@ def plot_RDTshifts(b1data, b2data, rdt, rdt_plane, axes, log_func=None):
 			ax_avg.setTitle(label)
 			# Set labels for the real part plot
 			if not ax_re.getAxis('left').labelText:  # Check if the Y-axis label is already set
-				ax_re.setLabel('left', f'<span style="color:white;">∂Re(f<sub>{rdt_plane},{rdt}</sub>)/∂knob', units='')
+				set_axis_label(ax_re, 'left', f'∂Re(f<sub>{rdt_plane},{rdt}</sub>)/∂knob')
 			if not ax_re.getAxis('bottom').labelText:  # Check if the X-axis label is already set
 				ax_re.setLabel('bottom', 'S', units='km')
 			# Set labels for the imaginary part plot
 			if not ax_im.getAxis('left').labelText:  # Check if the Y-axis label is already set
-				ax_im.setLabel('left', f'<span style="color:white;">∂Im(f<sub>{rdt_plane},{rdt}</sub>)/∂knob', units='')
+				set_axis_label(ax_im,'left', f'∂Im(f<sub>{rdt_plane},{rdt}</sub>)/∂knob')
 			if not ax_im.getAxis('bottom').labelText:  # Check if the X-axis label is already set
 				ax_im.setLabel('bottom', 'S', units='km')
 			# Collect data for dRe/dknob and dIm/dknob
@@ -168,7 +175,7 @@ def plot_RDTshifts(b1data, b2data, rdt, rdt_plane, axes, log_func=None):
 				line_color = b2_line_color
 
 			# Plot average re^2 + im^2
-			plot_avg_rdt_shift(ax_avg, data, line_color, rdt, rdt_plane)
+			plot_avg_rdt_shift(ax_avg, data, line_color, rdt, rdt_plane, knob)
 			# Plot dRe with error bars
 			error_re = ErrorBarItem(x=sdat, y=dredkdat, height=2*dredkerr, beam=0.1, pen=line_color)
 			ax_re.addItem(error_re)
@@ -225,11 +232,11 @@ def plot_RDT(b1data, b2data, rdt, rdt_plane, axes, log_func=None):
 			Plots |f|, Re(f), and Im(f) vs. knob trim in three provided axes.
 			"""
 			ax_amp.setTitle(beam_label, pad=20)
-			ax_amp.setLabel('left', f'<span style="color:white;">Δ|f<sub>{rdt_plane},{rdt}</sub>|')
+			set_axis_label(ax_amp,'left', f'Δ|f<sub>{rdt_plane},{rdt}</sub>|')
 			ax_amp.setLabel('bottom', 'S', units='km')
-			ax_re.setLabel('left', f'<span style="color:white;">ΔRe(f<sub>{rdt_plane},{rdt}</sub>)')
+			set_axis_label(ax_re, 'left', f'ΔRe(f<sub>{rdt_plane},{rdt}</sub>)')
 			ax_re.setLabel('bottom', 'S', units='km')
-			ax_im.setLabel('left', f'<span style="color:white;">ΔIm(f<sub>{rdt_plane},{rdt}</sub>)')
+			set_axis_label(ax_im, 'left', f'ΔIm(f<sub>{rdt_plane},{rdt}</sub>)')
 			ax_im.setLabel('bottom', 'S', units='km')
 			# Get the crossing angles
 			if not data:
@@ -314,13 +321,13 @@ def plot_dRDTdknob(b1data, b2data, rdt, rdt_plane, axes, knoblist=None, log_func
 
 			# Set labels for the real part plot
 			if not ax_re.getAxis('left').labelText:  # Check if the Y-axis label is already set
-				ax_re.setLabel('left', f'<span style="color:white;">∂Re(f<sub>{rdt_plane},{rdt}</sub>)/∂knob', units='')
+				set_axis_label(ax_re,'left', f'∂Re(f<sub>{rdt_plane},{rdt}</sub>)/∂knob')
 			if not ax_re.getAxis('bottom').labelText:  # Check if the X-axis label is already set
 				ax_re.setLabel('bottom', 'S', units='km')
 
 			# Set labels for the imaginary part plot
 			if not ax_im.getAxis('left').labelText:  # Check if the Y-axis label is already set
-				ax_im.setLabel('left', f'<span style="color:white;">∂Im(f<sub>{rdt_plane},{rdt}</sub>)/∂knob', units='')
+				set_axis_label(ax_im, 'left', f'∂Im(f<sub>{rdt_plane},{rdt}</sub>)/∂knob')
 			if not ax_im.getAxis('bottom').labelText:  # Check if the X-axis label is already set
 				ax_im.setLabel('bottom', 'S', units='km')
 

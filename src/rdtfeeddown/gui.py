@@ -217,7 +217,7 @@ class RDTFeeddownGUI(QMainWindow):
 		self.rdt_plane_dropdown = QComboBox()
 		self.rdt_plane_dropdown.addItems(["x", "y"])
 		param_layout.addWidget(self.rdt_plane_dropdown)
-		self.knob_label = QLabel("Knob:")
+		self.knob_label = QLabel("Xing knob name:")
 		param_layout.addWidget(self.knob_label)          # "Knob:"
 		self.knob_entry = QLineEdit("LHCBEAM/IP2-XING-V-MURAD")
 		param_layout.addWidget(self.knob_entry)
@@ -235,19 +235,6 @@ class RDTFeeddownGUI(QMainWindow):
 		self.validate_knob_button = QPushButton("Validate Knob")
 		self.validate_knob_button.clicked.connect(self.validate_knob_button_clicked)
 		param_layout.addWidget(self.validate_knob_button)
-		# Unified fields (hidden by default)
-		self.corr_knobname_entry = QLineEdit()
-		self.corr_knobname_entry.setPlaceholderText("Unified Knob Name")
-		self.corr_knobname_entry.hide()
-		param_layout.addWidget(self.corr_knobname_entry)
-		self.corr_knob_entry = QLineEdit()
-		self.corr_knob_entry.setPlaceholderText("Unified Knob Value")
-		self.corr_knob_entry.hide()
-		param_layout.addWidget(self.corr_knob_entry)
-		self.corr_xing_entry = QLineEdit()
-		self.corr_xing_entry.setPlaceholderText("Unified XING")
-		self.corr_xing_entry.hide()
-		param_layout.addWidget(self.corr_xing_entry)
 		param_group.setLayout(param_layout)
 		self.input_layout.addWidget(param_group)
 
@@ -504,7 +491,7 @@ class RDTFeeddownGUI(QMainWindow):
 		response_tab_layout.addWidget(corr_folders_group)
 
 		# --- Parameters and Knob Group ---
-		corr_param_group = QGroupBox("Parameters and Knob")
+		corr_param_group = QGroupBox("Parameters and Corrector")
 		corr_param_layout = QVBoxLayout()
 		self.corr_rdt_label = QLabel("RDT (in form of jklm):")
 		corr_param_layout.addWidget(self.corr_rdt_label)
@@ -523,12 +510,12 @@ class RDTFeeddownGUI(QMainWindow):
 		separate_knob_layout = QHBoxLayout()
 		# LHCB1 knob fields
 		lhcb1_layout = QVBoxLayout()
-		self.b1_corr_knobname_label = QLabel("LHCB1 Knob name:")
+		self.b1_corr_knobname_label = QLabel("LHCB1 Corrector name:")
 		self.b1_corr_knobname_label.setStyleSheet(b1_stylesheet)
 		lhcb1_layout.addWidget(self.b1_corr_knobname_label)
 		self.b1_corr_knobname_entry = QLineEdit()
 		lhcb1_layout.addWidget(self.b1_corr_knobname_entry)
-		self.b1_corr_knob_label = QLabel("LHCB1 Knob value:")
+		self.b1_corr_knob_label = QLabel("LHCB1 Corrector value:")
 		self.b1_corr_knob_label.setStyleSheet(b1_stylesheet)
 		lhcb1_layout.addWidget(self.b1_corr_knob_label)
 		self.b1_corr_knob_entry = QLineEdit()
@@ -541,12 +528,12 @@ class RDTFeeddownGUI(QMainWindow):
 		separate_knob_layout.addLayout(lhcb1_layout)
 		# LHCB2 knob fields
 		lhcb2_layout = QVBoxLayout()
-		self.b2_corr_knobname_label = QLabel("LHCB2 Knob name:")
+		self.b2_corr_knobname_label = QLabel("LHCB2 Corrector name:")
 		self.b2_corr_knobname_label.setStyleSheet(b2_stylesheet)
 		lhcb2_layout.addWidget(self.b2_corr_knobname_label)
 		self.b2_corr_knobname_entry = QLineEdit()
 		lhcb2_layout.addWidget(self.b2_corr_knobname_entry)
-		self.b2_corr_knob_label = QLabel("LHCB2 Knob value:")
+		self.b2_corr_knob_label = QLabel("LHCB2 Corrector value:")
 		self.b2_corr_knob_label.setStyleSheet(b2_stylesheet)
 		lhcb2_layout.addWidget(self.b2_corr_knob_label)
 		self.b2_corr_knob_entry = QLineEdit()
@@ -559,9 +546,9 @@ class RDTFeeddownGUI(QMainWindow):
 		separate_knob_layout.addLayout(lhcb2_layout)
 		corr_param_layout.addLayout(separate_knob_layout)
 		# Unified knob fields
-		self.corr_knobname_entry_label = QLabel("Shared Knob name:")
+		self.corr_knobname_entry_label = QLabel("Shared Corrector name:")
 		self.corr_knobname_entry = QLineEdit()
-		self.corr_knob_entry_label = QLabel("Shared Knob value:")
+		self.corr_knob_entry_label = QLabel("Shared Corrector value:")
 		self.corr_knob_entry = QLineEdit()
 		self.corr_xing_entry_label = QLabel("Shared XING angle:")
 		self.corr_xing_entry = QLineEdit()
@@ -865,20 +852,22 @@ class RDTFeeddownGUI(QMainWindow):
 	def plot_rdt_shifts(self):
 		self.plot_progress.show()
 		QApplication.processEvents()
-		datab1, datab2 = None, None
+		datab1, datab2, knob = None, None, None
 		try:
 			datab1 = self.b1rdtdata["data"]
+			knob = self.b1rdtdata["metadata"]["knob"]
 		except Exception as e:
 			self.log_error(f"Error accessing LHCB1 RDT data: {e}")
 		try:
 			datab2 = self.b2rdtdata["data"]
+			knob = self.b2rdtdata["metadata"]["knob"]
 		except Exception as e:
 			self.log_error(f"Error accessing LHCB2 RDT data: {e}")
 
 		self.rdtshift_axes, self.rdtshift_axes_layout = self.setup_figure(self.rdtShiftwidget, datab1, datab2, 3)
 
 		try:
-			plot_RDTshifts(datab1, datab2, self.rdt, self.rdt_plane, self.rdtshift_axes, log_func=self.log_error)
+			plot_RDTshifts(datab1, datab2, self.rdt, self.rdt_plane, self.rdtshift_axes, knob, log_func=self.log_error)
 		except Exception as e:
 			self.log_error(f"Error plotting RDT shifts: {e}")
 			self.plot_progress.hide()
@@ -888,14 +877,14 @@ class RDTFeeddownGUI(QMainWindow):
 	# New method to toggle simulation mode UI changes
 	def toggle_simulation_mode(self, state):
 		if state == Qt.Checked:
-			self.knob_entry.hide()
-			self.knob_label.hide()
+			# self.knob_entry.hide()
+			# self.knob_label.hide()
 			self.validate_knob_button.hide()
 			self.simulation_file_entry.show()
 			self.simulation_file_button.show()
 		else:
-			self.knob_entry.show()
-			self.knob_label.show()
+			# self.knob_entry.show()
+			# self.knob_label.show()
 			self.validate_knob_button.show()
 			self.simulation_file_entry.hide()
 			self.simulation_file_button.hide()
