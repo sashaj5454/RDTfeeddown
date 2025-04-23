@@ -20,6 +20,9 @@ class RDTFeeddownGUI(QMainWindow):
 	def __init__(self):
 		super().__init__()
 		self.setWindowFlags(Qt.FramelessWindowHint | Qt.Window)
+		self._resizing = False
+		self._resize_margin = 8
+		self._resize_direction = None
 		# Main layout
 		self.central_widget = QWidget()
 		self.setCentralWidget(self.central_widget)
@@ -35,6 +38,11 @@ class RDTFeeddownGUI(QMainWindow):
 		self.buildInputTab()
 		self.buildValidationTab()
 		self.buildCorrectionTab()
+		self.setMouseTracking(True)
+		self.central_widget.setMouseTracking(True)
+		self.central_widget.installEventFilter(self)
+		self.install_event_filters(self)
+		self.enable_mouse_tracking(self)
 
 	def buildPathsSection(self):
 		# Load defaults from the special file
@@ -1232,9 +1240,11 @@ class RDTFeeddownGUI(QMainWindow):
 				for col in range(2):
 					# Create a PlotWidget with a custom ViewBox.
 					view_box = MyViewBox()
+					view_box.setMouseEnabled(x=True, y=True)
 					plot_widget = pg.PlotWidget(viewBox=view_box)
 					plot_widget.setBackground(DARK_BACKGROUND_COLOR)
 					plot_widget.showGrid(x=True, y=True)
+					plot_widget.setMouseTracking(True)
 					grid.addWidget(plot_widget, row, col)
 					axes.append(plot_widget)
 					view_box.setMouseMode(pg.ViewBox.RectMode)  # Enable click-and-drag zoom
@@ -1244,9 +1254,11 @@ class RDTFeeddownGUI(QMainWindow):
 			axes = []
 			for row in range(rows):
 				view_box = MyViewBox()
+				view_box.setMouseEnabled(x=True, y=True)
 				plot_widget = pg.PlotWidget(viewBox=view_box)
 				plot_widget.setBackground(DARK_BACKGROUND_COLOR)
 				plot_widget.showGrid(x=True, y=True)
+				plot_widget.setMouseTracking(True)
 				grid.addWidget(plot_widget, row, 0)
 				axes.append(plot_widget)
 				view_box.setMouseMode(pg.ViewBox.RectMode)  # Enable click-and-drag zoom
@@ -1359,13 +1371,116 @@ class RDTFeeddownGUI(QMainWindow):
 
 	def mousePressEvent(self, event):
 		if event.button() == Qt.LeftButton:
-			self.drag_position = event.globalPos() - self.frameGeometry().topLeft()
+			pos = event.pos()
+			if self.isNearEdge(pos):
+				self._resizing = True
+				self._resize_start_pos = event.globalPos()
+				self._resize_start_geom = self.geometry()
+				self._resize_direction = self.getResizeDirection(pos)
+			else:
+				self.drag_position = event.globalPos() - self.frameGeometry().topLeft()
 			event.accept()
 
 	def mouseMoveEvent(self, event):
-		if event.buttons() == Qt.LeftButton:
+		if self._resizing:
+			self.handleResize(event.globalPos())
+			event.accept()
+		elif event.buttons() == Qt.LeftButton:
 			self.move(event.globalPos() - self.drag_position)
 			event.accept()
+		else:
+			direction = self.getResizeDirection(event.pos())
+			if direction in ['left', 'right']:
+				self.setCursor(Qt.SizeHorCursor)
+			elif direction in ['top', 'bottom']:
+				self.setCursor(Qt.SizeVerCursor)
+			elif direction in ['top-left', 'bottom-right']:
+				self.setCursor(Qt.SizeFDiagCursor)
+			elif direction in ['top-right', 'bottom-left']:
+				self.setCursor(Qt.SizeBDiagCursor)
+			else:
+				self.setCursor(Qt.ArrowCursor)
+
+	def mouseReleaseEvent(self, event):
+		self._resizing = False
+		self._resize_direction = None
+		self.setCursor(Qt.ArrowCursor)
+
+	def isNearEdge(self, pos):
+		rect = self.rect()
+		margin = self._resize_margin
+		return (
+			pos.x() < margin or pos.x() > rect.width() - margin or
+			pos.y() < margin or pos.y() > rect.height() - margin
+		)
+
+	def getResizeDirection(self, pos):
+		rect = self.rect()
+		margin = self._resize_margin
+		left = pos.x() < margin
+		right = pos.x() > rect.width() - margin
+		top = pos.y() < margin
+		bottom = pos.y() > rect.height() - margin
+
+		if top and left:
+			return 'top-left'
+		elif top and right:
+			return 'top-right'
+		elif bottom and left:
+			return 'bottom-left'
+		elif bottom and right:
+			return 'bottom-right'
+		elif left:
+			return 'left'
+		elif right:
+			return 'right'
+		elif top:
+			return 'top'
+		elif bottom:
+			return 'bottom'
+		return None
+
+	def handleResize(self, global_pos):
+		if not self._resize_direction:
+			return
+		delta = global_pos - self._resize_start_pos
+		geom = self._resize_start_geom
+		dir = self._resize_direction
+
+		if dir == 'right':
+			new_width = max(geom.width() + delta.x(), self.minimumWidth())
+			self.setGeometry(geom.x(), geom.y(), new_width, geom.height())
+		elif dir == 'bottom':
+			new_height = max(geom.height() + delta.y(), self.minimumHeight())
+			self.setGeometry(geom.x(), geom.y(), geom.width(), new_height)
+		elif dir == 'left':
+			new_x = geom.x() + delta.x()
+			new_width = max(geom.width() - delta.x(), self.minimumWidth())
+			self.setGeometry(new_x, geom.y(), new_width, geom.height())
+		elif dir == 'top':
+			new_y = geom.y() + delta.y()
+			new_height = max(geom.height() - delta.y(), self.minimumHeight())
+			self.setGeometry(geom.x(), new_y, geom.width(), new_height)
+		elif dir == 'top-left':
+			new_x = geom.x() + delta.x()
+			new_y = geom.y() + delta.y()
+			new_width = max(geom.width() - delta.x(), self.minimumWidth())
+			new_height = max(geom.height() - delta.y(), self.minimumHeight())
+			self.setGeometry(new_x, new_y, new_width, new_height)
+		elif dir == 'top-right':
+			new_y = geom.y() + delta.y()
+			new_width = max(geom.width() + delta.x(), self.minimumWidth())
+			new_height = max(geom.height() - delta.y(), self.minimumHeight())
+			self.setGeometry(geom.x(), new_y, new_width, new_height)
+		elif dir == 'bottom-left':
+			new_x = geom.x() + delta.x()
+			new_width = max(geom.width() - delta.x(), self.minimumWidth())
+			new_height = max(geom.height() + delta.y(), self.minimumHeight())
+			self.setGeometry(new_x, geom.y(), new_width, new_height)
+		elif dir == 'bottom-right':
+			new_width = max(geom.width() + delta.x(), self.minimumWidth())
+			new_height = max(geom.height() + delta.y(), self.minimumHeight())
+			self.setGeometry(geom.x(), geom.y(), new_width, new_height)
 
 	def toggle_maximize_restore(self):
 		style = self.style().standardIcon(QStyle.SP_TitleBarMaxButton)
@@ -1378,3 +1493,18 @@ class RDTFeeddownGUI(QMainWindow):
 		else:
 			self.showMaximized()
 			self.maximize_button.setIcon(cust_style2)
+
+	def eventFilter(self, obj, event):
+		if event.type() == event.MouseMove:
+			self.mouseMoveEvent(event)
+		return super().eventFilter(obj, event)
+	
+	def install_event_filters(self, widget):
+		widget.installEventFilter(self)
+		for child in widget.findChildren(QWidget):
+			child.installEventFilter(self)
+
+	def enable_mouse_tracking(self, widget):
+		widget.setMouseTracking(True)
+		for child in widget.findChildren(QWidget):
+			child.setMouseTracking(True)

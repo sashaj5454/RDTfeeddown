@@ -1,9 +1,11 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from .analysis import polyfunction, calculate_avg_rdt_shift, arcBPMcheck, badBPMcheck
-from pyqtgraph import ErrorBarItem, TextItem
-from qtpy.QtWidgets import QApplication
+from pyqtgraph import ErrorBarItem, TextItem, PlotDataItem, mkBrush, mkPen
+from qtpy.QtGui import QPainterPathStroker, QCursor, QPen
+from qtpy.QtWidgets import QToolTip
 from .config import DARK_BACKGROUND_COLOR
+from qtpy.QtCore import Qt, QPoint
 
 COLOR_LIST = ['#FFA500', '#87CEFA', '#00FA9A', '#FFFF00', '#00BFFF', '#FF4500', '#FF66CC']
 b1_line_color = "#00ccff"
@@ -39,24 +41,31 @@ def set_axis_label(axis, position, text, color="white"):
     axis.setLabel(position, f"<span style='color:{color};'>{text}</span>")
 
 def plot_ips(axes, label):
-    for ax in axes:
-        # Track which IP lines have been drawn on this axis
-        if not hasattr(ax, '_ips_drawn'):
-            ax._ips_drawn = set()
+	for ax in axes:
+		# Track which IP lines have been drawn on this axis
+		if not hasattr(ax, '_ips_drawn'):
+			ax._ips_drawn = set()
 
-        x_min, x_max = ax.viewRange()[0]
-        _, y_max = ax.viewRange()[1]
+		x_min, x_max = ax.viewRange()[0]
+		_, y_max = ax.viewRange()[1]
 
-        for ip in range(1, 9):
-            ip_str = f"IP{ip}"
-            ip_x = IP_POS_DEFAULT[label][ip_str]
-            # Only add a line if in current plot range and not already drawn
-            if x_min <= ip_x <= x_max and ip_str not in ax._ips_drawn:
-                line = ax.addLine(x=ip_x, pen={'color': 'w', 'style': 2})
-                text = TextItem(text=ip_str, color='w', anchor=(0.5, 0))
-                text.setPos(ip_x, y_max*1.25)
-                ax.addItem(text)
-                ax._ips_drawn.add(ip_str)
+		for ip in range(1, 9):
+			ip_str = f"IP{ip}"
+			ip_x = IP_POS_DEFAULT[label][ip_str]
+			# Only add a line if in current plot range and not already drawn
+			if x_min <= ip_x <= x_max and ip_str not in ax._ips_drawn:
+				ax.addLine(x=ip_x, pen=mkPen('w', style=Qt.DashLine))
+				# draw the IP label with its own background
+				text = TextItem(
+					text=ip_str,
+					color='w',
+					anchor=(0.5, 0),
+					fill=mkBrush(50, 50, 50, 200),   # semi‑transp. dark grey
+					border=None                      # no border
+				)
+				text.setPos(ip_x, y_max * 1.25)
+				ax.addItem(text)
+				ax._ips_drawn.add(ip_str)
 
 def plot_BPM(BPM, fulldata, rdt, rdt_plane, ax1=None, ax2=None, log_func=None):
 	try:
@@ -246,10 +255,9 @@ def plot_RDT(b1data, b2data, rdt, rdt_plane, axes, log_func=None):
 			if first_bpm is not None:
 				for entry in data[first_bpm]['diffdata']:
 					xing.append(entry[0])
-
-			 # Set title for the beam column
-			ax_amp.setTitle(beam_label, pad=20)
-
+			hover_lines_amp = []
+			hover_lines_re = []
+			hover_lines_im = []
 			# For each crossing angle, gather BPM data
 			for i, angle in enumerate(xing):
 				sdat, ampdat, redat, imdat = [], [], [], []
@@ -275,23 +283,43 @@ def plot_RDT(b1data, b2data, rdt, rdt_plane, axes, log_func=None):
 
 				colour = COLOR_LIST[i % len(COLOR_LIST)]
 
-				ax_amp.plot(sdat, ampdat, symbol='x', symbolPen=colour, pen=colour)
-				ax_re.plot(sdat, redat, symbol='x', symbolPen=colour, pen=colour)
-				ax_im.plot(sdat, imdat, symbol='x', symbolPen=colour, pen=colour)
-
+				hover_scatter_amp = HoverLine(x=sdat, y=ampdat, label=f"XING angle = {angle}", pen=colour, symbol='x', symbolPen=colour)
+				ax_amp.addItem(hover_scatter_amp)
+				hover_lines_amp.append(hover_scatter_amp)
+				hover_scatter_re = HoverLine(x=sdat, y=redat, label=f"XING angle = {angle}", pen=colour, symbol='x', symbolPen=colour)
+				ax_re.addItem(hover_scatter_re)
+				hover_lines_re.append(hover_scatter_re)
+				hover_scatter_im = HoverLine(x=sdat, y=imdat, label=f"XING angle = {angle}", pen=colour, symbol='x', symbolPen=colour)
+				ax_im.addItem(hover_scatter_im)
+				hover_lines_im.append(hover_scatter_im)
+		
 			plot_ips((ax_amp, ax_re, ax_im), beam_label)
+			return hover_lines_amp, hover_lines_re, hover_lines_im
 
 		if b1data and b2data:
 			# Plot B1 (left column)
-			plot_single_beam(ax1, ax3, ax5, b1data, "LHCB1")
+			hover_lines_amp_b1, hover_lines_re_b1, hover_lines_im_b1=plot_single_beam(ax1, ax3, ax5, b1data, "LHCB1")
+			install_closest_y_hover(ax1, hover_lines_amp_b1)
+			install_closest_y_hover(ax3, hover_lines_re_b1)
+			install_closest_y_hover(ax5, hover_lines_im_b1)
 			# Plot B2 (right column)
-			plot_single_beam(ax2, ax4, ax6, b2data, "LHCB2")
+			hover_lines_amp_b2, hover_lines_re_b2, hover_lines_im_b2=plot_single_beam(ax2, ax4, ax6, b2data, "LHCB2")
+			install_closest_y_hover(ax2, hover_lines_amp_b2)
+			install_closest_y_hover(ax4, hover_lines_re_b2)
+			install_closest_y_hover(ax6, hover_lines_im_b2)
 		elif b1data:
 			# Only B1
-			plot_single_beam(ax1, ax2, ax3, b1data, "LHCB1")
+			hover_lines_amp_b1, hover_lines_re_b1, hover_lines_im_b1 = plot_single_beam(ax1, ax2, ax3, b1data, "LHCB1")
+			install_closest_y_hover(ax1, hover_lines_amp_b1)
+			install_closest_y_hover(ax2, hover_lines_re_b1)
+			install_closest_y_hover(ax3, hover_lines_im_b1)
 		elif b2data:
 			# Only B2
-			plot_single_beam(ax1, ax2, ax3, b2data, "LHCB2")
+			hover_lines_amp_b2, hover_lines_re_b2, hover_lines_im_b2=plot_single_beam(ax1, ax2, ax3, b2data, "LHCB2")
+			install_closest_y_hover(ax1, hover_lines_amp_b2)
+			install_closest_y_hover(ax2, hover_lines_re_b2)
+			install_closest_y_hover(ax3, hover_lines_im_b2)
+
 
 	except Exception as e:
 		if log_func:
@@ -318,6 +346,8 @@ def plot_dRDTdknob(b1data, b2data, rdt, rdt_plane, axes, knoblist=None, log_func
 			ax_re, ax_im = axs
 
 			ax_re.setTitle(label)
+			hover_line_scatter_re = []
+			hover_line_scatter_im = []
 
 			# Set labels for the real part plot
 			if not ax_re.getAxis('left').labelText:  # Check if the Y-axis label is already set
@@ -385,8 +415,12 @@ def plot_dRDTdknob(b1data, b2data, rdt, rdt_plane, axes, knoblist=None, log_func
 			dimdkerr = np.array(dimdkerr)
 			# Plot new data lines
 			if line_label == "Simulation":
-				ax_re.plot(sdat, dredkdat, pen='g', name=line_label)
-				ax_im.plot(sdat, dimdkdat, pen='g', name=line_label)
+				hover_scattera = HoverLine(x=sdat, y=dredkdat, label=line_label, pen='g')
+				ax_re.addItem(hover_scattera)
+				hover_line_scatter_re.append(hover_scattera)
+				hover_scatterb = HoverLine(x=sdat, y=dimdkdat, label=line_label, pen='g')
+				ax_im.addItem(hover_scatterb)
+				hover_line_scatter_im.append(hover_scatterb)
 			else:
 				if label == "LHCB1":
 					line_color = b1_line_color
@@ -395,23 +429,40 @@ def plot_dRDTdknob(b1data, b2data, rdt, rdt_plane, axes, knoblist=None, log_func
 				# Plot dRe with error bars
 				error_re = ErrorBarItem(x=sdat, y=dredkdat, height=2*dredkerr, beam=0.1, pen=line_color)
 				ax_re.addItem(error_re)
-				ax_re.plot(sdat, dredkdat, pen=line_color, symbol='x', symbolPen=line_color, name=line_label)
+				hover_scatter1 = HoverLine(x=sdat, y=dredkdat, label=line_label, pen=line_color, symbol='x', symbolPen=line_color)
+				ax_re.addItem(hover_scatter1)
+				hover_line_scatter_re.append(hover_scatter1)
 
 				# Plot dIm with error bars
 				error_im = ErrorBarItem(x=sdat, y=dimdkdat, height=2*dimdkerr, beam=0.1, pen=line_color)
 				ax_im.addItem(error_im)
-				ax_im.plot(sdat, dimdkdat, pen=line_color, symbol='x', symbolPen=line_color, name=line_label)
+				hover_scatter2 = HoverLine(x=sdat, y=dimdkdat, label=line_label, pen=line_color, symbol='x', symbolPen=line_color)
+				ax_im.addItem(hover_scatter2)
+				hover_line_scatter_im.append(hover_scatter2)
 			plot_ips((ax_re, ax_im), label)
+			return hover_line_scatter_re, hover_line_scatter_im
 
 
 		# Plot for both beams
 		if b1data and b2data:
-			plot_beam_data((ax1, ax3), b1data, "LHCB1")
-			plot_beam_data((ax2, ax4), b2data, "LHCB2")
+			hover_line_scatter_re_b1, hover_line_scatter_im_b1 = plot_beam_data((ax1, ax3), b1data, "LHCB1")
+			install_closest_y_hover(ax1, hover_line_scatter_re_b1)
+			install_closest_y_hover(ax3, hover_line_scatter_im_b1)
+
+			hover_line_scatter_re_b2, hover_line_scatter_im_b2 =plot_beam_data((ax2, ax4), b2data, "LHCB2")
+			install_closest_y_hover(ax2, hover_line_scatter_re_b2)
+			install_closest_y_hover(ax4, hover_line_scatter_im_b2)
 		elif b1data:
-			plot_beam_data((ax1, ax2), b1data, "LHCB1")
+			hover_line_scatter_re_b1, hover_line_scatter_im_b1 = plot_beam_data((ax1, ax2), b1data, "LHCB1")
+			install_closest_y_hover(ax1, hover_line_scatter_re_b1)
+			install_closest_y_hover(ax2, hover_line_scatter_im_b1)
 		elif b2data:
-			plot_beam_data((ax1, ax2), b2data, "LHCB2")
+			hover_line_scatter_re_b2, hover_line_scatter_im_b2 =plot_beam_data((ax1, ax2), b2data, "LHCB2")
+			install_closest_y_hover(ax1, hover_line_scatter_re_b2)
+			install_closest_y_hover(ax2, hover_line_scatter_im_b2)
+			for hover_line in hover_line_scatter_re_b2:
+				print(hover_line, hover_line._plainLabel)
+				
 
 	except Exception as e:
 		if log_func:
@@ -430,3 +481,72 @@ def setup_blankcanvas(plot_widget):
 	plot_item = plot_widget.getPlotItem()
 	plot_item.hideAxis('left')
 	plot_item.hideAxis('bottom')
+
+class HoverLine(PlotDataItem):
+	def __init__(self, x, y, label, pen='w', **kwargs):
+		self._plainLabel = label
+		self._x = np.array(x)
+		self._y = np.array(y)
+		qp = mkPen(pen) if not isinstance(pen, QPen) else pen
+		self._htmlColor = qp.color().name()
+		super().__init__(x=x, y=y, pen=qp, **kwargs)
+		for item in (self.curve, self.scatter):
+			if item is None:
+				continue
+			item.setAcceptHoverEvents(True)
+			item.setAcceptedMouseButtons(Qt.LeftButton | Qt.RightButton)
+		self._hoverWidth = 0.01
+		
+	def shape(self):
+		p = super().shape()
+		s = QPainterPathStroker()
+		s.setWidth(self._hoverWidth)
+		return s.createStroke(p)
+
+def install_closest_y_hover(ax, hover_lines):
+    vb = ax.getViewBox()
+
+    def mouseMoved(evt):
+        if hasattr(evt, 'scenePos'):
+            scene_pos = evt.scenePos()
+        else:
+            scene_pos = evt
+        mousePoint = vb.mapSceneToView(scene_pos)
+        mouse_x = mousePoint.x()
+        mouse_y = mousePoint.y()
+        best_label = None
+        best_x = None
+        best_y = None
+        best_color = "white"
+        min_dist = float('inf')
+        for line in hover_lines:
+            xdata, ydata = line.getData()
+            if xdata is not None and len(xdata) > 0:
+                if np.min(xdata) <= mouse_x <= np.max(xdata):
+                    # Interpolate y for the exact mouse x
+                    y_val = np.interp(mouse_x, xdata, ydata)
+                    x_val = mouse_x
+                    dist = abs(y_val - mouse_y)
+                else:
+                    # Mouse is outside data range, use closest point
+                    idx = np.argmin(np.abs(xdata - mouse_x))
+                    x_val = xdata[idx]
+                    y_val = ydata[idx]
+                    dist = abs(y_val - mouse_y)
+                if dist < min_dist:
+                    min_dist = dist
+                    best_label = line._plainLabel
+                    best_x = x_val
+                    best_y = y_val
+                    best_color = getattr(line, "_htmlColor", "white")
+        if best_label is not None:
+            html = (
+                f"<span style='color:{best_color};white-space:nowrap;'>"
+                f"{best_label}<br>x={best_x:.3f}, y={best_y:.3f}"
+                "</span>"
+            )
+            QToolTip.showText(QCursor.pos(), html)
+        else:
+            QToolTip.hideText()
+
+    vb.scene().sigMouseMoved.connect(mouseMoved)

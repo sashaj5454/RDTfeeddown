@@ -6,9 +6,9 @@ from .validation_utils import validate_file_structure
 def load_selected_files(parent):
 		parent.plot_progress.show()
 		QApplication.processEvents()
-		selected_files = [parent.validation_files_list.item(i).text(0) 
-					for i in range(parent.validation_files_list.topLevelItemCount()) 
-					if parent.validation_files_list.topLevelItem(i).isSelected()]
+		selected_files = [parent.validation_files_list.item(i).text() 
+                  for i in range(parent.validation_files_list.count())
+                  if parent.validation_files_list.item(i).isSelected()]
 	
 		# Clear the loaded files tree widget
 		parent.loaded_files_list.clear()
