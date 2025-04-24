@@ -4,7 +4,7 @@ from .analysis import polyfunction, calculate_avg_rdt_shift, arcBPMcheck, badBPM
 from pyqtgraph import ErrorBarItem, TextItem, PlotDataItem, mkBrush, mkPen
 from qtpy.QtGui import QPainterPathStroker, QCursor, QPen
 from qtpy.QtWidgets import QToolTip
-from .config import DARK_BACKGROUND_COLOR
+from .style import DARK_BACKGROUND_COLOR
 from qtpy.QtCore import Qt, QPoint
 
 COLOR_LIST = ['#FFA500', '#87CEFA', '#00FA9A', '#FFFF00', '#00BFFF', '#FF4500', '#FF66CC']

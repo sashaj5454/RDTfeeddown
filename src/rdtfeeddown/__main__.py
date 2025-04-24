@@ -1,6 +1,6 @@
 from .gui import RDTFeeddownGUI
 from qtpy.QtWidgets import QApplication
-from .config import dark_stylesheet
+from .style import dark_stylesheet
 import rdtfeeddown.resources_rc
 
 

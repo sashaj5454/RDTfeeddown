@@ -2,10 +2,10 @@ import json
 from qtpy.QtWidgets import (
 	QApplication, QMainWindow, QGridLayout, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QCheckBox,
 	QFileDialog, QListWidget, QTabWidget, QWidget, QMessageBox, QProgressBar, QSizePolicy, QGroupBox, QComboBox,
-	QAbstractItemView, QTreeWidget, QTreeWidgetItem, QToolButton, QStyle
+	QAbstractItemView, QTreeWidget, QTreeWidgetItem
 )
 import pyqtgraph as pg
-from qtpy.QtCore import Qt, QSize   # Import Qt for the correct constants and QTimer
+from qtpy.QtCore import Qt   # Import Qt for the correct constants and QTimer
 from .validation_utils import validate_knob, validate_metas, validate_file_structure
 from .utils import load_defaults, initialize_statetracker, MyViewBox
 from .analysis_runner import run_analysis, run_response
@@ -13,7 +13,8 @@ from .analysis import group_datasets
 from .plotting import plot_BPM, plot_RDT, plot_RDTshifts, plot_dRDTdknob, setup_blankcanvas
 from .file_dialog_helpers import select_singleitem, select_multiple_files, select_folders, select_multiple_treefiles
 from .data_handler import load_selected_files, load_RDTdata
-from .config import recolor_icon, DARK_BACKGROUND_COLOR, minimize_stylesheet, maximize_stylesheet, close_stylesheet, plot_stylesheet, run_stylesheet, remove_stylesheet, b1_stylesheet, b2_stylesheet
+from .style import DARK_BACKGROUND_COLOR, plot_stylesheet, run_stylesheet, remove_stylesheet, b1_stylesheet, b2_stylesheet
+from .customtitlebar import create_custom_title_bar
 pg.setConfigOption('foreground', 'w')
 
 class RDTFeeddownGUI(QMainWindow):
@@ -30,7 +31,7 @@ class RDTFeeddownGUI(QMainWindow):
 		self.layout.setContentsMargins(0, 0, 0, 0)
 
 		# Add the custom title bar
-		self.layout.addWidget(self.create_custom_title_bar())
+		self.layout.addWidget(create_custom_title_bar())
 
 		# Add the rest of the GUI
 		self.tabs = QTabWidget()
@@ -1274,237 +1275,3 @@ class RDTFeeddownGUI(QMainWindow):
 		if event.button() == Qt.RightButton:
 			for plot_widget in axes:
 				plot_widget.getViewBox().autoRange()
-
-	def create_custom_title_bar(self):
-		# Create a custom title bar widget
-		title_bar = QWidget()
-		title_bar_layout = QHBoxLayout()
-		title_bar_layout.setContentsMargins(0, 0, 0, 0)
-
-		# Add the help button
-		help_button = QToolButton()
-		help_button.setObjectName("helpButton")  # Set a unique object name
-		help_button.setIcon(self.style().standardIcon(QStyle.SP_MessageBoxQuestion))
-		help_button.setToolTip("Click for Help")
-		help_button.clicked.connect(self.show_help)
-		title_bar_layout.addWidget(help_button)
-
-		title_bar_layout.addStretch()
-
-		# Add the title text
-		title_label = QLabel("RDT Feeddown Analysis")
-		title_label.setStyleSheet("color: white; font-weight: bold;")
-		title_bar_layout.addWidget(title_label)
-
-		title_bar_layout.addStretch()
-
-		# Add minimize button
-		minimize_button = QToolButton()
-		minimize_button.setObjectName("minimizeButton")  # Set a unique object name
-		style = self.style().standardIcon(QStyle.SP_TitleBarMinButton)
-		cust_style = recolor_icon(style, "white",QSize(30,30))
-		minimize_button.setIcon(cust_style)
-		minimize_button.setToolTip("Minimize")
-		minimize_button.clicked.connect(self.showMinimized)
-		minimize_button.setStyleSheet(minimize_stylesheet)
-		title_bar_layout.addWidget(minimize_button)
-
-		# Add maximize/restore button
-		self.maximize_button = QToolButton()
-		self.maximize_button.setObjectName("maximizeButton")  # Set a unique object name
-		style2 = self.style().standardIcon(QStyle.SP_TitleBarMaxButton)
-		cust_style2 = recolor_icon(style2, "white")
-		self.maximize_button.setIcon(cust_style2)
-		self.maximize_button.clicked.connect(self.toggle_maximize_restore)
-		self.maximize_button.setToolTip("Maximize/Restore")
-		self.maximize_button.setStyleSheet(maximize_stylesheet)
-		title_bar_layout.addWidget(self.maximize_button)
-
-		# Add close button
-		close_button = QToolButton()
-		close_button.setObjectName("closeButton")  # Set a unique object name
-		style3 = self.style().standardIcon(QStyle.SP_TitleBarCloseButton)
-		cust_style3 = recolor_icon(style3, "white", QSize(30,30))
-		close_button.setIcon(cust_style3)
-		close_button.setToolTip("Close")
-		close_button.clicked.connect(self.close)
-		close_button.setStyleSheet(close_stylesheet)
-		title_bar_layout.addWidget(close_button)
-
-		# Set the layout for the title bar
-		title_bar.setLayout(title_bar_layout)
-		title_bar.setStyleSheet("background-color: #2e2e2e;")
-
-		return title_bar
-	
-	def show_help(self):
-		help_text = """
-<html>
-<body>
-  <p><b>RDT Feeddown Analysis Help:</b></p>
-  <ul style="padding-left: 0;">
-    <li style="margin-bottom: 1em;">To change the default input/output paths before launching, create a file called "defaults.json" in the cwd, formatted as follows:.</li>
-    <div style="background-color: #252526; font-family: monospace; padding: 10px; border-radius: 5px;">
-      <pre>
-<span style="color: #9cdcfe;">{</span>
-  <span style="color: #ce9178;">"default_input_path"</span>: <span style="color: #dcdCAA;">"[insert input path here]"</span>,
-  <span style="color: #ce9178;">"default_output_path"</span>: <span style="color: #dcdCAA;">"[insert output path here]"</span>
-<span style="color: #9cdcfe;">}</span>
-      </pre>
-    </div>
-	<li style="margin-bottom: 1em;">To create a properties csv file, if in simulation mode in the Analysis tab since no Timber data, it must be in the format:</li>
-	<div style="background-color: #252526; font-family: monospace; padding: 10px; border-radius: 5px;">
-	<pre>
-<span style="color:#569cd6">MATCH,</span> <span style="color:#dcdcaa">KNOB</span>
-<span style="color:#569cd6">[insert regex string corresponding to chosen folder paths],</span> <span style="color:#dcdcaa">[insert XING knob value]</span>
-    </pre>
-	</div>
-    <li style="margin-bottom: 1em;">Use the Validation tab to see results of analysis on file selections.</li>
-    <li style="margin-bottom: 1em;">Use the Graph tab to view BPM, RDT, and RDT shift plots.</li>
-    <li style="margin-bottom: 1em;">Use the Response sub-tab of the Correction tab to quantify response caused by changing XING angle for a specific corrector.</li>
-	<li style="margin-bottom: 1em;">Use the Graph sub-tab of the Correction tab use output of the response tab to match with analysis of measurement.</li>
-  </ul>
-</body>
-</html>
-		"""
-		QMessageBox.information(self, "Help", help_text)
-
-	def mousePressEvent(self, event):
-		if event.button() == Qt.LeftButton:
-			pos = event.pos()
-			if self.isNearEdge(pos):
-				self._resizing = True
-				self._resize_start_pos = event.globalPos()
-				self._resize_start_geom = self.geometry()
-				self._resize_direction = self.getResizeDirection(pos)
-			else:
-				self.drag_position = event.globalPos() - self.frameGeometry().topLeft()
-			event.accept()
-
-	def mouseMoveEvent(self, event):
-		if self._resizing:
-			self.handleResize(event.globalPos())
-			event.accept()
-		elif event.buttons() == Qt.LeftButton:
-			self.move(event.globalPos() - self.drag_position)
-			event.accept()
-		else:
-			direction = self.getResizeDirection(event.pos())
-			if direction in ['left', 'right']:
-				self.setCursor(Qt.SizeHorCursor)
-			elif direction in ['top', 'bottom']:
-				self.setCursor(Qt.SizeVerCursor)
-			elif direction in ['top-left', 'bottom-right']:
-				self.setCursor(Qt.SizeFDiagCursor)
-			elif direction in ['top-right', 'bottom-left']:
-				self.setCursor(Qt.SizeBDiagCursor)
-			else:
-				self.setCursor(Qt.ArrowCursor)
-
-	def mouseReleaseEvent(self, event):
-		self._resizing = False
-		self._resize_direction = None
-		self.setCursor(Qt.ArrowCursor)
-
-	def isNearEdge(self, pos):
-		rect = self.rect()
-		margin = self._resize_margin
-		return (
-			pos.x() < margin or pos.x() > rect.width() - margin or
-			pos.y() < margin or pos.y() > rect.height() - margin
-		)
-
-	def getResizeDirection(self, pos):
-		rect = self.rect()
-		margin = self._resize_margin
-		left = pos.x() < margin
-		right = pos.x() > rect.width() - margin
-		top = pos.y() < margin
-		bottom = pos.y() > rect.height() - margin
-
-		if top and left:
-			return 'top-left'
-		elif top and right:
-			return 'top-right'
-		elif bottom and left:
-			return 'bottom-left'
-		elif bottom and right:
-			return 'bottom-right'
-		elif left:
-			return 'left'
-		elif right:
-			return 'right'
-		elif top:
-			return 'top'
-		elif bottom:
-			return 'bottom'
-		return None
-
-	def handleResize(self, global_pos):
-		if not self._resize_direction:
-			return
-		delta = global_pos - self._resize_start_pos
-		geom = self._resize_start_geom
-		dir = self._resize_direction
-
-		if dir == 'right':
-			new_width = max(geom.width() + delta.x(), self.minimumWidth())
-			self.setGeometry(geom.x(), geom.y(), new_width, geom.height())
-		elif dir == 'bottom':
-			new_height = max(geom.height() + delta.y(), self.minimumHeight())
-			self.setGeometry(geom.x(), geom.y(), geom.width(), new_height)
-		elif dir == 'left':
-			new_x = geom.x() + delta.x()
-			new_width = max(geom.width() - delta.x(), self.minimumWidth())
-			self.setGeometry(new_x, geom.y(), new_width, geom.height())
-		elif dir == 'top':
-			new_y = geom.y() + delta.y()
-			new_height = max(geom.height() - delta.y(), self.minimumHeight())
-			self.setGeometry(geom.x(), new_y, geom.width(), new_height)
-		elif dir == 'top-left':
-			new_x = geom.x() + delta.x()
-			new_y = geom.y() + delta.y()
-			new_width = max(geom.width() - delta.x(), self.minimumWidth())
-			new_height = max(geom.height() - delta.y(), self.minimumHeight())
-			self.setGeometry(new_x, new_y, new_width, new_height)
-		elif dir == 'top-right':
-			new_y = geom.y() + delta.y()
-			new_width = max(geom.width() + delta.x(), self.minimumWidth())
-			new_height = max(geom.height() - delta.y(), self.minimumHeight())
-			self.setGeometry(geom.x(), new_y, new_width, new_height)
-		elif dir == 'bottom-left':
-			new_x = geom.x() + delta.x()
-			new_width = max(geom.width() - delta.x(), self.minimumWidth())
-			new_height = max(geom.height() + delta.y(), self.minimumHeight())
-			self.setGeometry(new_x, geom.y(), new_width, new_height)
-		elif dir == 'bottom-right':
-			new_width = max(geom.width() + delta.x(), self.minimumWidth())
-			new_height = max(geom.height() + delta.y(), self.minimumHeight())
-			self.setGeometry(geom.x(), geom.y(), new_width, new_height)
-
-	def toggle_maximize_restore(self):
-		style = self.style().standardIcon(QStyle.SP_TitleBarMaxButton)
-		cust_style = recolor_icon(style, "white")
-		style2 = self.style().standardIcon(QStyle.SP_TitleBarNormalButton)
-		cust_style2 = recolor_icon(style2, "white", QSize(30,30))
-		if self.isMaximized():
-			self.showNormal()
-			self.maximize_button.setIcon(cust_style)
-		else:
-			self.showMaximized()
-			self.maximize_button.setIcon(cust_style2)
-
-	def eventFilter(self, obj, event):
-		if event.type() == event.MouseMove:
-			self.mouseMoveEvent(event)
-		return super().eventFilter(obj, event)
-	
-	def install_event_filters(self, widget):
-		widget.installEventFilter(self)
-		for child in widget.findChildren(QWidget):
-			child.installEventFilter(self)
-
-	def enable_mouse_tracking(self, widget):
-		widget.setMouseTracking(True)
-		for child in widget.findChildren(QWidget):
-			child.setMouseTracking(True)
