@@ -1,5 +1,5 @@
 from .style import recolor_icon, minimize_stylesheet, maximize_stylesheet, close_stylesheet
-from qtpy.QtWidgets import QWidget, QHBoxLayout, QToolButton, QLabel, QMessageBox, QStyle
+from qtpy.QtWidgets import QWidget, QHBoxLayout, QToolButton, QLabel, QMessageBox, QStyle, QDialog, QVBoxLayout, QPlainTextEdit, QPushButton
 from qtpy.QtCore import Qt, QSize
 
 def create_custom_title_bar(parent):
@@ -13,8 +13,15 @@ def create_custom_title_bar(parent):
 	help_button.setObjectName("helpButton")  # Set a unique object name
 	help_button.setIcon(parent.style().standardIcon(QStyle.SP_MessageBoxQuestion))
 	help_button.setToolTip("Click for Help")
-	help_button.clicked.connect(parent.show_help)
+	help_button.clicked.connect(lambda: show_help(parent))
 	title_bar_layout.addWidget(help_button)
+
+	error_log_button = QToolButton()
+	error_log_button.setObjectName("errorLogButton")  # Set a unique object name
+	error_log_button.setIcon(parent.style().standardIcon(QStyle.SP_FileDialogDetailedView))
+	error_log_button.setToolTip("Click to view error log")
+	error_log_button.clicked.connect(lambda:show_error_log_window(parent))
+	title_bar_layout.addWidget(error_log_button)
 
 	title_bar_layout.addStretch()
 
@@ -32,7 +39,7 @@ def create_custom_title_bar(parent):
 	cust_style = recolor_icon(style, "white",QSize(30,30))
 	minimize_button.setIcon(cust_style)
 	minimize_button.setToolTip("Minimize")
-	minimize_button.clicked.connect(parent.showMinimized)
+	minimize_button.clicked.connect(lambda: parent.showMinimized())
 	minimize_button.setStyleSheet(minimize_stylesheet)
 	title_bar_layout.addWidget(minimize_button)
 
@@ -42,7 +49,7 @@ def create_custom_title_bar(parent):
 	style2 = parent.style().standardIcon(QStyle.SP_TitleBarMaxButton)
 	cust_style2 = recolor_icon(style2, "white")
 	parent.maximize_button.setIcon(cust_style2)
-	parent.maximize_button.clicked.connect(parent.toggle_maximize_restore)
+	parent.maximize_button.clicked.connect(lambda: toggle_maximize_restore(parent))
 	parent.maximize_button.setToolTip("Maximize/Restore")
 	parent.maximize_button.setStyleSheet(maximize_stylesheet)
 	title_bar_layout.addWidget(parent.maximize_button)
@@ -95,6 +102,23 @@ def show_help(parent):
 </html>
 	"""
 	QMessageBox.information(parent, "Help", help_text)
+
+def show_error_log_window(self):
+        """
+        Open a pop-up window displaying all logged error messages.
+        """
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Error Log")
+        layout = QVBoxLayout()
+        text_edit = QPlainTextEdit()
+        text_edit.setReadOnly(True)
+        text_edit.setPlainText("\n\n".join(self.error_log))
+        layout.addWidget(text_edit)
+        close_btn = QPushButton("Close")
+        close_btn.clicked.connect(dialog.accept)
+        layout.addWidget(close_btn)
+        dialog.setLayout(layout)
+        dialog.exec_()
 
 def mousePressEvent(parent, event):
 	if event.button() == Qt.LeftButton:

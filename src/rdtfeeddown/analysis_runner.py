@@ -15,51 +15,51 @@ def run_analysis(parent):
 	rdt = parent.rdt_entry.text().strip()
 	rdt_plane = parent.rdt_plane_dropdown.currentText().strip()
 	if not rdt or not rdt_plane:
-		QMessageBox.critical(parent, "Error", "RDT and RDT plane must be specified!")
+		parent.log_error("RDT and RDT plane must be specified!")
 		parent.input_progress.hide()
 		return
 	is_valid_rdt, rdt_message = validate_rdt_and_plane(rdt, rdt_plane)
 	if not is_valid_rdt:
-		QMessageBox.critical(parent, "Error", f"Invalid RDT or RDT plane: {rdt_message}")
+		parent.log_error(f"Invalid RDT or RDT plane: {rdt_message}")
 		parent.input_progress.hide()
 		return
 	rdt_folder = rdt_to_order_and_type(rdt)
 	# Validate knob
 	knob = parent.knob_entry.text().strip()
 	if not knob:
-		QMessageBox.critical(parent, "Error", "Knob must be specified!")
+		parent.log_error("Knob must be specified!")
 		parent.input_progress.hide()
 		return
 	if not parent.simulation_checkbox.isChecked():
 		ldb = initialize_statetracker()
 		is_valid_knob, knob_message = validate_knob(ldb, knob)
 		if not is_valid_knob:
-			QMessageBox.critical(parent, "Error", f"Invalid Knob: {knob_message}")
+			parent.log_error(f"Invalid Knob: {knob_message}")
 			parent.input_progress.hide()
 			return
 	if not is_valid_knob:
-		QMessageBox.critical(parent, "Error", f"Invalid Knob: {knob_message}")
+		parent.log_error(f"Invalid Knob: {knob_message}")
 		parent.input_progress.hide()
 		return
 	# Validate models
 	beam1_model = parent.beam1_model_entry.text().strip()
 	beam2_model = parent.beam2_model_entry.text().strip()
 	if not beam1_model and not beam2_model:
-		QMessageBox.critical(parent, "Error", "At least one beam model must be specified!")
+		parent.log_error("At least one beam model must be specified!")
 		parent.input_progress.hide()
 		return
 	# Validate reference folders
 	beam1_reffolder = parent.beam1_reffolder_entry.text().strip()
 	beam2_reffolder = parent.beam2_reffolder_entry.text().strip()
 	if not beam1_reffolder and not beam2_reffolder:
-		QMessageBox.critical(parent, "Error", "At least one reference folder must be specified!")
+		parent.log_error("At least one reference folder must be specified!")
 		parent.input_progress.hide()
 		return
 	# Validate measurement folders
 	beam1_folders = [parent.beam1_folders_list.item(i).text() for i in range(parent.beam1_folders_list.count())]
 	beam2_folders = [parent.beam2_folders_list.item(i).text() for i in range(parent.beam2_folders_list.count())]
 	if not beam1_folders and not beam2_folders:
-		QMessageBox.critical(parent, "Error", "At least one measurement folder must be specified!")
+		parent.log_error("At least one measurement folder must be specified!")
 		parent.input_progress.hide()
 		return
 
@@ -113,13 +113,13 @@ def run_analysis_logic(parent, ldb, beam1_model, beam2_model, beam1_reffolder, b
 		data = load_RDTdata(f)
 		valid = validate_file_structure(data, ['beam', 'ref', 'rdt', 'rdt_plane', 'knob'], parent.log_error)
 		if not valid:
-			QMessageBox.critical(parent, "Error", f"Invalid file structure for {f}.")
+			parent.log_error(f"Invalid file structure for {f}.")
 			parent.input_progress.hide()
 			return
 		loaded_output_data.append(data)
 	results = group_datasets(loaded_output_data, parent.log_error)
 	if len(results) < 4:
-		QMessageBox.critical(parent, "Error", "Not enough data from group_datasets.")
+		parent.log_error("Not enough data from group_datasets.")
 		parent.input_progress.hide()
 		return
 	parent.b1rdtdata, parent.b2rdtdata, parent.rdt, parent.rdt_plane = results
@@ -139,12 +139,12 @@ def run_response(parent):
 	parent.rdt = rdt
 	parent.rdt_plane = rdt_plane
 	if not parent.rdt or not parent.rdt_plane:
-		QMessageBox.critical(parent, "Error", "RDT and RDT plane must be specified!")
+		parent.log_error("RDT and RDT plane must be specified!")
 		parent.simcorr_progress.hide()
 		return
 	is_valid_rdt, rdt_message = validate_rdt_and_plane(rdt, rdt_plane)
 	if not is_valid_rdt:
-		QMessageBox.critical(parent, "Error", f"Invalid RDT or RDT plane: {rdt_message}")
+		parent.log_error(f"Invalid RDT or RDT plane: {rdt_message}")
 		parent.simcorr_progress.hide()
 		return
 	rdt_folder = rdt_to_order_and_type(rdt)
@@ -152,14 +152,14 @@ def run_response(parent):
 	beam1_reffolder = parent.corr_beam1_reffolder_entry.text().strip()
 	beam2_reffolder = parent.corr_beam2_reffolder_entry.text().strip()
 	if not beam1_reffolder and not beam2_reffolder:
-		QMessageBox.critical(parent, "Error", "At least one reference folder must be specified!")
+		parent.log_error("At least one reference folder must be specified!")
 		parent.simcorr_progress.hide()
 		return
 	# Validate measurement folders
 	beam1_measfolder = parent.corr_beam1_measfolder_entry.text().strip()
 	beam2_measfolder = parent.corr_beam2_measfolder_entry.text().strip()
 	if not beam1_measfolder and not beam2_measfolder:
-		QMessageBox.critical(parent, "Error", "At least one measurement folder must be specified!")
+		parent.log_error("At least one measurement folder must be specified!")
 		parent.simcorr_progress.hide()
 		return
 	# Validate knobs
@@ -171,7 +171,7 @@ def run_response(parent):
 		b1_xing = parent.corr_xing_entry.text().strip()
 		b2_xing = b1_xing
 		if not b1_knob_name or not b1_knob_value or not b1_xing:
-			QMessageBox.critical(parent, "Error", "Knob name, value, and XING must be specified!")
+			parent.log_error("Knob name, value, and XING must be specified!")
 			parent.simcorr_progress.hide()
 			return
 	else:
@@ -183,13 +183,13 @@ def run_response(parent):
 		b2_xing = parent.b2_corr_xing_entry.text().strip()
 		# Validate LHCB1 fields
 		if (b1_knob_name or b1_knob_value or b1_xing) and not (b1_knob_name and b1_knob_value and b1_xing):
-			QMessageBox.critical(parent, "Error", "For LHCB1, if any knob fields are specified, then all (name, value, and XING) must be provided!")
+			parent.log_error("For LHCB1, if any knob fields are specified, then all (name, value, and XING) must be provided!")
 			parent.simcorr_progress.hide()
 			return
 
 		# Validate LHCB2 fields
 		if (b2_knob_name or b2_knob_value or b2_xing) and not (b2_knob_name and b2_knob_value and b2_xing):
-			QMessageBox.critical(parent, "Error", "For LHCB2, if any knob fields are specified, then all (name, value, and XING) must be provided!")
+			parent.log_error("For LHCB2, if any knob fields are specified, then all (name, value, and XING) must be provided!")
 			parent.simcorr_progress.hide()
 			return
 	# Run response

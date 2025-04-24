@@ -1,4 +1,5 @@
 import json
+import traceback
 from qtpy.QtWidgets import (
 	QApplication, QMainWindow, QGridLayout, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QCheckBox,
 	QFileDialog, QListWidget, QTabWidget, QWidget, QMessageBox, QProgressBar, QSizePolicy, QGroupBox, QComboBox,
@@ -14,7 +15,7 @@ from .plotting import plot_BPM, plot_RDT, plot_RDTshifts, plot_dRDTdknob, setup_
 from .file_dialog_helpers import select_singleitem, select_multiple_files, select_folders, select_multiple_treefiles
 from .data_handler import load_selected_files, load_RDTdata
 from .style import DARK_BACKGROUND_COLOR, plot_stylesheet, run_stylesheet, remove_stylesheet, b1_stylesheet, b2_stylesheet
-from .customtitlebar import create_custom_title_bar
+from .customtitlebar import create_custom_title_bar, install_event_filters, enable_mouse_tracking
 pg.setConfigOption('foreground', 'w')
 
 class RDTFeeddownGUI(QMainWindow):
@@ -29,9 +30,9 @@ class RDTFeeddownGUI(QMainWindow):
 		self.setCentralWidget(self.central_widget)
 		self.layout = QVBoxLayout(self.central_widget)
 		self.layout.setContentsMargins(0, 0, 0, 0)
-
+		self.error_log = []
 		# Add the custom title bar
-		self.layout.addWidget(create_custom_title_bar())
+		self.layout.addWidget(create_custom_title_bar(self))
 
 		# Add the rest of the GUI
 		self.tabs = QTabWidget()
@@ -42,8 +43,8 @@ class RDTFeeddownGUI(QMainWindow):
 		self.setMouseTracking(True)
 		self.central_widget.setMouseTracking(True)
 		self.central_widget.installEventFilter(self)
-		self.install_event_filters(self)
-		self.enable_mouse_tracking(self)
+		install_event_filters(self, self.central_widget)
+		enable_mouse_tracking(self, self.central_widget)
 
 	def buildPathsSection(self):
 		# Load defaults from the special file
@@ -267,7 +268,7 @@ class RDTFeeddownGUI(QMainWindow):
 		run_layout = QVBoxLayout()
 		self.run_button = QPushButton("Run Analysis")
 		self.run_button.setStyleSheet(run_stylesheet)
-		self.run_button.clicked.connect(self.run_analysis)
+		self.run_button.clicked.connect(lambda: run_analysis(self))
 		run_layout.addWidget(self.run_button)
 		run_group.setLayout(run_layout)
 		self.input_layout.addWidget(run_group)
@@ -751,16 +752,13 @@ class RDTFeeddownGUI(QMainWindow):
 		"""
 		knob = self.knob_entry.text()
 		if not knob:
-			QMessageBox.critical(self, "Error", "Knob field must be filled!")
+			self.log_error("Knob field must be filled!")
 			return
 		is_valid_knob, knob_message = validate_knob(initialize_statetracker(), knob)
 		if is_valid_knob:
 			QMessageBox.information(self, "Knob Validation", "Knob is valid. Setting: " + repr(knob_message))
 		else:
-			QMessageBox.critical(self, "Knob Validation", "Invalid Knob: " + repr(knob_message))
-
-	def run_analysis(self):
-		run_analysis(self)
+			self.log_error("Knob Validation", "Invalid Knob: " + repr(knob_message))
 
 	def update_validation_files_widget(self):
 		# Update the validation_files_list widget with analysis_output_files
@@ -769,6 +767,11 @@ class RDTFeeddownGUI(QMainWindow):
 				self.validation_files_list.addItem(f)
 
 	def log_error(self, error_msg):
+		tb = traceback.format_exc()
+		formatted = f"<p style='color:white;'>{error_msg}</p>"
+		if tb and tb.strip() and tb.strip() != "None":
+			formatted += f"<p style='color:red;'>{tb}</p>"
+		self.error_log.append(formatted)
 		QMessageBox.critical(self, "Error", error_msg)
 
 	def toggle_select_all_validation_files(self, state):
@@ -811,11 +814,11 @@ class RDTFeeddownGUI(QMainWindow):
 					self.loaded_files_list.addTopLevelItem(item)
 				if not loaded_output_data:
 					self.loaded_files_list.clear()
-					QMessageBox.critical(self, "Error", "No valid data loaded.")
+					self.log_error("No valid data loaded.")
 					return
 				results = group_datasets(loaded_output_data, self.log_error)
 				if len(results) < 4:
-					QMessageBox.critical(self, "Error", "Not enough data from group_datasets.")
+					self.log_error("Not enough data from group_datasets.")
 					return
 				self.b1rdtdata, self.b2rdtdata, self.rdt, self.rdt_plane = results
 				if self.b1rdtdata is None and self.b2rdtdata is None:
