@@ -168,7 +168,7 @@ def getrdt_omc3(
 				log_func(msg)
 			raise RuntimeError(msg)
 	try:
-		refdat, beam_no = readrdtdatafile(ref, rdt, rdt_plane, rdtfolder, threshold, sim=sim, log_func=log_func)
+		refdat, beam_no = readrdtdatafile(ref, rdt, rdt_plane, rdtfolder, sim=sim, log_func=log_func)
 		if beam_no != beam[-1]:
 			log_func(f"Wrong beam used.")
 			raise RuntimeError(f"Wrong beam used.")
@@ -194,7 +194,7 @@ def getrdt_omc3(
 		else:  # Fallback to original method if not found
 			ksetting = get_analysis_knobsetting(ldb, knob, f, log_func)
 		try:
-			cdat, beam_no = readrdtdatafile(f, rdt, rdt_plane, rdtfolder, threshold, sim=sim, log_func=log_func)
+			cdat, beam_no = readrdtdatafile(f, rdt, rdt_plane, rdtfolder, sim=sim, log_func=log_func)
 			if beam_no != beam[-1]:
 				log_func(f"Wrong beam used.")
 				raise RuntimeError(f"Wrong beam used.")

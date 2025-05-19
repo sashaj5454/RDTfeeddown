@@ -68,6 +68,9 @@ def create_custom_title_bar(parent):
 	# Set the layout for the title bar
 	title_bar.setLayout(title_bar_layout)
 	title_bar.setStyleSheet("background-color: #2e2e2e;")
+	parent.central_widget.mousePressEvent = lambda event: mousePressEvent(parent, event)
+	parent.central_widget.mouseMoveEvent = lambda event: mouseMoveEvent(parent, event)
+	parent.central_widget.mouseReleaseEvent = lambda event: mouseReleaseEvent(parent, event)
 
 	return title_bar
 
@@ -124,18 +127,18 @@ def mousePressEvent(parent, event):
 	if event.button() == Qt.LeftButton:
 		# Convert global position to the widget's local coordinate system
 		local_pos = parent.mapFromGlobal(event.globalPos())
-		if parent.isNearEdge(local_pos):
+		if isNearEdge(parent, local_pos):
 			parent._resizing = True
 			parent._resize_start_pos = event.globalPos()  # keep global for delta calculations
 			parent._resize_start_geom = parent.geometry()
-			parent._resize_direction = parent.getResizeDirection(local_pos)
+			parent._resize_direction = getResizeDirection(parent, local_pos)
 		else:
 			parent.drag_position = event.globalPos() - parent.frameGeometry().topLeft()
 		event.accept()
 
 def mouseMoveEvent(parent, event):
 	if parent._resizing:
-		parent.handleResize(event.globalPos())
+		handleResize(parent, event.globalPos())
 		event.accept()
 	elif event.buttons() == Qt.LeftButton:
 		if hasattr(parent, "drag_position"):
@@ -144,7 +147,7 @@ def mouseMoveEvent(parent, event):
 	else:
 		# Convert the global position to local coordinates
 		local_pos = parent.mapFromGlobal(event.globalPos())
-		direction = parent.getResizeDirection(local_pos)
+		direction = getResizeDirection(parent, local_pos)
 		if direction in ['left', 'right']:
 			parent.setCursor(Qt.SizeHorCursor)
 		elif direction in ['top', 'bottom']:
