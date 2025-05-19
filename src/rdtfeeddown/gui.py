@@ -771,7 +771,7 @@ class RDTFeeddownGUI(QMainWindow):
 		formatted = f"<p style='color:white;'>{error_msg}</p>"
 		if tb and tb.strip() and tb.strip() != "None":
 			formatted += f"<p style='color:red;'>{tb}</p>"
-		self.error_log.append(formatted)
+			self.error_log.append(formatted)
 		QMessageBox.critical(self, "Error", error_msg)
 
 	def toggle_select_all_validation_files(self, state):

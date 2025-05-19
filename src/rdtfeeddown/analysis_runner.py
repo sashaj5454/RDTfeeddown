@@ -84,7 +84,8 @@ def run_analysis_logic(parent, ldb, beam1_model, beam2_model, beam1_reffolder, b
 										  rdt_folder,
 										  parent.simulation_checkbox.isChecked(), 
 										  parent.simulation_file_entry.text(),
-										  parent.log_error)
+										#   parent.threshold,
+										  log_func=parent.log_error)
 			parent.b1rdtdata = fit_BPM(parent.b1rdtdata)
 	QApplication.processEvents()
 	if beam2_model and beam2_folders:
@@ -95,7 +96,8 @@ def run_analysis_logic(parent, ldb, beam1_model, beam2_model, beam1_reffolder, b
 										rdt_folder, 
 										parent.simulation_checkbox.isChecked(), 
 										parent.simulation_file_entry.text(),
-										parent.log_error)
+										# parent.threshold,
+										log_func=parent.log_error)
 		parent.b2rdtdata = fit_BPM(parent.b2rdtdata)
 	QApplication.processEvents()
 	# Prompt to save LHCB1 RDT data just before calling write_RDTshifts
