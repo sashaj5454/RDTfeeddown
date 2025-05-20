@@ -2,7 +2,7 @@ import numpy as np
 from .analysis import polyfunction, calculate_avg_rdt_shift, arcBPMcheck, badBPMcheck
 from pyqtgraph import ErrorBarItem, TextItem, PlotDataItem, mkBrush, mkPen
 from qtpy.QtGui import QPainterPathStroker, QCursor, QPen
-from qtpy.QtWidgets import QToolTip
+from qtpy.QtWidgets import QToolTip, QApplication
 from .style import DARK_BACKGROUND_COLOR
 from qtpy.QtCore import Qt
 
@@ -32,6 +32,21 @@ IP_POS_DEFAULT = {
 		'IP8': 26.5104792,
 	}
 }
+
+def find_min_max_y(axes):
+	overall_y_min = float('inf')
+	overall_y_max = float('-inf')
+
+	for ax in axes:
+		y_range = ax.getViewBox().viewRange()[1]
+		y_min, y_max = y_range[0], y_range[1]
+		overall_y_min = min(overall_y_min, y_min)
+		overall_y_max = max(overall_y_max, y_max)
+		print(overall_y_min, overall_y_max)
+
+	# Now set each axis to use these common limits:
+	for ax in axes:
+		ax.getViewBox().setYRange(overall_y_min, overall_y_max)
 
 def set_axis_label(axis, position, text, color="white"):
     """
@@ -89,7 +104,7 @@ def plot_BPM(BPM, fulldata, rdt, rdt_plane, ax1=None, ax2=None, log_func=None):
 		refit = polyfunction(xfit, fitdata[0][0], fitdata[0][1], fitdata[0][2])
 		imfit = polyfunction(xfit, fitdata[3][0], fitdata[3][1], fitdata[3][2])
 
-		if fulldata["metadata"]["beam"] == "b1":
+		if fulldata["metadata"]["beam"][-1] == "1":
 			line_color = b1_line_color
 		else:
 			line_color = b2_line_color
@@ -206,19 +221,26 @@ def plot_RDTshifts(b1data, b2data, rdt, rdt_plane, axes, knob, log_func=None):
 
 
 		# Case 1: Both Beam 1 and Beam 2 data
-		if b1data  and b2data:
+		if b1data and b2data:
 			# LHCB1 on the left: (ax1, ax3, ax5)
 			plot_beam_data((ax1, ax3, ax5), b1data, "LHCB1")
+				
 			# LHCB2 on the right: (ax2, ax4, ax6)
 			plot_beam_data((ax2, ax4, ax6), b2data, "LHCB2")
+			print("RE and IM")
+			find_min_max_y((ax3, ax4, ax5, ax6))
+			print("AVG")
+			find_min_max_y((ax1, ax2))
 
 		# Case 2: Only Beam 1 data given (b2data is None)
 		elif b1data:
 			plot_beam_data((ax1, ax2, ax3), b1data, "LHCB1")
+			find_min_max_y((ax2, ax3))
 
 		# Case 3: Only Beam 2 data given (b1data is None)
 		elif b2data is not None:
 			plot_beam_data((ax1, ax2, ax3), b2data, "LHCB2")
+			find_min_max_y((ax2, ax3))
 
 	except Exception as e:
 		if log_func:
@@ -313,18 +335,22 @@ def plot_RDT(b1data, b2data, rdt, rdt_plane, axes, log_func=None):
 			install_closest_y_hover(ax2, hover_lines_amp_b2)
 			install_closest_y_hover(ax4, hover_lines_re_b2)
 			install_closest_y_hover(ax6, hover_lines_im_b2)
+			find_min_max_y((ax3, ax4, ax5, ax6))
+			find_min_max_y((ax1, ax2))
 		elif b1data:
 			# Only B1
 			hover_lines_amp_b1, hover_lines_re_b1, hover_lines_im_b1 = plot_single_beam(ax1, ax2, ax3, b1data, "LHCB1")
 			install_closest_y_hover(ax1, hover_lines_amp_b1)
 			install_closest_y_hover(ax2, hover_lines_re_b1)
 			install_closest_y_hover(ax3, hover_lines_im_b1)
+			find_min_max_y((ax2, ax3))
 		elif b2data:
 			# Only B2
 			hover_lines_amp_b2, hover_lines_re_b2, hover_lines_im_b2=plot_single_beam(ax1, ax2, ax3, b2data, "LHCB2")
 			install_closest_y_hover(ax1, hover_lines_amp_b2)
 			install_closest_y_hover(ax2, hover_lines_re_b2)
 			install_closest_y_hover(ax3, hover_lines_im_b2)
+			find_min_max_y((ax2, ax3))
 
 
 	except Exception as e:
@@ -458,16 +484,17 @@ def plot_dRDTdknob(b1data, b2data, rdt, rdt_plane, axes, knoblist=None, log_func
 			hover_line_scatter_re_b2, hover_line_scatter_im_b2 =plot_beam_data((ax2, ax4), b2data, "LHCB2")
 			install_closest_y_hover(ax2, hover_line_scatter_re_b2)
 			install_closest_y_hover(ax4, hover_line_scatter_im_b2)
+			find_min_max_y((ax1, ax2, ax3, ax4))
 		elif b1data:
 			hover_line_scatter_re_b1, hover_line_scatter_im_b1 = plot_beam_data((ax1, ax2), b1data, "LHCB1")
 			install_closest_y_hover(ax1, hover_line_scatter_re_b1)
 			install_closest_y_hover(ax2, hover_line_scatter_im_b1)
+			find_min_max_y((ax1, ax2))
 		elif b2data:
 			hover_line_scatter_re_b2, hover_line_scatter_im_b2 =plot_beam_data((ax1, ax2), b2data, "LHCB2")
 			install_closest_y_hover(ax1, hover_line_scatter_re_b2)
 			install_closest_y_hover(ax2, hover_line_scatter_im_b2)
-			for hover_line in hover_line_scatter_re_b2:
-				print(hover_line, hover_line._plainLabel)
+			find_min_max_y((ax1, ax2))
 				
 
 	except Exception as e:
