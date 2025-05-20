@@ -11,6 +11,7 @@ import json
 from pyqtgraph import ViewBox
 from qtpy.QtCore import Qt
 from qtpy.QtCore import QTimer
+from qtpy.QtWidgets import QApplication
 	
 
 def rdt_to_order_and_type(
@@ -186,35 +187,35 @@ class MyViewBox(ViewBox):
 		if ev.button() == Qt.LeftButton and (ev.modifiers() & Qt.ControlModifier):
 			self._ctrl_pan_active = True
 			self.setMouseMode(ViewBox.PanMode)
-			self.setCursor(Qt.ClosedHandCursor)
+			QApplication.setOverrideCursor(Qt.ClosedHandCursor)
 		else:
-			# Always ensure cursor is reset if not panning
 			self.setMouseMode(ViewBox.RectMode)
-			self.unsetCursor()
+			QApplication.restoreOverrideCursor()
 		super().mousePressEvent(ev)
 
 	def mouseReleaseEvent(self, ev):
-		# Always reset to zoom mode and cursor on mouse release
 		if self._ctrl_pan_active:
 			self.setMouseMode(ViewBox.RectMode)
 			self._ctrl_pan_active = False
-			self.unsetCursor()
+			QApplication.restoreOverrideCursor()
 		else:
-			# Defensive: always ensure cursor is correct
 			self.setMouseMode(ViewBox.RectMode)
-			self.unsetCursor()
+			QApplication.restoreOverrideCursor()
 		super().mouseReleaseEvent(ev)
 
 	def leaveEvent(self, ev):
-		# If the mouse leaves the ViewBox while panning, reset to zoom mode and cursor
 		if self._ctrl_pan_active:
 			self.setMouseMode(ViewBox.RectMode)
 			self._ctrl_pan_active = False
-			self.unsetCursor()
+			QApplication.restoreOverrideCursor()
 		else:
 			self.setMouseMode(ViewBox.RectMode)
-			self.unsetCursor()
+			QApplication.restoreOverrideCursor()
 		super().leaveEvent(ev)
+
+	def mouseMoveEvent(self, ev):
+		# No need to set the cursor here when using override
+		super().mouseMoveEvent(ev)
 
 	def mouseClickEvent(self, ev):
 		if ev.button() == Qt.RightButton:

@@ -96,6 +96,30 @@ def show_help(parent):
 <span style="color:#569cd6">[insert regex string corresponding to chosen folder paths],</span> <span style="color:#dcdcaa">[insert XING knob value]</span>
 </pre>
 </div>
+</ul>
+<hr>
+<p><b>Plot Shortcuts:</b></p>
+<table style="width:100%; border-collapse:collapse; font-family: monospace; font-size:90%; margin-bottom:20px;">
+  <tr>
+    <td style="width:35%; vertical-align:top;">
+      <span style="display:inline-block; padding:4px 8px; background-color:#444; color:#ddd; border:1px solid #666; border-radius:4px; margin-right:4px;">
+        Ctrl</span> 
+		+ 
+      <span style="display:inline-block; padding:4px 8px; background-color:#444; color:#ddd; border:1px solid #666; border-radius:4px; margin-left:4px;">
+        Left Click</span>
+    </td>
+    <td style="vertical-align:top;">Drag to pan the plot</td>
+  </tr>
+  <tr>
+    <td style="vertical-align:top;">
+      <span style="display:inline-block; padding:4px 8px; background-color:#444; color:#ddd; border:1px solid #666; border-radius:4px;">
+        Right Click
+      </span>
+    </td>
+    <td style="vertical-align:top;">Reset plot display</td>
+  </tr>
+</table>
+
 <li style="margin-bottom: 1em;">Use the <span style="font-weight: bold;">Input</span> tab to input results of crossing angle scans either from simulation or measurement.</li>
 <li style="margin-bottom: 1em;">Use the <span style="font-weight: bold;">Validation</span> tab to see results of analysis on file selections and to to view BPM, RDT, and RDT shift plots.</li>
 <li style="margin-bottom: 1em;">Use the <span style="font-weight: bold;">Graph</span> sub-tab of the <span style="font-weight: bold;">Correction</span> tab use output of the response tab to match with analysis of measurement.</li>
