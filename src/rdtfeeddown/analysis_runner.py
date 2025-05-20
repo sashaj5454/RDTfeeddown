@@ -109,15 +109,24 @@ def run_analysis_logic(parent, ldb, beam1_model, beam2_model, beam1_reffolder, b
 
 	loaded_output_data = []
 	parent.loaded_files_list.clear()
+	# Check if the file is already in the TreeWidget
+	existing_files = [
+		parent.loaded_files_list.topLevelItem(i).text(0)  # Assuming column 0 contains the file name
+		for i in range(parent.loaded_files_list.topLevelItemCount())
+	]
 	for f in parent.analysis_output_files:
-		if f not in [parent.loaded_files_list.item(i).text() for i in range(parent.loaded_files_list.count())]:
-			parent.loaded_files_list.addItem(f)
-		data = load_RDTdata(f)
-		valid = validate_file_structure(data, ['beam', 'ref', 'rdt', 'rdt_plane', 'knob'], parent.log_error)
-		if not valid:
-			parent.log_error(f"Invalid file structure for {f}.")
-			parent.input_progress.hide()
-			return
+		if f not in existing_files:
+			data = load_RDTdata(f)
+			valid = validate_file_structure(data, ['beam', 'ref', 'rdt', 'rdt_plane', 'knob'], parent.log_error)
+			if not valid:
+				parent.log_error(f"Invalid file structure for {f}.")
+				continue
+			parent.rdt = data.get("metadata", {}).get("rdt", "Unknown RDT")
+			parent.rdt_plane = data.get("metadata", {}).get("rdt_plane", "Unknown Plane")
+			parent.corrector = data.get("metadata", {}).get("knob", "Unknown Corrector")
+			beam = data.get("metadata", {}).get("beam", "Unknown Beam")
+			item = QTreeWidgetItem([f, beam, parent.rdt, parent.rdt_plane, parent.corrector])
+			parent.loaded_files_list.addTopLevelItem(item)
 		loaded_output_data.append(data)
 	results = group_datasets(loaded_output_data, parent.log_error)
 	if len(results) < 4:

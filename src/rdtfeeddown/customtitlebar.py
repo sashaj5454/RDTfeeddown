@@ -89,17 +89,17 @@ def show_help(parent):
 <span style="color: #9cdcfe;">}</span>
 	</pre>
 </div>
-<li style="margin-bottom: 1em;">To create a properties csv file, if in simulation mode in the Analysis tab since no Timber data, it must be in the format:</li>
+<li style="margin-bottom: 1em;">To create a <span style="font-weight: bold;">properties file</span> (i.e. if in simulation mode in the <span style="font-weight: bold;">Input tab</span> since no Timber data) it must be saved in <span style="font-weight: bold;">.csv format</span>, set out as shown below:</li>
 <div style="background-color: #252526; font-family: monospace; padding: 10px; border-radius: 5px;">
 <pre>
 <span style="color:#569cd6">MATCH,</span> <span style="color:#dcdcaa">KNOB</span>
 <span style="color:#569cd6">[insert regex string corresponding to chosen folder paths],</span> <span style="color:#dcdcaa">[insert XING knob value]</span>
 </pre>
 </div>
-<li style="margin-bottom: 1em;">Use the Validation tab to see results of analysis on file selections.</li>
-<li style="margin-bottom: 1em;">Use the Graph tab to view BPM, RDT, and RDT shift plots.</li>
-<li style="margin-bottom: 1em;">Use the Response sub-tab of the Correction tab to quantify response caused by changing XING angle for a specific corrector.</li>
-<li style="margin-bottom: 1em;">Use the Graph sub-tab of the Correction tab use output of the response tab to match with analysis of measurement.</li>
+<li style="margin-bottom: 1em;">Use the <span style="font-weight: bold;">Input</span> tab to input results of crossing angle scans either from simulation or measurement.</li>
+<li style="margin-bottom: 1em;">Use the <span style="font-weight: bold;">Validation</span> tab to see results of analysis on file selections and to to view BPM, RDT, and RDT shift plots.</li>
+<li style="margin-bottom: 1em;">Use the <span style="font-weight: bold;">Graph</span> sub-tab of the <span style="font-weight: bold;">Correction</span> tab use output of the response tab to match with analysis of measurement.</li>
+<li style="margin-bottom: 1em;">Use the <span style="font-weight: bold;">Response (optional)</span> sub-tab of the <span style="font-weight: bold;">Correction</span> tab to quantify RDT response caused by changing XING angle for a specific corrector - this can either be simulation or measurement result.</li>
 </ul>
 </body>
 </html>

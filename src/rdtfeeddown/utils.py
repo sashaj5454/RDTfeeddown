@@ -8,7 +8,7 @@ from zoneinfo import ZoneInfo
 import tfs
 from datetime import datetime
 import json
-import pyqtgraph as pg
+from pyqtgraph import ViewBox
 from qtpy.QtCore import Qt
 from qtpy.QtCore import QTimer
 	
@@ -175,21 +175,51 @@ def csv_to_dict(
 		reader = csv.DictReader(infile, skipinitialspace=True)
 		data = [row for row in reader]
 	return data
+class MyViewBox(ViewBox):
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+		self._ctrl_pan_active = False
+		self.setMouseMode(ViewBox.RectMode)
+		self.unsetCursor()
 
-class MyViewBox(pg.ViewBox):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._resetting = False
+	def mousePressEvent(self, ev):
+		if ev.button() == Qt.LeftButton and (ev.modifiers() & Qt.ControlModifier):
+			self._ctrl_pan_active = True
+			self.setMouseMode(ViewBox.PanMode)
+			self.setCursor(Qt.ClosedHandCursor)
+		else:
+			# Always ensure cursor is reset if not panning
+			self.setMouseMode(ViewBox.RectMode)
+			self.unsetCursor()
+		super().mousePressEvent(ev)
 
-    def mouseClickEvent(self, ev):
-        if ev.button() == Qt.RightButton and not self._resetting:
-            self._resetting = True
-            self.autoRange()
-            ev.accept()  # consume the event
-            # Reset the flag after a short delay to avoid continuous resetting.
-            QTimer.singleShot(50, self._reset_flag)
-        else:
-            super().mouseClickEvent(ev)
+	def mouseReleaseEvent(self, ev):
+		# Always reset to zoom mode and cursor on mouse release
+		if self._ctrl_pan_active:
+			self.setMouseMode(ViewBox.RectMode)
+			self._ctrl_pan_active = False
+			self.unsetCursor()
+		else:
+			# Defensive: always ensure cursor is correct
+			self.setMouseMode(ViewBox.RectMode)
+			self.unsetCursor()
+		super().mouseReleaseEvent(ev)
 
-    def _reset_flag(self):
-        self._resetting = False
+	def leaveEvent(self, ev):
+		# If the mouse leaves the ViewBox while panning, reset to zoom mode and cursor
+		if self._ctrl_pan_active:
+			self.setMouseMode(ViewBox.RectMode)
+			self._ctrl_pan_active = False
+			self.unsetCursor()
+		else:
+			self.setMouseMode(ViewBox.RectMode)
+			self.unsetCursor()
+		super().leaveEvent(ev)
+
+	def mouseClickEvent(self, ev):
+		if ev.button() == Qt.RightButton:
+			self.autoRange()
+			ev.accept()
+			QTimer.singleShot(50, lambda: None)
+		else:
+			super().mouseClickEvent(ev)

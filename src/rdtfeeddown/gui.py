@@ -45,6 +45,7 @@ class RDTFeeddownGUI(QMainWindow):
 		self.central_widget.installEventFilter(self)
 		install_event_filters(self, self.central_widget)
 		enable_mouse_tracking(self, self.central_widget)
+		self.tabs.currentChanged.connect(self.ensure_graph_tab_open)
 
 	def buildPathsSection(self):
 		# Load defaults from the special file
@@ -400,7 +401,107 @@ class RDTFeeddownGUI(QMainWindow):
 		# Create a QTabWidget for the sub-tabs
 		self.correction_sub_tabs = QTabWidget()
 		correction_main_layout.addWidget(self.correction_sub_tabs)
-		
+
+		# ------------------- Graph Tab -------------------
+		self.graph_tab = QWidget()
+		graph_tab_layout = QVBoxLayout(self.graph_tab)
+		# Loaded Files section
+		loaded_files_group = QGroupBox("Loaded Corrector Response Files")
+		loaded_files_group.setFixedHeight(150)
+		loaded_files_layout = QVBoxLayout()
+		self.correction_loaded_files_list = QTreeWidget()
+		self.correction_loaded_files_list.setColumnCount(4)
+		self.correction_loaded_files_list.setHeaderLabels(["Filename", "Beam", "RDT", "RDT plane", "Corrector"])
+		self.correction_loaded_files_list.setSelectionMode(QAbstractItemView.ExtendedSelection)
+		loaded_files_layout.addWidget(self.correction_loaded_files_list)
+		self.correction_loaded_files_list.itemSelectionChanged.connect(lambda: self.update_select_all_checkbox(self.correction_loaded_files_list, self.select_all_files_checkbox))
+
+		btn_layout = QHBoxLayout()
+		self.load_file_button = QPushButton("Load Files")
+		self.load_file_button.clicked.connect(self.load_selected_correction_files)
+		self.load_file_button.setToolTip("Load selected response files to use to match to the analysis files")
+		btn_layout.addWidget(self.load_file_button)
+		self.remove_file_button = QPushButton("Remove Selected Files")
+		self.remove_file_button.setStyleSheet(remove_stylesheet)
+		self.remove_file_button.clicked.connect(lambda: self.remove_selected_items(self.correction_loaded_files_list, self.corr_responses, True))
+		btn_layout.addWidget(self.remove_file_button)
+		self.select_all_files_checkbox = QCheckBox("Select All Files")
+		self.select_all_files_checkbox.stateChanged.connect(lambda state: self._toggle_select_all(self.correction_loaded_files_list, state))
+		btn_layout.addWidget(self.select_all_files_checkbox)
+		loaded_files_layout.addLayout(btn_layout)
+		loaded_files_group.setLayout(loaded_files_layout)
+		graph_tab_layout.addWidget(loaded_files_group)
+				
+		# Measurement to be matched group
+		measurement_match_group = QGroupBox("Measurements to be matched")
+		match_layout = QHBoxLayout(measurement_match_group)
+
+		# LHCB1 Single Measurement
+		b1_container = QWidget()
+		b1_vlayout = QVBoxLayout(b1_container)
+		b1_label = QLabel("LHCB1 Analysis File To Match:")
+		b1_label.setStyleSheet(b1_stylesheet)
+		b1_vlayout.addWidget(b1_label)
+		self.b1_match_entry = QLineEdit()
+		b1_vlayout.addWidget(self.b1_match_entry)
+		b1_button = QPushButton("Browse File")
+		b1_button.clicked.connect(lambda: select_singleitem(self, "LHCB1",
+															"Select LHCB1 Analysis File",
+															self.b1_match_entry, None,
+															"JSON Files (*.json)" 
+															))
+		b1_button.setToolTip("Select LHCB1 analysis file outputted in the Validation tab from the measurements to be matched to with the response files")
+		b1_vlayout.addWidget(b1_button)
+		match_layout.addWidget(b1_container)
+
+		# LHCB2 Single Measurement
+		b2_container = QWidget()
+		b2_vlayout = QVBoxLayout(b2_container)
+		b2_label = QLabel("LHCB2 Analysis File To Match:")
+		b2_label.setStyleSheet(b2_stylesheet)
+		b2_vlayout.addWidget(b2_label)
+		self.b2_match_entry = QLineEdit()
+		b2_vlayout.addWidget(self.b2_match_entry)
+		b2_button = QPushButton("Browse File")
+		b2_button.clicked.connect(lambda: select_singleitem(self, "LHCB2",
+															"Select LHCB2 Analysis File",
+															None, self.b2_match_entry,
+															"JSON Files (*.json)"
+															))
+		b2_button.setToolTip("Select LHCB2 analysis file outputted in the Validation tab from the measurements to be matched to with the response files")
+		b2_vlayout.addWidget(b2_button)
+		match_layout.addWidget(b2_container)
+
+		graph_tab_layout.addWidget(measurement_match_group)
+
+		# Plot button
+		self.corr_plot_button = QPushButton("Plot")
+		self.corr_plot_button.setStyleSheet(plot_stylesheet)
+		self.corr_plot_button.clicked.connect(self.plot_loaded_correction_files)
+		graph_tab_layout.addWidget(self.corr_plot_button)
+
+		# Graph and Knob Manager layout
+		graph_and_knob_layout = QHBoxLayout()
+		self.figureContainer = QWidget()
+		container_layout = QVBoxLayout(self.figureContainer)
+		self.corrFigure = pg.PlotWidget()
+		setup_blankcanvas(self.corrFigure)
+		container_layout.addWidget(self.corrFigure)
+		graph_and_knob_layout.addWidget(self.figureContainer, stretch=3)
+		self.knob_manager_group = QGroupBox("Knob Manager")
+		knob_manager_layout = QVBoxLayout()
+		self.knob_widgets = {}
+		self.update_knobs_button = QPushButton("Update Knobs and Re-Plot")
+		self.update_knobs_button.setStyleSheet(plot_stylesheet)
+		self.update_knobs_button.clicked.connect(self.update_knobs_and_replot)
+		knob_manager_layout.addWidget(self.update_knobs_button)
+		self.knob_manager_group.setLayout(knob_manager_layout)
+		graph_and_knob_layout.addWidget(self.knob_manager_group)
+		graph_tab_layout.addLayout(graph_and_knob_layout, stretch=1)
+
+		self.graph_tab.setLayout(graph_tab_layout)
+		self.correction_sub_tabs.addTab(self.graph_tab, "Graph")
+
 		# ------------------- Response Tab -------------------
 		self.response_tab = QWidget()
 		response_tab_layout = QVBoxLayout(self.response_tab)
@@ -617,107 +718,9 @@ class RDTFeeddownGUI(QMainWindow):
 		response_tab_layout.addWidget(run_response_group)
 
 		self.response_tab.setLayout(response_tab_layout)
-		self.correction_sub_tabs.addTab(self.response_tab, "Response")
+		self.correction_sub_tabs.addTab(self.response_tab, "Response (optional)")
 
-		# ------------------- Graph Tab -------------------
-		self.graph_tab = QWidget()
-		graph_tab_layout = QVBoxLayout(self.graph_tab)
-		# Loaded Files section
-		loaded_files_group = QGroupBox("Loaded Corrector Response Files")
-		loaded_files_group.setFixedHeight(150)
-		loaded_files_layout = QVBoxLayout()
-		self.correction_loaded_files_list = QTreeWidget()
-		self.correction_loaded_files_list.setColumnCount(4)
-		self.correction_loaded_files_list.setHeaderLabels(["Filename", "Beam", "RDT", "RDT plane", "Corrector"])
-		self.correction_loaded_files_list.setSelectionMode(QAbstractItemView.ExtendedSelection)
-		loaded_files_layout.addWidget(self.correction_loaded_files_list)
-		self.correction_loaded_files_list.itemSelectionChanged.connect(lambda: self.update_select_all_checkbox(self.correction_loaded_files_list, self.select_all_files_checkbox))
-
-		btn_layout = QHBoxLayout()
-		self.load_file_button = QPushButton("Load Files")
-		self.load_file_button.clicked.connect(self.load_selected_correction_files)
-		self.load_file_button.setToolTip("Load selected response files to use to match to the analysis files")
-		btn_layout.addWidget(self.load_file_button)
-		self.remove_file_button = QPushButton("Remove Selected Files")
-		self.remove_file_button.setStyleSheet(remove_stylesheet)
-		self.remove_file_button.clicked.connect(lambda: self.remove_selected_items(self.correction_loaded_files_list, self.corr_responses, True))
-		btn_layout.addWidget(self.remove_file_button)
-		self.select_all_files_checkbox = QCheckBox("Select All Files")
-		self.select_all_files_checkbox.stateChanged.connect(lambda state: self._toggle_select_all(self.correction_loaded_files_list, state))
-		btn_layout.addWidget(self.select_all_files_checkbox)
-		loaded_files_layout.addLayout(btn_layout)
-		loaded_files_group.setLayout(loaded_files_layout)
-		graph_tab_layout.addWidget(loaded_files_group)
-				
-		# Measurement to be matched group
-		measurement_match_group = QGroupBox("Measurements to be matched")
-		match_layout = QHBoxLayout(measurement_match_group)
-
-		# LHCB1 Single Measurement
-		b1_container = QWidget()
-		b1_vlayout = QVBoxLayout(b1_container)
-		b1_label = QLabel("LHCB1 Analysis File To Match:")
-		b1_label.setStyleSheet(b1_stylesheet)
-		b1_vlayout.addWidget(b1_label)
-		self.b1_match_entry = QLineEdit()
-		b1_vlayout.addWidget(self.b1_match_entry)
-		b1_button = QPushButton("Browse File")
-		b1_button.clicked.connect(lambda: select_singleitem(self, "LHCB1",
-															"Select LHCB1 Analysis File",
-															self.b1_match_entry, None,
-															"JSON Files (*.json)" 
-															))
-		b1_button.setToolTip("Select LHCB1 analysis file outputted in the Validation tab from the measurements to be matched to with the response files")
-		b1_vlayout.addWidget(b1_button)
-		match_layout.addWidget(b1_container)
-
-		# LHCB2 Single Measurement
-		b2_container = QWidget()
-		b2_vlayout = QVBoxLayout(b2_container)
-		b2_label = QLabel("LHCB2 Analysis File To Match:")
-		b2_label.setStyleSheet(b2_stylesheet)
-		b2_vlayout.addWidget(b2_label)
-		self.b2_match_entry = QLineEdit()
-		b2_vlayout.addWidget(self.b2_match_entry)
-		b2_button = QPushButton("Browse File")
-		b2_button.clicked.connect(lambda: select_singleitem(self, "LHCB2",
-															"Select LHCB2 Analysis File",
-															None, self.b2_match_entry,
-															"JSON Files (*.json)"
-															))
-		b2_button.setToolTip("Select LHCB2 analysis file outputted in the Validation tab from the measurements to be matched to with the response files")
-		b2_vlayout.addWidget(b2_button)
-		match_layout.addWidget(b2_container)
-
-		graph_tab_layout.addWidget(measurement_match_group)
-
-		# Plot button
-		self.corr_plot_button = QPushButton("Plot")
-		self.corr_plot_button.setStyleSheet(plot_stylesheet)
-		self.corr_plot_button.clicked.connect(self.plot_loaded_correction_files)
-		graph_tab_layout.addWidget(self.corr_plot_button)
-
-		# Graph and Knob Manager layout
-		graph_and_knob_layout = QHBoxLayout()
-		self.figureContainer = QWidget()
-		container_layout = QVBoxLayout(self.figureContainer)
-		self.corrFigure = pg.PlotWidget()
-		setup_blankcanvas(self.corrFigure)
-		container_layout.addWidget(self.corrFigure)
-		graph_and_knob_layout.addWidget(self.figureContainer, stretch=3)
-		self.knob_manager_group = QGroupBox("Knob Manager")
-		knob_manager_layout = QVBoxLayout()
-		self.knob_widgets = {}
-		self.update_knobs_button = QPushButton("Update Knobs and Re-Plot")
-		self.update_knobs_button.setStyleSheet(plot_stylesheet)
-		self.update_knobs_button.clicked.connect(self.update_knobs_and_replot)
-		knob_manager_layout.addWidget(self.update_knobs_button)
-		self.knob_manager_group.setLayout(knob_manager_layout)
-		graph_and_knob_layout.addWidget(self.knob_manager_group)
-		graph_tab_layout.addLayout(graph_and_knob_layout, stretch=1)
-
-		self.graph_tab.setLayout(graph_tab_layout)
-		self.correction_sub_tabs.addTab(self.graph_tab, "Graph")
+		
 
 		# Progress bar for correction tab remains below everything
 		self.simcorr_progress = QProgressBar()
@@ -750,6 +753,8 @@ class RDTFeeddownGUI(QMainWindow):
 		"""
 		Validate the knob when the "Validate Knob" button is clicked.
 		"""
+		self.input_progress.show()
+		QApplication.processEvents() 
 		knob = self.knob_entry.text()
 		if not knob:
 			self.log_error("Knob field must be filled!")
@@ -759,7 +764,8 @@ class RDTFeeddownGUI(QMainWindow):
 			QMessageBox.information(self, "Knob Validation", "Knob is valid. Setting: " + repr(knob_message))
 		else:
 			self.log_error("Knob Validation", "Invalid Knob: " + repr(knob_message))
-
+		self.input_progress.hide()
+		
 	def update_validation_files_widget(self):
 		# Update the validation_files_list widget with analysis_output_files
 		for f in self.analysis_output_files:
@@ -1251,7 +1257,6 @@ class RDTFeeddownGUI(QMainWindow):
 					plot_widget.setMouseTracking(True)
 					grid.addWidget(plot_widget, row, col)
 					axes.append(plot_widget)
-					view_box.setMouseMode(pg.ViewBox.RectMode)  # Enable click-and-drag zoom
 					view_box.menu = None  # Disable default context menu
 		else:
 			# Create a 2x1 grid of subplots.
@@ -1265,7 +1270,6 @@ class RDTFeeddownGUI(QMainWindow):
 				plot_widget.setMouseTracking(True)
 				grid.addWidget(plot_widget, row, 0)
 				axes.append(plot_widget)
-				view_box.setMouseMode(pg.ViewBox.RectMode)  # Enable click-and-drag zoom
 				view_box.menu = None  # Disable default context menu
 
 		QApplication.processEvents()  # Force the UI to update.
@@ -1278,3 +1282,12 @@ class RDTFeeddownGUI(QMainWindow):
 		if event.button() == Qt.RightButton:
 			for plot_widget in axes:
 				plot_widget.getViewBox().autoRange()
+	
+	def ensure_graph_tab_open(self, index):
+		"""
+		Ensure the "Graph" sub-tab is opened when the "Correction" tab is selected.
+		"""
+		# Check if the current tab is the "Correction" tab
+		if self.tabs.tabText(index) == "Correction":
+			# Set the active sub-tab to "Graph"
+			self.correction_sub_tabs.setCurrentWidget(self.graph_tab)

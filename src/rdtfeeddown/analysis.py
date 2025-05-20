@@ -170,8 +170,8 @@ def getrdt_omc3(
 	try:
 		refdat, beam_no = readrdtdatafile(ref, rdt, rdt_plane, rdtfolder, sim=sim, log_func=log_func)
 		if beam_no != beam[-1]:
-			log_func(f"Wrong beam used.")
-			raise RuntimeError(f"Wrong beam used.")
+			log_func(f"Input is for LHCB{beam_no} not LHCB{beam[-1]}.")
+			raise RuntimeError(f"Input is for LHCB{beam_no} not LHCB{beam[-1]}.")
 	except FileNotFoundError:
 		msg = f"RDT file not found in reference folder: {ref}."
 		if log_func:
@@ -196,8 +196,8 @@ def getrdt_omc3(
 		try:
 			cdat, beam_no = readrdtdatafile(f, rdt, rdt_plane, rdtfolder, sim=sim, log_func=log_func)
 			if beam_no != beam[-1]:
-				log_func(f"Wrong beam used.")
-				raise RuntimeError(f"Wrong beam used.")
+				log_func(f"Input is for LHCB{beam_no} not LHCB{beam[-1]}.")
+				raise RuntimeError(f"Input is for LHCB{beam_no} not LHCB{beam[-1]}.")
 		except FileNotFoundError:
 			msg = f"RDT file not found in measurement folder: {f}."
 			if log_func:
