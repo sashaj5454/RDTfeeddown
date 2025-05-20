@@ -103,6 +103,13 @@ def plot_BPM(BPM, fulldata, rdt, rdt_plane, ax1=None, ax2=None, log_func=None):
 		ax2.setLabel('bottom', f"{knob} trim")
 		ax2.plot(xfit, imfit, pen=line_color)
 		ax2.plot(xing, im, pen=None, symbol='x', symbolPen=line_color)
+
+		combined_min = min(np.min(re), np.min(im))
+		combined_max = max(np.max(re), np.max(im))
+
+		# Set both axes to use the same y-range
+		ax1.setYRange(combined_min, combined_max)
+		ax2.setYRange(combined_min, combined_max)
 		
 	except Exception as e:
 		if log_func:
