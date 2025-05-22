@@ -32,7 +32,7 @@ def select_singleitem(
 		dialog.setFileMode(QFileDialog.Directory)
 		dialog.setOption(QFileDialog.ShowDirsOnly, True)
 	else:
-		dialog.setFileMode(QFileDialog.ExistingFiles)
+		dialog.setFileMode(QFileDialog.ExistingFile)
 	dialog.setNameFilter(filter_text)
 	if dialog.exec_() == QFileDialog.Accepted:
 		itempath = dialog.selectedFiles()[0]

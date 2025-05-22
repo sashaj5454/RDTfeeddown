@@ -62,7 +62,7 @@ def run_analysis(parent):
 		parent.log_error("At least one measurement folder must be specified!")
 		parent.input_progress.hide()
 		return
-
+	
 	# Run analysis
 	try:
 		run_analysis_logic(
@@ -100,7 +100,7 @@ def run_analysis_logic(parent, ldb, beam1_model, beam2_model, beam1_reffolder, b
 										log_func=parent.log_error)
 		parent.b2rdtdata = fit_BPM(parent.b2rdtdata)
 	QApplication.processEvents()
-	# Prompt to save LHCB1 RDT data just before calling write_RDTshifts
+	# Prompt to save LHCB1 RDT data 
 	parent.analysis_output_files = []
 	if beam1_model and beam1_folders:
 		save_b1_rdtdata(parent)

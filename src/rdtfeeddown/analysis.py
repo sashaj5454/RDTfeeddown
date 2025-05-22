@@ -56,7 +56,7 @@ def read_rdt_file(
 		return None
 
 	for index, row in rt_filtered.iterrows():
-			raw_data.append([str(row["NAME"]), float(row["AMP"]), float(row["REAL"]), float(row["IMAG"])])
+		raw_data.append([str(row["NAME"]), float(row["AMP"]), float(row["REAL"]), float(row["IMAG"]), float(row["ERRAMP"])])
 	return raw_data, beam_no
 
 def ensure_trailing_slash(
@@ -99,7 +99,7 @@ def readrdtdatafile(
 				row["REAL"] = np.real(row[f"F{rdt}"])
 				row["IMAG"] = np.imag(row[f"F{rdt}"]) 
 				row["AMP"] = np.abs(row[f"F{rdt}"])
-				raw_data.append([str(row["NAME"]), float(row["AMP"]), float(row["REAL"]), float(row["IMAG"])])
+				raw_data.append([str(row["NAME"]), float(row["AMP"]), float(row["REAL"]), float(row["IMAG"]), 0])
 		except Exception:
 			raw_data, beam_no = read_rdt_file(filepath, log_func)
 	else:
@@ -116,8 +116,8 @@ def update_bpm_data(
 	Updates BPM data dictionary with new data.
 	"""
 	for entry in data:
-		name, amp, re, im = entry
-		bpmdata[name][key].append([knob_setting, amp, re, im])
+		name, amp, re, im, amp_err = entry
+		bpmdata[name][key].append([knob_setting, amp, re, im, amp_err])
 
 def getrdt_omc3(
 	ldb, 
@@ -225,7 +225,7 @@ def getrdt_omc3(
 		dat = bpmdata[bpm]['data']
 
 		diffdat = [
-			[dat[k][0] - bref[0][0], dat[k][2] - bref[0][2], dat[k][3] - bref[0][3]]
+			[dat[k][0] - bref[0][0], dat[k][2] - bref[0][2], dat[k][3] - bref[0][3], dat[k][4]]
 			for k in range(len(dat))
 		]
 		diffdat.sort(key=lambda x: x[0])
@@ -299,80 +299,6 @@ def badBPMcheck(bpm):
 			break
 	# print(f"{bpm} is bad BPM: {badbpm}")
 	return badbpm
-
-def write_RDTshifts_for_beam(data, rdt, rdt_plane, beam, output_path):
-	"""
-	Generalized function to write RDT shifts for a given beam (b1 or b2).
-	"""
-	# Ensure output_path has a trailing slash.
-	output_path = ensure_trailing_slash(output_path)
-	# Gradients
-	fout = f'{output_path}data_{beam}_f{rdt}{rdt_plane}rdtgradient.csv'
-	with open(fout, 'w') as wout:
-		csvwout = csv.writer(wout, delimiter=' ')
-		header = ['#name', 's', f'd(Ref{rdt}_{rdt_plane})/dknob', f'd(Imf{rdt}_{rdt_plane})/dknob', 're fit error', 'im fit error']
-		csvwout.writerow(header)
-		for b in data.keys():
-			if not arcBPMcheck(b) or badBPMcheck(b):
-				continue
-			s = data[b]['s']
-			dredk = data[b]['fitdata'][0][1]
-			dimdk = data[b]['fitdata'][3][1]
-			dreerr = data[b]['fitdata'][2][1]
-			dimerr = data[b]['fitdata'][5][1]
-			csvwout.writerow([b, s, dredk, dimdk, dreerr, dimerr])
-
-	# Average re**2 + im**2
-	xing = [diff[0] for diff in next(iter(data.values()))['diffdata']]
-	fout = f'{output_path}data_{beam}_f{rdt}{rdt_plane}rdtshiftvsknob.csv'
-	with open(fout, 'w') as wout:
-		csvwout = csv.writer(wout, delimiter=' ')
-		header = ['#xing', 'sqrt(Dre^2+Dim^2)', 'std_dev over BPM']
-		csvwout.writerow(header)
-		for x in xing:
-			toavg = []
-			for b in data.keys():
-				if not arcBPMcheck(b) or badBPMcheck(b):
-					continue
-				diffdata = data[b]['diffdata']
-				for diff in diffdata:
-					if diff[0] == x:
-						re, im = diff[1], diff[2]
-						amp = np.sqrt(re**2 + im**2)
-						toavg.append(amp)
-			avgRDTshift = np.mean(toavg)
-			avgRDTshifterr = np.std(toavg)
-			csvwout.writerow([x, avgRDTshift, avgRDTshifterr])
-
-	# RDT deltas
-	for x in xing:
-		fout = f'{output_path}data_{beam}_f{rdt}{rdt_plane}rdtdelta_knob_{x}.csv'
-		with open(fout, 'w') as wout:
-			csvwout = csv.writer(wout, delimiter=' ')
-			header = ['#name', 's', 'delta amp', 'delta re', 'delta im']
-			csvwout.writerow(header)
-			for b in data.keys():
-				if not arcBPMcheck(b) or badBPMcheck(b):
-					continue
-				s = data[b]['s']
-				diffdata = data[b]['diffdata']
-				for diff in diffdata:
-					if diff[0] == x:
-						re, im = diff[1], diff[2]
-						amp = np.sqrt(re**2 + im**2)
-						csvwout.writerow([b, s, amp, re, im])
-
-def write_RDTshifts(data, rdt, rdt_plane, beam, output_path , log_func=None):
-	"""
-	Writes RDT shifts for a beam
-	"""
-	try:
-		write_RDTshifts_for_beam(data, rdt, rdt_plane, beam, output_path)
-	except Exception as e:
-		if log_func:
-			log_func(f"Error writing RDT shifts for {beam}: {e}")
-		else:
-			print(f"Error writing RDT shifts for {beam}: {e}")
 
 def calculate_avg_rdt_shift(data):
 	"""
@@ -514,7 +440,7 @@ def getrdt_sim(beam, ref, file, xing, knob_name, knob_strength, rdt, rdt_plane, 
 			bpmdata[bpm]['s']=float(entry["S"])
 			bpmdata[bpm]['ref']=[]
 			bpmdata[bpm]['data']=[]
-			bpmdata[bpm]['ref'].append([0, entry["AMP"], entry["REAL"], entry["IMAG"]])
+			bpmdata[bpm]['ref'].append([0, entry["AMP"], entry["REAL"], entry["IMAG"], entry["ERRAMP"]])
 	else:
 		msg = f"Reference data not found for {ref}."
 		if log_func:
@@ -537,7 +463,7 @@ def getrdt_sim(beam, ref, file, xing, knob_name, knob_strength, rdt, rdt_plane, 
 			bpm = entry["NAME"]
 			if not arcBPMcheck(bpm) or badBPMcheck(bpm):
 				continue
-			bpmdata[bpm]['data'].append([knob_strength, entry["AMP"], entry["REAL"], entry["IMAG"]])
+			bpmdata[bpm]['data'].append([knob_strength, entry["AMP"], entry["REAL"], entry["IMAG"], entry["ERRAMP"]])
 	else:
 		msg = f"Measurement data not found for {file}."
 		if log_func:

@@ -776,9 +776,11 @@ class RDTFeeddownGUI(QMainWindow):
 		tb = traceback.format_exc()
 		formatted = f"<p style='color:white;'>{error_msg}</p>"
 		if tb and tb.strip() and tb.strip() != "None":
-			formatted += f"<p style='color:red;'>{tb}</p>"
+			formatted += f"<p style='color:#ff5555;'>{tb}</p>"
 			self.error_log.append(formatted)
-		QMessageBox.critical(self, "Error", error_msg)
+		msg_box = QMessageBox(self)
+		msg_box.setTextFormat(Qt.RichText)
+		msg_box.critical(msg_box, "Error", formatted)
 
 	def toggle_select_all_validation_files(self, state):
 		"""
@@ -1062,6 +1064,7 @@ class RDTFeeddownGUI(QMainWindow):
 		self.b2_response_meas = None
 		try:
 			self.b1_response_meas = load_RDTdata(self.b1_match_entry.text())
+			# self.b1_response_meas = load_RDTdata("/afs/cern.ch/work/s/sahorney/private/LHCoptics/2025_03_a4corr/Results_Apr_25/b1_IP1Hxingscan_f0030.json")
 		except Exception as e:
 			self.log_error(f"Error loading LHCB1 response measurement: {e}")
 		try:
@@ -1161,11 +1164,13 @@ class RDTFeeddownGUI(QMainWindow):
 			self.rdt_plane = {}
 
 		selected_files = select_multiple_treefiles(self, self.correction_loaded_files_list, title="Select Response Files", saved_data=self.corr_responses)
+		# selected_files=["/afs/cern.ch/work/s/sahorney/private/LHCoptics/2025_03_a4corr/b1_MCOSX_R1_f0030.json"]
 		# Validate metadata and update the UI
 		samemetadata, metadata = validate_metas(self.corr_responses)
 		if samemetadata:
 			for file in selected_files:
 				if file not in self.corr_responses.keys():
+					
 					self.corr_responses[file] = load_RDTdata(file)
 					validate_file_structure(self.corr_responses[file], ['beam', 'ref', 'rdt', 'rdt_plane', 'knob_name'], self.log_error)
 			self.populate_knob_manager()
@@ -1219,6 +1224,7 @@ class RDTFeeddownGUI(QMainWindow):
 
 		for ax in self.corr_axes:
 			for item in ax.listDataItems():
+				print(item.name())
 				if hasattr(item, 'name') and item.name() == 'Simulation':
 					ax.removeItem(item)
 		 # Extract updated knob values.

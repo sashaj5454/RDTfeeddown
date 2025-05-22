@@ -1,5 +1,5 @@
 from .style import recolor_icon, minimize_stylesheet, maximize_stylesheet, close_stylesheet
-from qtpy.QtWidgets import QWidget, QHBoxLayout, QToolButton, QLabel, QMessageBox, QStyle, QDialog, QVBoxLayout, QPlainTextEdit, QPushButton
+from qtpy.QtWidgets import QWidget, QHBoxLayout, QToolButton, QLabel, QMessageBox, QStyle, QDialog, QVBoxLayout, QTextEdit, QPushButton
 from qtpy.QtCore import Qt, QSize
 
 def create_custom_title_bar(parent):
@@ -116,7 +116,7 @@ def show_help(parent):
         Right Click
       </span>
     </td>
-    <td style="vertical-align:top;">Reset plot display</td>
+    <td style="vertical-align:top;">Auto-scale a plot</td>
   </tr>
 </table>
 
@@ -137,9 +137,9 @@ def show_error_log_window(self):
         dialog = QDialog(self)
         dialog.setWindowTitle("Error Log")
         layout = QVBoxLayout()
-        text_edit = QPlainTextEdit()
+        text_edit = QTextEdit()
         text_edit.setReadOnly(True)
-        text_edit.setPlainText("\n\n".join(self.error_log))
+        text_edit.setHtml("<br><br>".join(self.error_log))
         layout.addWidget(text_edit)
         close_btn = QPushButton("Close")
         close_btn.clicked.connect(dialog.accept)

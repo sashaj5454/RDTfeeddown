@@ -42,7 +42,6 @@ def find_min_max_y(axes):
 		y_min, y_max = y_range[0], y_range[1]
 		overall_y_min = min(overall_y_min, y_min)
 		overall_y_max = max(overall_y_max, y_max)
-		print(overall_y_min, overall_y_max)
 
 	# Now set each axis to use these common limits:
 	for ax in axes:
@@ -87,15 +86,19 @@ def plot_BPM(BPM, fulldata, rdt, rdt_plane, ax1=None, ax2=None, log_func=None):
 		diffdata = data[BPM]['diffdata']
 		fitdata = data[BPM]['fitdata']
 		knob = fulldata["metadata"]["knob"]
-		xing, re, im = [], [], []
+		xing, re, im, amp_err = [], [], [], []
 		for x in range(len(diffdata)):
 			xing.append(diffdata[x][0])
 			re.append(diffdata[x][1])
 			im.append(diffdata[x][2])
-
+			try:
+				amp_err.append(diffdata[x][3])
+			except IndexError:
+				amp_err.append(0.0)
 		xing = np.array(xing)
 		re = np.array(re)
 		im = np.array(im)
+		amp_err = np.array(amp_err)
 
 		xing_min = np.min(xing)
 		xing_max = np.max(xing)
@@ -112,11 +115,15 @@ def plot_BPM(BPM, fulldata, rdt, rdt_plane, ax1=None, ax2=None, log_func=None):
 		set_axis_label(ax1,'left', f"{BPM} ΔRe(f<sub>{rdt_plane},{rdt}</sub>)")
 		ax1.setLabel('bottom', f"{knob} trim")
 		ax1.plot(xfit, refit, pen=line_color)
+		error_ax1 = ErrorBarItem(x=xing, y=re, height=2*amp_err, beam=0.1, pen=mkPen(line_color, width=2), capSize=15)
+		ax1.addItem(error_ax1)
 		ax1.plot(xing, re, pen=None, symbol='x', symbolPen=line_color)
 
 		set_axis_label(ax2, 'left', f"{BPM} ΔIm(f<sub>{rdt_plane},{rdt}</sub>)")
 		ax2.setLabel('bottom', f"{knob} trim")
 		ax2.plot(xfit, imfit, pen=line_color)
+		error_ax2 = ErrorBarItem(x=xing, y=im, height=2*amp_err, beam=0.1, pen=mkPen(line_color, width=2), capSize=15)
+		ax2.addItem(error_ax2)
 		ax2.plot(xing, im, pen=None, symbol='x', symbolPen=line_color)
 
 		combined_min = min(np.min(re), np.min(im))
@@ -138,6 +145,13 @@ def plot_avg_rdt_shift(ax, data, line_color, rdt, rdt_plane, knob):
 	Plot the average RDT shift and standard deviation for given data on the provided axis.
 	"""
 	xing, ampdat, stddat = calculate_avg_rdt_shift(data)
+	xing = np.insert(xing, 0, 0)
+	ampdat = np.insert(ampdat, 0, 0)
+	stddat = np.insert(stddat, 0, 0)
+	sort_indices = np.argsort(xing)  # Get the indices that would sort xing
+	xing = xing[sort_indices]        # Sort xing
+	ampdat = ampdat[sort_indices]    # Sort ampdat based on xing
+	stddat = stddat[sort_indices]  
 	set_axis_label(ax, 'left', f"√(ΔRe(f<sub>{rdt_plane},{rdt}</sub>)<sup>2</sup> + ΔIm(f<sub>{rdt_plane},{rdt}</sub>)<sup>2</sup>)")
 	set_axis_label(ax, 'bottom', f"{knob} trim")
 	ax.plot(xing, ampdat, pen=line_color, symbol='x', symbolPen=line_color)  # Plot the data points.
@@ -227,9 +241,7 @@ def plot_RDTshifts(b1data, b2data, rdt, rdt_plane, axes, knob, log_func=None):
 				
 			# LHCB2 on the right: (ax2, ax4, ax6)
 			plot_beam_data((ax2, ax4, ax6), b2data, "LHCB2")
-			print("RE and IM")
 			find_min_max_y((ax3, ax4, ax5, ax6))
-			print("AVG")
 			find_min_max_y((ax1, ax2))
 
 		# Case 2: Only Beam 1 data given (b2data is None)
@@ -445,6 +457,15 @@ def plot_dRDTdknob(b1data, b2data, rdt, rdt_plane, axes, knoblist=None, log_func
 			dimdkdat = np.array(dimdkdat)
 			dredkerr = np.array(dredkerr)
 			dimdkerr = np.array(dimdkerr)
+
+			# Sort data by sdat
+			# This is important for the hover lines to work correctly
+			sort_idx = np.argsort(sdat)
+			sdat = sdat[sort_idx]
+			dredkdat = dredkdat[sort_idx]
+			dimdkdat = dimdkdat[sort_idx]
+			dredkerr = dredkerr[sort_idx]
+			dimdkerr = dimdkerr[sort_idx]
 			# Plot new data lines
 			if line_label == "Simulation":
 				hover_scattera = HoverLine(x=sdat, y=dredkdat, label=line_label, pen='g')
@@ -479,6 +500,8 @@ def plot_dRDTdknob(b1data, b2data, rdt, rdt_plane, axes, knoblist=None, log_func
 		if b1data and b2data:
 			hover_line_scatter_re_b1, hover_line_scatter_im_b1 = plot_beam_data((ax1, ax3), b1data, "LHCB1")
 			install_closest_y_hover(ax1, hover_line_scatter_re_b1)
+			for line in hover_line_scatter_re_b1:
+				print("Hover line label:", line._plainLabel)
 			install_closest_y_hover(ax3, hover_line_scatter_im_b1)
 
 			hover_line_scatter_re_b2, hover_line_scatter_im_b2 =plot_beam_data((ax2, ax4), b2data, "LHCB2")
@@ -489,6 +512,8 @@ def plot_dRDTdknob(b1data, b2data, rdt, rdt_plane, axes, knoblist=None, log_func
 			hover_line_scatter_re_b1, hover_line_scatter_im_b1 = plot_beam_data((ax1, ax2), b1data, "LHCB1")
 			install_closest_y_hover(ax1, hover_line_scatter_re_b1)
 			install_closest_y_hover(ax2, hover_line_scatter_im_b1)
+			for line in hover_line_scatter_re_b1:
+				print("Hover line label:", line._plainLabel)
 			find_min_max_y((ax1, ax2))
 		elif b2data:
 			hover_line_scatter_re_b2, hover_line_scatter_im_b2 =plot_beam_data((ax1, ax2), b2data, "LHCB2")
@@ -529,7 +554,10 @@ class HoverLine(PlotDataItem):
 			item.setAcceptHoverEvents(True)
 			item.setAcceptedMouseButtons(Qt.LeftButton | Qt.RightButton)
 		self._hoverWidth = 0.01
-		
+	
+	def name(self):
+		return self._plainLabel
+	
 	def shape(self):
 		p = super().shape()
 		s = QPainterPathStroker()
@@ -537,49 +565,55 @@ class HoverLine(PlotDataItem):
 		return s.createStroke(p)
 
 def install_closest_y_hover(ax, hover_lines):
-    vb = ax.getViewBox()
+	vb = ax.getViewBox()
 
-    def mouseMoved(evt):
-        if hasattr(evt, 'scenePos'):
-            scene_pos = evt.scenePos()
-        else:
-            scene_pos = evt
-        mousePoint = vb.mapSceneToView(scene_pos)
-        mouse_x = mousePoint.x()
-        mouse_y = mousePoint.y()
-        best_label = None
-        best_x = None
-        best_y = None
-        best_color = "white"
-        min_dist = float('inf')
-        for line in hover_lines:
-            xdata, ydata = line.getData()
-            if xdata is not None and len(xdata) > 0:
-                if np.min(xdata) <= mouse_x <= np.max(xdata):
-                    # Interpolate y for the exact mouse x
-                    y_val = np.interp(mouse_x, xdata, ydata)
-                    x_val = mouse_x
-                    dist = abs(y_val - mouse_y)
-                else:
-                    # Mouse is outside data range, use closest point
-                    idx = np.argmin(np.abs(xdata - mouse_x))
-                    x_val = xdata[idx]
-                    y_val = ydata[idx]
-                    dist = abs(y_val - mouse_y)
-                if dist < min_dist:
-                    min_dist = dist
-                    best_label = line._plainLabel
-                    best_x = x_val
-                    best_y = y_val
-                    best_color = getattr(line, "_htmlColor", "white")
-        if best_label is not None:
-            html = (
-                f"<span style='color:{best_color};white-space:nowrap;'>"
-                f"{best_label}<br>x={best_x:.3f}, y={best_y:.3f}"
-                "</span>"
-            )
-            QToolTip.showText(QCursor.pos(), html)
-        else:
-            QToolTip.hideText()
+	def mouseMoved(evt):
+		if hasattr(evt, 'scenePos'):
+			scene_pos = evt.scenePos()
+		else:
+			scene_pos = evt
+		mousePoint = vb.mapSceneToView(scene_pos)
+		mouse_x = mousePoint.x()
+		mouse_y = mousePoint.y()
+		best_label = None
+		best_x = None
+		best_y = None
+		best_color = "white"
+		y_mins = [np.min(ydata) for line in hover_lines if (ydata := line.getData()[1]) is not None and len(ydata) > 0]
+		y_maxs = [np.max(ydata) for line in hover_lines if (ydata := line.getData()[1]) is not None and len(ydata) > 0]
+		if y_mins and y_maxs:
+			y_min = min(y_mins)
+			y_max = max(y_maxs)
+			dynamic_min_dist = 0.1 * (y_max - y_min)
+		else:
+			dynamic_min_dist = 0.01
+		for line in hover_lines:
+			xdata, ydata = line.getData()
+			if xdata is not None and len(xdata) > 0:
+				if np.min(xdata) <= mouse_x <= np.max(xdata):
+					# Interpolate y for the exact mouse x
+					y_val = np.interp(mouse_x, xdata, ydata)
+					x_val = mouse_x
+				else:
+					idx = np.argmin(np.abs(xdata - mouse_x))
+					x_val = xdata[idx]
+					y_val = ydata[idx]
+				# Use full Euclidean distance
+				dist = np.sqrt((x_val - mouse_x)**2 + (y_val - mouse_y)**2)
+				if dist < dynamic_min_dist:
+					dynamic_min_dist = dist
+					best_label = line._plainLabel
+					best_x = x_val
+					best_y = y_val
+					best_color = getattr(line, "_htmlColor", "white")
+		if best_label is not None:
+			html = (
+				f"<span style='color:{best_color};white-space:nowrap;'>"
+				f"{best_label}<br>x={best_x:.3f}, y={best_y:.3f}"
+				"</span>"
+			)
+			QToolTip.showText(QCursor.pos(), html)
+		else:
+			QToolTip.hideText()
 
-    vb.scene().sigMouseMoved.connect(mouseMoved)
+	vb.scene().sigMouseMoved.connect(mouseMoved)
