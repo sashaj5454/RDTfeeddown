@@ -81,6 +81,40 @@ def plot_ips(axes, label):
 				ax._ips_drawn.add(ip_str)
 
 def plot_BPM(BPM, fulldata, rdt, rdt_plane, ax1=None, ax2=None, log_func=None):
+	"""
+	Generate plots for individual BPM RDT measurements vs knob settings.
+	
+	Parameters
+	----------
+	BPM : str
+		Name of the BPM to plot
+	fulldata : dict
+		Complete dataset containing measurements, fits, and metadata
+	rdt : str
+		RDT identifier (e.g., '0030')
+	rdt_plane : str
+		Measurement plane ('x' or 'y')
+	ax1 : pyqtgraph.PlotWidget, optional
+		Axis for real part plot
+	ax2 : pyqtgraph.PlotWidget, optional
+		Axis for imaginary part plot
+	log_func : callable, optional
+		Function for logging messages
+		
+	Returns
+	-------
+	None
+		Plots are generated on the provided axes
+		
+	Notes
+	-----
+	Creates two subplots:
+	1. Real part of RDT vs knob setting with polynomial fit
+	2. Imaginary part of RDT vs knob setting with polynomial fit
+	
+	Error bars are included if available in the data. Line colors
+	are automatically selected based on beam number (B1=blue, B2=red).
+	"""
 	try:
 		data = fulldata["data"]
 		diffdata = data[BPM]['diffdata']

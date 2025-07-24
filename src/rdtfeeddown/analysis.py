@@ -42,7 +42,24 @@ def read_rdt_file(
 	log_func=None
 ):
 	"""
-	Reads RDT data from a file and returns raw data.
+	Reads RDT data from a TFS file and extracts BPM measurements.
+	
+	Parameters
+	----------
+	filepath : str
+		Path to the TFS file containing RDT data
+	log_func : callable, optional
+		Logging function for error messages
+		
+	Returns
+	-------
+	tuple
+		(raw_data, beam_no) where raw_data is a list of BPM measurements
+		and beam_no is the beam identifier
+		
+	Notes
+	-----
+	Each BPM measurement contains: [name, amplitude, real, imaginary, error]
 	"""
 	raw_data = []
 	rt = tfs.read(filepath)
@@ -77,7 +94,35 @@ def readrdtdatafile(
 	log_func=None
 ):
 	"""
-	Reads RDT data from a file and removes outliers based on Z-scores.
+	Reads RDT data from OMC3 analysis results and filters outliers.
+	
+	Parameters
+	----------
+	cfile : str
+		Path to the OMC3 analysis results directory
+	rdt : str
+		RDT identifier (e.g., '0030', '1002')
+	rdt_plane : str
+		Measurement plane ('x' or 'y')
+	rdtfolder : str
+		Subfolder containing RDT files (e.g., 'normal_quadrupole')
+	threshold : float, default=3
+		Z-score threshold for outlier detection
+	sim : bool, default=False
+		Whether to read from simulation data format
+	log_func : callable, optional
+		Logging function for messages
+		
+	Returns
+	-------
+	tuple
+		(filtered_data, beam_no) where filtered_data is outlier-free
+		BPM measurements and beam_no identifies the beam
+		
+	Notes
+	-----
+	This function combines file reading and outlier filtering to provide
+	clean RDT measurement data for analysis.
 	"""
 	# Ensure cfile and rdtfolder have trailing slashes
 	cfile2 = ensure_trailing_slash(cfile)
@@ -113,7 +158,26 @@ def update_bpm_data(
 	knob_setting
 ):
 	"""
-	Updates BPM data dictionary with new data.
+	Updates BPM data dictionary with measurements at a specific knob setting.
+	
+	Parameters
+	----------
+	bpmdata : dict
+		Dictionary containing BPM data, keyed by BPM name
+	data : list
+		List of BPM measurements from a single analysis
+	key : str
+		Dictionary key to store the data under ('ref', 'data', etc.)
+	knob_setting : float
+		Knob setting value for this measurement
+		
+	Notes
+	-----
+	Each BPM entry in data should contain:
+	[name, amplitude, real_part, imaginary_part, amplitude_error]
+	
+	The function appends [knob_setting, amp, re, im, amp_err] to 
+	bpmdata[name][key] for each BPM.
 	"""
 	for entry in data:
 		name, amp, re, im, amp_err = entry
@@ -135,6 +199,60 @@ def getrdt_omc3(
 	threshold=3, 
 	log_func=None
 ):
+	"""
+	Extract RDT data from OMC3 analysis results for feed-down studies.
+	
+	Parameters
+	----------
+	ldb : pytimber.LoggingDB
+		CERN logging database connection for knob setting retrieval
+	beam : str
+		Beam identifier (e.g., 'LHCB1', 'LHCB2')
+	modelbpmlist : list
+		List of BPM names from the model
+	bpmdata : dict
+		Dictionary containing BPM position and reference data
+	ref : str
+		Path to reference measurement directory
+	flist : list
+		List of paths to measurement directories for analysis
+	knob : str
+		Name of the machine knob being varied (e.g., crossing angle)
+	rdt : str
+		RDT identifier (e.g., '0030' for f₃₀)
+	rdt_plane : str
+		Measurement plane ('x' or 'y')
+	rdtfolder : str
+		Subfolder containing RDT files (e.g., 'normal_quadrupole')
+	sim : bool
+		Whether analyzing simulation data
+	propfile : str
+		Properties file for simulation mode mapping
+	threshold : float, default=3
+		Z-score threshold for outlier detection
+	log_func : callable, optional
+		Function for logging messages
+		
+	Returns
+	-------
+	dict
+		Dictionary containing processed RDT data for each BPM, including
+		knob settings, amplitudes, and complex RDT values
+		
+	Raises
+	------
+	RuntimeError
+		If beam numbers don't match or reference data is invalid
+		
+	Notes
+	-----
+	This is the main analysis function that:
+	1. Validates beam consistency across model and data
+	2. Extracts knob settings from logging database or mapping file
+	3. Reads RDT measurements from all specified directories
+	4. Filters outliers and organizes data by BPM
+	5. Returns structured data ready for fitting and plotting
+	"""
 	beam_no = modelbpmlist[0][-1]
 	if beam[-1] != beam_no:
 		msg = f"Beam number {beam} does not match the model BPM list."

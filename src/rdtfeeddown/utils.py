@@ -17,6 +17,33 @@ from qtpy.QtWidgets import QApplication
 def rdt_to_order_and_type(
 	rdt: str
 ):	
+	"""
+	Convert RDT identifier to order and type description.
+	
+	Parameters
+	----------
+	rdt : str
+		4-digit RDT identifier (e.g., '0030', '1002')
+		
+	Returns
+	-------
+	str
+		Human-readable description combining type and multipole order
+		(e.g., 'normal_quadrupole', 'skew_sextupole')
+		
+	Notes
+	-----
+	RDT notation uses jklm indices where:
+	- Order = j + k + l + m (determines multipole)
+	- Type = 'normal' if (l + m) is even, 'skew' if odd
+	
+	Examples
+	--------
+	>>> rdt_to_order_and_type('0030')
+	'normal_quadrupole'
+	>>> rdt_to_order_and_type('1002') 
+	'skew_quadrupole'
+	"""
 	rdt_j, rdt_k, rdt_l, rdt_m = map(int, rdt)
 	rdt_type = "normal" if (rdt_l + rdt_m) % 2 == 0 else "skew"
 	orders = dict(((1, "dipole"), 
@@ -31,6 +58,20 @@ def rdt_to_order_and_type(
 	return f"{rdt_type}_{orders[rdt_j + rdt_k + rdt_l + rdt_m]}"
 
 def initialize_statetracker():
+	"""
+	Initialize connection to CERN's logging database for knob setting retrieval.
+	
+	Returns
+	-------
+	pytimber.LoggingDB
+		Database connection object for querying machine parameters
+		
+	Notes
+	-----
+	Requires access to CERN network and pytimber package installation.
+	This function creates the connection needed to retrieve historical
+	machine knob settings during RDT measurements.
+	"""
 	ldb = pytimber.LoggingDB()
 	return ldb
 
@@ -40,6 +81,36 @@ def getknobsetting_statetracker(ldb,thistimestamp,requested_knob):
 	return knob_setting
 
 def get_analysis_knobsetting(ldb,requested_knob,analyfile, log_func=None):
+	"""
+	Extract knob setting from OMC3 analysis results using logging database.
+	
+	Parameters
+	----------
+	ldb : pytimber.LoggingDB
+		Logging database connection
+	requested_knob : str
+		Name of machine knob (e.g., 'LHCBEAM/IP5-XING-H-MURAD')
+	analyfile : str
+		Path to OMC3 analysis results directory
+	log_func : callable, optional
+		Function for logging messages
+		
+	Returns
+	-------
+	float or None
+		Knob setting value at measurement time, or None if retrieval fails
+		
+	Notes
+	-----
+	This function:
+	1. Reads the command.run file to find kick file timestamps
+	2. Converts timestamps to appropriate timezone
+	3. Queries logging database for knob settings
+	4. Validates consistency across multiple measurements
+		
+	The command.run file contains the OMC3 analysis command with file lists
+	that encode measurement timestamps in their filenames.
+	"""
 	############-> read the command.run file to generate a list of all the kicks used to produce this results folder	
 	fc=analyfile+'/command.run'
 	try:
