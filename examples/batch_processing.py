@@ -187,7 +187,7 @@ def generate_all_plots(b1_data, b2_data, rdt_type, plane, output_dir, logger):
                 rdt.plotting.plot_BPM(bpm, b1_data, rdt_type, plane)
                 plot_count += 1
             except Exception as e:
-                logger.warning(f"Failed to plot B1 BMP {bpm}: {e}")
+                logger.warning(f"Failed to plot B1 BPM {bpm}: {e}")
         
         # Individual BPM plots for B2
         for bpm in b2_data['data'].keys():
@@ -244,7 +244,7 @@ def generate_summary_report(results, output_file):
             for detail in results['details']:
                 if detail['status'] == 'success':
                     f.write(f"  {detail['analysis_id']}:\n")
-                    f.write(f"    B1 BPMs: {detail['b1_bmps']}, B2 BPMs: {detail['b2_bpms']}\n")
+                    f.write(f"    B1 BPMs: {detail['b1_bpms']}, B2 BPMs: {detail['b2_bpms']}\n")
                     f.write(f"    Plots: {detail['plots_generated']}\n")
                     f.write(f"    B1 avg shift: {detail['b1_avg_shift']:.6f}\n")
                     f.write(f"    B2 avg shift: {detail['b2_avg_shift']:.6f}\n")

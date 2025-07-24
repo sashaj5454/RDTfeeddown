@@ -62,7 +62,7 @@ def main():
             ldb=ldb,
             beam='LHCB1',
             modelbpmlist=b1_model_bpms,
-            bpmdata=b1_bmp_data,
+            bpmdata=b1_bpm_data,
             ref=config['ref_b1'],
             flist=config['files_b1'],
             knob=config['knob'],
@@ -109,7 +109,7 @@ def main():
         for bpm in b1_fitted['data'].keys():
             output_file = os.path.join(
                 config['output_dir'], 
-                f"f{config['rdt']}_{config['plane']}_{bmp}_B1.png"
+                f"f{config['rdt']}_{config['plane']}_{bpm}_B1.png"
             )
             rdt.plotting.plot_BPM(bpm, b1_fitted, config['rdt'], config['plane'])
             plot_count += 1
