@@ -1,0 +1,11 @@
+numpy
+matplotlib
+scipy
+pytimber
+
+[dev]
+pytest
+sphinx
+black
+flake8
+ruff
