@@ -122,7 +122,7 @@ def show_help(parent):
 
 <li style="margin-bottom: 1em;">Use the <span style="font-weight: bold;">Input</span> tab to input results of crossing angle scans either from simulation or measurement.</li>
 <li style="margin-bottom: 1em;">Use the <span style="font-weight: bold;">Validation</span> tab to see results of analysis on file selections and to to view BPM, RDT, and RDT shift plots.</li>
-<li style="margin-bottom: 1em;">Use the <span style="font-weight: bold;">Graph</span> sub-tab of the <span style="font-weight: bold;">Correction</span> tab use output of the response tab to match with analysis of measurement.</li>
+<li style="margin-bottom: 1em;">Use the <span style="font-weight: bold;">Graph</span> sub-tab of the <span style="font-weight: bold;">Correction</span> tab use output of the  <span style="font-weight: bold;">Response (optional)</span> tab to match with analysis of measurement.</li>
 <li style="margin-bottom: 1em;">Use the <span style="font-weight: bold;">Response (optional)</span> sub-tab of the <span style="font-weight: bold;">Correction</span> tab to quantify RDT response caused by changing XING angle for a specific corrector - this can either be simulation or measurement result.</li>
 </ul>
 </body>

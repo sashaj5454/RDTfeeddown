@@ -1224,7 +1224,6 @@ class RDTFeeddownGUI(QMainWindow):
 
 		for ax in self.corr_axes:
 			for item in ax.listDataItems():
-				print(item.name())
 				if hasattr(item, 'name') and item.name() == 'Simulation':
 					ax.removeItem(item)
 		 # Extract updated knob values.

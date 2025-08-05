@@ -500,8 +500,6 @@ def plot_dRDTdknob(b1data, b2data, rdt, rdt_plane, axes, knoblist=None, log_func
 		if b1data and b2data:
 			hover_line_scatter_re_b1, hover_line_scatter_im_b1 = plot_beam_data((ax1, ax3), b1data, "LHCB1")
 			install_closest_y_hover(ax1, hover_line_scatter_re_b1)
-			for line in hover_line_scatter_re_b1:
-				print("Hover line label:", line._plainLabel)
 			install_closest_y_hover(ax3, hover_line_scatter_im_b1)
 
 			hover_line_scatter_re_b2, hover_line_scatter_im_b2 =plot_beam_data((ax2, ax4), b2data, "LHCB2")
@@ -512,8 +510,6 @@ def plot_dRDTdknob(b1data, b2data, rdt, rdt_plane, axes, knoblist=None, log_func
 			hover_line_scatter_re_b1, hover_line_scatter_im_b1 = plot_beam_data((ax1, ax2), b1data, "LHCB1")
 			install_closest_y_hover(ax1, hover_line_scatter_re_b1)
 			install_closest_y_hover(ax2, hover_line_scatter_im_b1)
-			for line in hover_line_scatter_re_b1:
-				print("Hover line label:", line._plainLabel)
 			find_min_max_y((ax1, ax2))
 		elif b2data:
 			hover_line_scatter_re_b2, hover_line_scatter_im_b2 =plot_beam_data((ax1, ax2), b2data, "LHCB2")
