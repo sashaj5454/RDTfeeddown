@@ -1,17 +1,11 @@
-.. rdtfeeddown documentation master file, created by
-   sphinx-quickstart on Tue Aug  5 16:19:16 2025.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+RDTfeeddown
+===========
 
-rdtfeeddown documentation
-=========================
-
-Add your content using ``reStructuredText`` syntax. See the
-`reStructuredText <https://www.sphinx-doc.org/en/master/usage/restructuredtext/index.html>`_
-documentation for details.
-
+Welcome to the RDTfeeddown documentation!
+This documentation provides an overview of how to use the RDTfeeddown package effectively. It includes detailed instructions, examples, and best practices for leveraging the features of RDTfeeddown in your projects.
 
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
 
+   usage
