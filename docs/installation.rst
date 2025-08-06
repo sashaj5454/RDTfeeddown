@@ -1,7 +1,7 @@
 Installation
 ============
 
-To install RDTFeeddown, run:
+To install RDTfeeddown, run:
 
 .. code-block:: bash
 
@@ -11,7 +11,7 @@ Or, to install from source:
 
 .. code-block:: bash
 
-   git clone https://github.com/yourusername/rdtfeeddown.git
+   git clone https://github.com/sashaj5454/rdtfeeddown.git
    cd rdtfeeddown
    pip install .
 
@@ -25,9 +25,3 @@ Dependencies
 - pytest
 - tfs
 - QtPy
-
-Run the GUI using:
-
-.. code-block:: bash
-
-   python -m rdtfeeddown

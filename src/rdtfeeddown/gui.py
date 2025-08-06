@@ -298,7 +298,7 @@ class RDTFeeddownGUI(QMainWindow):
 		self.validation_files_list.itemSelectionChanged.connect(lambda: self.update_select_all_checkbox(self.validation_files_list, self.validation_select_all_checkbox))
 
 		validation_buttons_layout = QHBoxLayout()
-		self.validation_files_button = QPushButton("Add Folders")
+		self.validation_files_button = QPushButton("Add Files")
 		self.validation_files_button.clicked.connect(self.select_analysis_files)
 		validation_buttons_layout.addWidget(self.validation_files_button)
 

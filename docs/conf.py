@@ -6,7 +6,7 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = "rdtfeeddown"
+project = "RDTfeeddown"
 copyright = "2025, Sasha Horney"
 author = "Sasha Horney"
 release = "0.0.0"
@@ -16,7 +16,7 @@ release = "0.0.0"
 
 extensions = []
 
-templates_path = ["_templates"]
+templates_path = ["source/_templates"]
 exclude_patterns = []
 
 
