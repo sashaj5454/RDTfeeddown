@@ -1,7 +1,5 @@
-import csv
-import json
-import os
 import re
+from pathlib import Path
 
 import numpy as np
 import tfs
@@ -31,14 +29,13 @@ def filter_outliers(data, threshold=3):
     re_zscores = zscore(re_values)
     im_zscores = zscore(im_values)
 
-    filtered_data = [
+    return [
         row
         for i, row in enumerate(data)
         if abs(amp_zscores[i]) < threshold
         and abs(re_zscores[i]) < threshold
         and abs(im_zscores[i]) < threshold
     ]
-    return filtered_data
 
 
 def read_rdt_file(filepath, log_func=None):
@@ -111,7 +108,7 @@ def readrdtdatafile(
                         0,
                     ]
                 )
-        except Exception:
+        except FileNotFoundError:
             raw_data, beam_no = read_rdt_file(filepath, log_func)
     else:
         raw_data, beam_no = read_rdt_file(filepath, log_func)
@@ -160,7 +157,7 @@ def getrdt_omc3(
     if sim and mapping_dict:
         for entry in mapping_dict:
             regex_str = entry.get("MATCH", "")
-            if re.fullmatch(rf"^{regex_str}$", os.path.basename(ref)):
+            if re.fullmatch(rf"^{regex_str}$", Path(ref).name):
                 refk = float(entry.get("KNOB", 0))  # Default to 0 if "KNOB" is missing
                 if refk is None:
                     msg = f"Reference knob for {ref} not found in mapping dictionary."
@@ -198,7 +195,8 @@ def getrdt_omc3(
                 (
                     e
                     for e in mapping_dict
-                    if re.fullmatch(rf"^{e.get('MATCH', '')}$", os.path.basename(f))
+                    if re.fullmatch(rf"^{e.get('MATCH', '')}$", Path(f).name)
+                    if re.fullmatch(rf"^{e.get('MATCH', '')}$", Path(f).name)
                 ),
                 None,
             )
@@ -234,7 +232,7 @@ def getrdt_omc3(
         raise RuntimeError(msg)
         return None
 
-    intersectedBPMdata = {}
+    intersected_bpm_data = {}
     for bpm in modelbpmlist:
         if len(bpmdata[bpm]["ref"]) != 1 or len(bpmdata[bpm]["data"]) != len(flist):
             continue
@@ -253,8 +251,8 @@ def getrdt_omc3(
             for k in range(len(dat))
         ]
         diffdat.sort(key=lambda x: x[0])
-        intersectedBPMdata[bpm] = {"s": s, "diffdata": diffdat}
-    if not intersectedBPMdata:
+        intersected_bpm_data[bpm] = {"s": s, "diffdata": diffdat}
+    if not intersected_bpm_data:
         msg = "No BPM data found after intersection."
         if log_func:
             log_func(msg)
@@ -269,13 +267,12 @@ def getrdt_omc3(
             "rdt_plane": rdt_plane,
             "knob": knob,
         },
-        "data": intersectedBPMdata,
+        "data": intersected_bpm_data,
     }
 
 
 def polyfunction(x, c, m, n):
-    y = c + m * x + n * x**2
-    return y
+    return c + m * x + n * x**2
 
 
 def fitdata(xdata, ydata, yerrdata, fitfunction):
@@ -294,7 +291,7 @@ def fitdatanoerrors(xdata, ydata, fitfunction):
 
 def fit_bpm(fulldata):
     data = fulldata["data"]
-    for bpm in data.keys():
+    for bpm in data:
         diffdata = data[bpm]["diffdata"]
         xing = []
         re = []
@@ -312,23 +309,20 @@ def fit_bpm(fulldata):
     return fulldata
 
 
-def arcBPMcheck(bpm):
+def arc_bpm_check(bpm):
     bpmtype = bpm.partition(".")[0]
     if bpmtype != "BPM":
-        isARCbpm = False
+        is_arc_bpm = False
     else:
         bpmindex = (
             bpm.partition(".")[2].rpartition(".")[0].partition("L")[0].partition("R")[0]
         )
-        if int(bpmindex) >= 10:
-            isARCbpm = True
-        else:
-            isARCbpm = False
+        is_arc_bpm = int(bpmindex) >= 10
     # print(f"{bpm} is arc BPM: {isARCbpm}")
-    return isARCbpm
+    return is_arc_bpm
 
 
-def badBPMcheck(bpm):
+def bad_bpm_check(bpm):
     badbpmb1 = ["BPM.13L2.B1"]
     badbpmb2 = ["BPM.25R3.B2", "BPM.26R3.B2"]
     badbpm = False
@@ -349,7 +343,7 @@ def calculate_avg_rdt_shift(data):
     Calculate the average RDT shift and standard deviation over BPMs for given data.
     """
     xing = []  # Get the list of crossing angles measured
-    for b in data.keys():
+    for b in data:
         diffdata = data[b]["diffdata"]
         for x in range(len(diffdata)):
             xing.append(diffdata[x][0])
@@ -359,8 +353,8 @@ def calculate_avg_rdt_shift(data):
     stddat = []
     for x in xing:
         toavg = []
-        for b in data.keys():
-            if not arcBPMcheck(b) or badBPMcheck(b):
+        for b in data:
+            if not arc_bpm_check(b) or bad_bpm_check(b):
                 continue
             diffdata = data[b]["diffdata"]
             for y in range(len(diffdata)):
@@ -401,7 +395,7 @@ def group_datasets(datasets, log_func=None):
                 grouped_b1["metadata"]["rdt"],
                 grouped_b1["metadata"]["rdt_plane"],
             )
-        elif beam_no == "2":
+        if beam_no == "2":
             grouped_b2["metadata"] = dataset["metadata"]
             grouped_b2["data"] = dataset["data"]
             return (
@@ -515,7 +509,7 @@ def getrdt_sim(
     if refdat is not None:
         for index, entry in refdat.iterrows():
             bpm = entry["NAME"]
-            if not arcBPMcheck(bpm) or badBPMcheck(bpm):
+            if not arc_bpm_check(bpm) or bad_bpm_check(bpm):
                 continue
             bpmlist.append(bpm)
             bpmdata[bpm] = {}
@@ -545,7 +539,7 @@ def getrdt_sim(
     if cdat is not None:
         for index, entry in cdat.iterrows():
             bpm = entry["NAME"]
-            if not arcBPMcheck(bpm) or badBPMcheck(bpm):
+            if not arc_bpm_check(bpm) or bad_bpm_check(bpm):
                 continue
             bpmdata[bpm]["data"].append(
                 [
@@ -569,7 +563,7 @@ def getrdt_sim(
             log_func(msg)
         raise RuntimeError(msg)
         return None
-    intersectedBPMdata = {}
+    intersected_bpm_data = {}
     # Check if the reference and measurement data have the same number of entries
     for bpm in bpmlist:
         if len(bpmdata[bpm]["ref"]) != 1 or len(bpmdata[bpm]["data"]) != 1:
@@ -585,8 +579,8 @@ def getrdt_sim(
             ((dat[0][2] - bref[0][2]) / xing) / knob_strength,
             ((dat[0][3] - bref[0][3]) / xing) / knob_strength,
         ]
-        intersectedBPMdata[bpm] = {"s": s, "diffdata": diffdat}
-    if not intersectedBPMdata:
+        intersected_bpm_data[bpm] = {"s": s, "diffdata": diffdat}
+    if not intersected_bpm_data:
         msg = "No BPM data found after intersection."
         if log_func:
             log_func(msg)
@@ -600,5 +594,5 @@ def getrdt_sim(
             "rdt_plane": rdt_plane,
             "knob_name": knob_name,
         },
-        "data": intersectedBPMdata,
+        "data": intersected_bpm_data,
     }

@@ -10,17 +10,17 @@ def check_rdt(rdt: str, rdtplane: str):
         return False, "The rdt must contain only numeric characters."
 
     # Split the string into j, k, l, and m
-    j, k, l, m = [int(char) for char in rdt]
+    j, k, l_rdt, m = [int(char) for char in rdt]
 
-    if j == 0 and l == 0:  # the RDT can't be seen on any plane
+    if j == 0 and l_rdt == 0:  # the RDT can't be seen on any plane
         return False, "The rdt does not exist on any plane"
-    if l + m == 0 and j != 0 and rdtplane != "x":
+    if l_rdt + m == 0 and j != 0 and rdtplane != "x":
         return False, "The rdt does not exist on the vertical plane"
-    if j + k == 0 and l != 0 and rdtplane != "y":
+    if j + k == 0 and l_rdt != 0 and rdtplane != "y":
         return False, "The rdt does not exist on the horizontal plane"
     if j == 0 and rdtplane != "y":
         return False, "The rdt does not exist on the horizontal plane"
-    if l == 0 and rdtplane != "x":
+    if l_rdt == 0 and rdtplane != "x":
         return False, "The rdt does not exist on the vertical plane"
 
     return True, ""

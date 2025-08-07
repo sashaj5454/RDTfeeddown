@@ -249,5 +249,5 @@ class MyViewBox(ViewBox):
             super().mouse_click_event(ev)
 
     # For backward compatibility, alias the old method name to the new one
-    mouseMoveEvent = mouse_move_event
-    mouseClickEvent = mouse_click_event
+    # mouseMoveEvent = mouse_move_event
+    # mouseClickEvent = mouse_click_event

@@ -18,7 +18,7 @@ Or, to install from source:
 Dependencies
 ------------
 
-- Python >= 3.8
+- Python >= 3.11
 - numpy
 - pyqtgraph
 - matplotlib

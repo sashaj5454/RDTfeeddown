@@ -4,7 +4,12 @@ from qtpy.QtCore import Qt
 from qtpy.QtGui import QCursor, QPainterPathStroker, QPen
 from qtpy.QtWidgets import QToolTip
 
-from .analysis import arcBPMcheck, badBPMcheck, calculate_avg_rdt_shift, polyfunction
+from .analysis import (
+    arc_bpm_check,
+    bad_bpm_check,
+    calculate_avg_rdt_shift,
+    polyfunction,
+)
 from .style import DARK_BACKGROUND_COLOR
 
 COLOR_LIST = [
@@ -245,7 +250,7 @@ def plot_rdtshifts(b1data, b2data, rdt, rdt_plane, axes, knob, log_func=None):
             sdat, dredkdat, dimdkdat = [], [], []
             dredkerr, dimdkerr = [], []
             for bpm in data:
-                if not arcBPMcheck(bpm) or badBPMcheck(bpm):
+                if not arc_bpm_check(bpm) or bad_bpm_check(bpm):
                     continue
                 s = data[bpm]["s"] / 1000
                 # [re_opt, re_cov, re_err, im_opt, im_cov, im_err]
@@ -351,7 +356,7 @@ def plot_rdt(b1data, b2data, rdt, rdt_plane, axes, log_func=None):
             for i, angle in enumerate(xing):
                 sdat, ampdat, redat, imdat = [], [], [], []
                 for bpm in data:
-                    if not arcBPMcheck(bpm) or badBPMcheck(bpm):
+                    if not arc_bpm_check(bpm) or bad_bpm_check(bpm):
                         continue
                     s = data[bpm]["s"] / 1000
                     diffdata = data[bpm]["diffdata"]
@@ -506,7 +511,7 @@ def plot_drdt_dknob(b1data, b2data, rdt, rdt_plane, axes, knoblist=None, log_fun
                 line_label = "Simulation"
                 # Data has a "file" key structure
                 for bpm in data[next(iter(data.keys()))]["data"]:
-                    if not arcBPMcheck(bpm) or badBPMcheck(bpm):
+                    if not arc_bpm_check(bpm) or bad_bpm_check(bpm):
                         continue
                     re_opts, re_errs, im_opts, im_errs = 0, 0, 0, 0
                     s = float(data[next(iter(data.keys()))]["data"][bpm]["s"]) / 1000
@@ -531,7 +536,7 @@ def plot_drdt_dknob(b1data, b2data, rdt, rdt_plane, axes, knoblist=None, log_fun
                 line_label = "Measurement"
                 # Data is directly a BPM dictionary
                 for bpm in data["data"]:
-                    if not arcBPMcheck(bpm) or badBPMcheck(bpm):
+                    if not arc_bpm_check(bpm) or bad_bpm_check(bpm):
                         continue
                     s = float(data["data"][bpm]["s"]) / 1000
                     re_opt, _, re_err, im_opt, _, im_err = data["data"][bpm]["fitdata"]
