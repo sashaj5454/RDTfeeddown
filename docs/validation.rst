@@ -1,15 +1,15 @@
 Validation
 ===========
- 
-The GUI provides a user-friendly interface to validate and correct the RDT feeddown data.
- 
-You can load your data, and display it to validate it. 
+
+The **Validation tab** of the GUI provides a user-friendly interface to validate and correct the RDT feeddown data.
+
+You can load your data, and display it to validate it.
 
 Input Fields Explained
 ---------------------
 
 - **Add Files**:
-  Add the GUI generated files containing the RDT feeddown data you want to plot (this simply adds the filenames to a list).
+  Add the generated files from the :ref:`Input` tab of the GUI containing the RDT feeddown data you want to plot (this simply adds the filenames to a list).
 
 - **Load Selected Files for Plotting**:
   Load the selected files to display their data in the plotting tabs.

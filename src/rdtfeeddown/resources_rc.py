@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 # Resource object code
 #
 # Created by: The Resource Compiler for PyQt5 (Qt v5.15.14)
@@ -837,7 +835,7 @@ qt_resource_struct_v2 = b"\
 \x00\x00\x01\x96\x5d\x90\xf0\x70\
 "
 
-qt_version = [int(v) for v in QtCore.qVersion().split('.')]
+qt_version = [int(v) for v in QtCore.qVersion().split(".")]
 if qt_version < [5, 8, 0]:
     rcc_version = 1
     qt_resource_struct = qt_resource_struct_v1
@@ -845,10 +843,17 @@ else:
     rcc_version = 2
     qt_resource_struct = qt_resource_struct_v2
 
-def qInitResources():
-    QtCore.qRegisterResourceData(rcc_version, qt_resource_struct, qt_resource_name, qt_resource_data)
 
-def qCleanupResources():
-    QtCore.qUnregisterResourceData(rcc_version, qt_resource_struct, qt_resource_name, qt_resource_data)
+def q_init_resources():
+    QtCore.qRegisterResourceData(
+        rcc_version, qt_resource_struct, qt_resource_name, qt_resource_data
+    )
 
-qInitResources()
+
+def q_cleanup_resources():
+    QtCore.qUnregisterResourceData(
+        rcc_version, qt_resource_struct, qt_resource_name, qt_resource_data
+    )
+
+
+q_init_resources()

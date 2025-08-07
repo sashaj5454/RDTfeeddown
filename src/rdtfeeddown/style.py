@@ -1,5 +1,6 @@
-from qtpy.QtGui import QIcon, QPixmap, QPainter, QColor
 from qtpy.QtCore import QSize, Qt
+from qtpy.QtGui import QColor, QIcon, QPainter, QPixmap
+
 DARK_BACKGROUND_COLOR = "#2e2e2e"
 plot_colour = "#5C62D6"
 run_colour = "green"
@@ -9,18 +10,18 @@ b2_colour = "#B90E0A"
 
 
 dark_stylesheet = f"""
-QWidget {{ 
-    background-color: {DARK_BACKGROUND_COLOR}; 
-    color: #ffffff; 
+QWidget {{
+    background-color: {DARK_BACKGROUND_COLOR};
+    color: #ffffff;
 }}
-QPushButton {{ 
-    background-color: #3c3c3c; 
-    color: #ffffff; 
+QPushButton {{
+    background-color: #3c3c3c;
+    color: #ffffff;
     border: white;
     padding: 5px;
 }}
-QPushButton:hover {{ 
-    background-color: #484848; 
+QPushButton:hover {{
+    background-color: #484848;
 }}
 QLineEdit, QComboBox, QTreeWidget, QListWidget {{
     background-color: #3c3c3c;
@@ -36,16 +37,16 @@ QGroupBox::title {{
     subcontrol-position: top center;
     padding: 0 3px;
 }}
-QTabWidget::pane {{ 
+QTabWidget::pane {{
     border: 1px solid #555555;
 }}
-QTabBar::tab {{ 
+QTabBar::tab {{
     background: #3c3c3c;
     color: #ffffff;
     padding: 5px;
 }}
-QTabBar::tab:selected {{ 
-    background: #484848; 
+QTabBar::tab:selected {{
+    background: #484848;
 }}
 QCheckBox::indicator {{
     width: 13px;
@@ -63,63 +64,65 @@ QToolTip {{
 }}
 """
 
+
 def recolor_icon(icon, color, size=QSize(28, 28)):
     # Get a pixmap from the icon (using its actual size)
     pixmap = icon.pixmap(icon.actualSize(size))
-    
+
     # Create a new pixmap with a transparent background
     new_pixmap = QPixmap(pixmap.size())
     new_pixmap.fill(Qt.transparent)
-    
+
     # Set up a QPainter to recolor the pixmap
     painter = QPainter(new_pixmap)
     # Draw the original pixmap
     painter.drawPixmap(0, 0, pixmap)
-    
+
     # Set composition mode to tint the pixmap
     painter.setCompositionMode(QPainter.CompositionMode_SourceIn)
     painter.fillRect(new_pixmap.rect(), QColor(color))
     painter.end()
-    
+
     return QIcon(new_pixmap)
 
-minimize_stylesheet = f"""
-#minimizeButton {{
+
+minimize_stylesheet = """
+#minimizeButton {
 			background-color: #3c3c3c;
 			color: white;
 			border: none;
 			padding: 5px;
 			border-radius: 3px;
-		}}
-#minimizeButton:hover {{
+		}
+#minimizeButton:hover {
     background-color: #484848;
-}}
+}
 """
 
-maximize_stylesheet = f"""
-#maximizeButton {{
+maximize_stylesheet = """
+#maximizeButton {
             background-color: #3c3c3c;
             color: white;
             border: none;
             padding: 5px;
             border-radius: 3px;
-        }}  
-#maximizeButton:hover {{
+        }
+#maximizeButton:hover {
     background-color: #484848;
-}}
+}
 """
 
-close_stylesheet = f"""
-#closeButton {{
+close_stylesheet = """
+#closeButton {
             background-color: #3c3c3c;
             color: white;
             border: none;
             padding: 5px;
             border-radius: 3px;
-        }}
-#closeButton:hover {{
+        }
+#closeButton:hover {
     background-color: #484848;
-}}
+}
 """
 
 plot_stylesheet = f"""
