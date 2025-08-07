@@ -1,6 +1,6 @@
 # Resource object code
 #
-# Created by: The Resource Compiler for PyQt5 (Qt v5.15.14)
+# Created by: The Resource Compiler for PyQt5 (Qt v5.15.9)
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -844,16 +844,16 @@ else:
     qt_resource_struct = qt_resource_struct_v2
 
 
-def q_init_resources():
+def qInitResources():  # noqa: N802
     QtCore.qRegisterResourceData(
         rcc_version, qt_resource_struct, qt_resource_name, qt_resource_data
     )
 
 
-def q_cleanup_resources():
+def qCleanupResources():  # noqa: N802
     QtCore.qUnregisterResourceData(
         rcc_version, qt_resource_struct, qt_resource_name, qt_resource_data
     )
 
 
-q_init_resources()
+qInitResources()

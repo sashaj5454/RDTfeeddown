@@ -1,17 +1,21 @@
-from .gui import RDTFeeddownGUI
+from qtpy.QtCore import QEvent, QObject
 from qtpy.QtWidgets import QApplication
-from qtpy.QtCore import QObject, QEvent
+
+import rdtfeeddown.resources_rc  # noqa: F401 - needed for resource loading
+
+from .gui import RDTFeeddownGUI
 from .style import dark_stylesheet
-import rdtfeeddown.resources_rc
+
 
 class CursorResetFilter(QObject):
-    def eventFilter(self, obj, event):
+    def eventFilter(self, obj, event):  # noqa: N802
         if event.type() == QEvent.MouseButtonRelease:
             # Always restore override cursor on any mouse release
             while QApplication.overrideCursor() is not None:
                 QApplication.restoreOverrideCursor()
         return False
-    
+
+
 if __name__ == "__main__":
     try:
         app = QApplication([])
@@ -21,6 +25,6 @@ if __name__ == "__main__":
         window = RDTFeeddownGUI()
         window.show()
         app.exec_()
-    except Exception as e:
+    except (ImportError, RuntimeError) as e:
         print(f"Error starting the GUI: {e}")
         exit(1)

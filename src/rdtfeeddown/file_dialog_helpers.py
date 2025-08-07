@@ -4,7 +4,6 @@ from qtpy.QtWidgets import (
     QFileSystemModel,
     QListView,
     QListWidgetItem,
-    QMessageBox,
     QTreeView,
     QTreeWidgetItem,
 )
@@ -19,6 +18,7 @@ def select_singleitem(
     title_text: str,
     b1entry,
     b2entry,
+    input_path: str = "",
     filter_text: str = "All Files (*)",
     folder=False,
 ):
@@ -37,10 +37,10 @@ def select_singleitem(
     """
     dialog = QFileDialog(parent)
     dialog.setWindowTitle(title_text)
-    dialog.setDirectory(parent.default_input_path)
+    dialog.setDirectory(input_path)
     if folder:
         dialog.setFileMode(QFileDialog.Directory)
-        dialog.setOption(QFileDialog.ShowDirsOnly, True)
+        dialog.setOption(QFileDialog.ShowDirsOnly, on=True)
     else:
         dialog.setFileMode(QFileDialog.ExistingFile)
     dialog.setNameFilter(filter_text)
@@ -53,11 +53,15 @@ def select_singleitem(
     elif beam == "LHCB2":
         b2entry.setText(itempath)
     else:
-        return None
+        return
 
 
 def select_multiple_files(
-    parent, default_dir, list_widget, title="Select Files", filter="JSON Files (*.json)"
+    parent,
+    default_dir,
+    list_widget,
+    title="Select Files",
+    file_filter="JSON Files (*.json)",
 ):
     """
     Open a file dialog to select multiple files.
@@ -66,7 +70,7 @@ def select_multiple_files(
             parent (QWidget): The parent widget.
             default_dir (str): Directory where the dialog should start.
             title (str): The window title.
-            filter (str): The filter string.
+            file_filter (str): The filter string.
 
     Returns:
             list: List of selected file paths.
@@ -75,7 +79,7 @@ def select_multiple_files(
     dialog.setWindowTitle(title)
     dialog.setDirectory(default_dir)
     dialog.setFileMode(QFileDialog.ExistingFiles)
-    dialog.setNameFilter(filter)
+    dialog.setNameFilter(file_filter)
     for view in dialog.findChildren((QListView, QTreeView)):
         view.setSelectionMode(QAbstractItemView.ExtendedSelection)
     if dialog.exec_() == QFileDialog.Accepted:
@@ -104,9 +108,9 @@ def select_folders(parent, default_dir, name_filter, list_widget):
             list: List of selected directory paths.
     """
     dialog = QFileDialog(parent)
-    dialog.setOption(QFileDialog.DontUseNativeDialog, True)
+    dialog.setOption(QFileDialog.DontUseNativeDialog, on=True)
     dialog.setFileMode(QFileDialog.Directory)
-    dialog.setOption(QFileDialog.ShowDirsOnly, True)
+    dialog.setOption(QFileDialog.ShowDirsOnly, on=True)
     dialog.setDirectory(default_dir)
     dialog.setNameFilter(name_filter)
     for view in dialog.findChildren((QListView, QTreeView)):
@@ -125,7 +129,7 @@ def select_multiple_treefiles(
     parent,
     tree_widget,
     title="Select Files",
-    filter="JSON Files (*.json)",
+    file_filter="JSON Files (*.json)",
     saved_data=None,
 ):
     """
@@ -137,7 +141,7 @@ def select_multiple_treefiles(
         parent.default_output_path
     )  # Use default output path, adjust if needed
     dialog.setFileMode(QFileDialog.ExistingFiles)
-    dialog.setNameFilter(filter)
+    dialog.setNameFilter(file_filter)
 
     # Enable multiple selection in the dialog
     for view in dialog.findChildren((QListView, QTreeView)):

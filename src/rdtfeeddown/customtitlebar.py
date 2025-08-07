@@ -88,11 +88,9 @@ def create_custom_title_bar(parent):
     # Set the layout for the title bar
     title_bar.setLayout(title_bar_layout)
     title_bar.setStyleSheet("background-color: #2e2e2e;")
-    parent.central_widget.mousePressEvent = lambda event: mouse_press_event(
-        parent, event
-    )
-    parent.central_widget.mouseMoveEvent = lambda event: mouse_move_event(parent, event)
-    parent.central_widget.mouseReleaseEvent = lambda event: mouse_release_event(
+    parent.central_widget.mousePressEvent = lambda event: mousePressEvent(parent, event)
+    parent.central_widget.mouseMoveEvent = lambda event: mouseMoveEvent(parent, event)
+    parent.central_widget.mouseReleaseEvent = lambda event: mouseReleaseEvent(
         parent, event
     )
 
@@ -174,11 +172,11 @@ def show_error_log_window(self):
     dialog.exec_()
 
 
-def mouse_press_event(parent, event):
+def mousePressEvent(parent, event):  # noqa: N802
     if event.button() == Qt.LeftButton:
         # Convert global position to the widget's local coordinate system
         local_pos = parent.mapFromGlobal(event.globalPos())
-        if is_near_edge(parent, local_pos):
+        if isNearEdge(parent, local_pos):
             parent._resizing = True
             parent._resize_start_pos = (
                 event.globalPos()
@@ -190,7 +188,7 @@ def mouse_press_event(parent, event):
         event.accept()
 
 
-def mouse_move_event(parent, event):
+def mouseMoveEvent(parent, event):  # noqa: N802
     if parent._resizing:
         handle_resize(parent, event.globalPos())
         event.accept()
@@ -214,13 +212,13 @@ def mouse_move_event(parent, event):
             parent.setCursor(Qt.ArrowCursor)
 
 
-def mouse_release_event(parent, event):
+def mouseReleaseEvent(parent, event):  # noqa: N802
     parent._resizing = False
     parent._resize_direction = None
     parent.setCursor(Qt.ArrowCursor)
 
 
-def is_near_edge(parent, pos):
+def isNearEdge(parent, pos):  # noqa: N802
     rect = parent.rect()
     margin = parent._resize_margin
     return (
@@ -314,7 +312,7 @@ def toggle_maximize_restore(parent):
         parent.maximize_button.setIcon(cust_style2)
 
 
-def event_filter(parent, obj, event):
+def eventFilter(parent, obj, event):  # noqa: N802
     # If you receive a MouseMove even from a child, call the mouseMoveEvent method.
     if event.type() == event.MouseMove:
         parent.mouseMoveEvent(event)
@@ -327,7 +325,7 @@ def install_event_filters(parent, widget):
         child.installEventFilter(parent)
 
 
-def enable_mouse_tracking(parent, widget):
+def enable_mouse_tracking(parent, widget):  # noqa: N802
     widget.setMouseTracking(True)
     for child in widget.findChildren(QWidget):
         child.setMouseTracking(True)

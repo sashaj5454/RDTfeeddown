@@ -26,28 +26,28 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
-from .analysis import group_datasets
-from .analysis_runner import run_analysis, run_response
-from .customtitlebar import (
+from rdtfeeddown.analysis import group_datasets
+from rdtfeeddown.analysis_runner import run_analysis, run_response
+from rdtfeeddown.customtitlebar import (
     create_custom_title_bar,
     enable_mouse_tracking,
     install_event_filters,
 )
-from .data_handler import load_rdtdata, load_selected_files
-from .file_dialog_helpers import (
+from rdtfeeddown.data_handler import load_rdtdata, load_selected_files
+from rdtfeeddown.file_dialog_helpers import (
     select_folders,
     select_multiple_files,
     select_multiple_treefiles,
     select_singleitem,
 )
-from .plotting import (
+from rdtfeeddown.plotting import (
     plot_bpm,
     plot_drdt_dknob,
     plot_rdt,
     plot_rdtshifts,
     setup_blankcanvas,
 )
-from .style import (
+from rdtfeeddown.style import (
     DARK_BACKGROUND_COLOR,
     b1_stylesheet,
     b2_stylesheet,
@@ -55,8 +55,12 @@ from .style import (
     remove_stylesheet,
     run_stylesheet,
 )
-from .utils import MyViewBox, initialize_statetracker, load_defaults
-from .validation_utils import validate_file_structure, validate_knob, validate_metas
+from rdtfeeddown.utils import MyViewBox, initialize_statetracker, load_defaults
+from rdtfeeddown.validation_utils import (
+    validate_file_structure,
+    validate_knob,
+    validate_metas,
+)
 
 pg.setConfigOption("foreground", "w")
 
@@ -74,7 +78,6 @@ class RDTFeeddownGUI(QMainWindow):
         self.layout = QVBoxLayout(self.central_widget)
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.error_log = []
-        # Add the custom title bar
         self.layout.addWidget(create_custom_title_bar(self))
 
         # Add the rest of the GUI
@@ -119,7 +122,6 @@ class RDTFeeddownGUI(QMainWindow):
         self.input_layout.addWidget(paths_group)
 
     def build_input_tab(self):
-        # Add an attribute to store the list of analysis output files
         self.analysis_output_files = []
 
         # ===== Input Tab with separated sections =====
@@ -146,6 +148,7 @@ class RDTFeeddownGUI(QMainWindow):
                 "Select LHCB1 Model",
                 self.beam1_model_entry,
                 None,
+                input_path=self.default_input_path,
                 folder=True,
             )
         )
@@ -169,6 +172,7 @@ class RDTFeeddownGUI(QMainWindow):
                 "Select LHCB2 Model",
                 None,
                 self.beam2_model_entry,
+                self.default_input_path,
                 folder=True,
             )
         )
@@ -204,6 +208,7 @@ class RDTFeeddownGUI(QMainWindow):
                 "Select LHCB1 Reference Measurement Folder",
                 self.beam1_reffolder_entry,
                 self.beam2_reffolder_entry,
+                self.default_input_path,
                 "LHCB1 folders (Beam1BunchTurn*);;All Folders (*)",
                 folder=True,
             )
@@ -241,6 +246,7 @@ class RDTFeeddownGUI(QMainWindow):
                 "Select LHCB2 Reference Measurement Folder",
                 self.beam1_reffolder_entry,
                 self.beam2_reffolder_entry,
+                self.default_input_path,
                 "LHCB2 folders (Beam2BunchTurn*);;All Folders (*)",
                 folder=True,
             )
@@ -514,6 +520,7 @@ class RDTFeeddownGUI(QMainWindow):
         self.layout.addWidget(self.plot_progress)
 
     def build_correction_tab(self):
+        self.corr_responses = {}
         # ===== Correction Tab with separated sections =====
         self.correction_tab = QWidget()
         self.tabs.addTab(self.correction_tab, "Correction")
@@ -593,6 +600,7 @@ class RDTFeeddownGUI(QMainWindow):
                 "Select LHCB1 Analysis File",
                 self.b1_match_entry,
                 None,
+                self.default_output_path,
                 "JSON Files (*.json)",
             )
         )
@@ -618,6 +626,7 @@ class RDTFeeddownGUI(QMainWindow):
                 "Select LHCB2 Analysis File",
                 None,
                 self.b2_match_entry,
+                self.default_output_path,
                 "JSON Files (*.json)",
             )
         )
@@ -687,6 +696,7 @@ class RDTFeeddownGUI(QMainWindow):
                 "Select LHCB1 Reference File",
                 self.corr_beam1_reffolder_entry,
                 None,
+                self.default_output_path,
                 folder=True,
             )
         )
@@ -723,6 +733,7 @@ class RDTFeeddownGUI(QMainWindow):
                 "Select LHCB2 Reference Folder",
                 None,
                 self.corr_beam2_reffolder_entry,
+                self.default_output_path,
                 folder=True,
             )
         )
@@ -768,6 +779,7 @@ class RDTFeeddownGUI(QMainWindow):
                 "Select LHCB1 Response Folder",
                 self.corr_beam1_measfolder_entry,
                 None,
+                self.default_output_path,
                 folder=True,
             )
         )
@@ -804,6 +816,7 @@ class RDTFeeddownGUI(QMainWindow):
                 "Select LHCB2 Response Folder",
                 None,
                 self.corr_beam2_measfolder_entry,
+                self.default_output_path,
                 folder=True,
             )
         )
@@ -1025,7 +1038,7 @@ class RDTFeeddownGUI(QMainWindow):
     def select_analysis_files(self):
         selected_files = select_multiple_files(
             self,
-            self.default_input_path,
+            self.default_output_path,
             self.validation_files_list,
             "Select Analysis Files",
         )
@@ -1153,11 +1166,11 @@ class RDTFeeddownGUI(QMainWindow):
         datab1, datab2 = None, None
         try:
             datab1 = self.b1rdtdata["data"]
-        except (KeyError, AttributeError) as e:
+        except (KeyError, AttributeError, TypeError) as e:
             self.log_error(f"Error accessing LHCB1 RDT data: {e}", e)
         try:
             datab2 = self.b2rdtdata["data"]
-        except (KeyError, AttributeError) as e:
+        except (KeyError, AttributeError, TypeError) as e:
             self.log_error(f"Error accessing LHCB2 RDT data: {e}", e)
 
         self.rdt_axes, self.rdt_axes_layout = self.setup_figure(
@@ -1173,7 +1186,7 @@ class RDTFeeddownGUI(QMainWindow):
                 self.rdt_axes,
                 log_func=self.log_error,
             )
-        except RuntimeError as e:
+        except (KeyError, AttributeError, TypeError) as e:
             self.log_error(f"Error plotting RDT data: {e}", e)
             self.plot_progress.hide()
             return
@@ -1186,12 +1199,12 @@ class RDTFeeddownGUI(QMainWindow):
         try:
             datab1 = self.b1rdtdata["data"]
             knob = self.b1rdtdata["metadata"]["knob"]
-        except RuntimeError as e:
+        except (KeyError, AttributeError, TypeError) as e:
             self.log_error(f"Error accessing LHCB1 RDT data: {e}", e)
         try:
             datab2 = self.b2rdtdata["data"]
             knob = self.b2rdtdata["metadata"]["knob"]
-        except RuntimeError as e:
+        except (KeyError, AttributeError, TypeError) as e:
             self.log_error(f"Error accessing LHCB2 RDT data: {e}", e)
 
         self.rdtshift_axes, self.rdtshift_axes_layout = self.setup_figure(
@@ -1208,7 +1221,7 @@ class RDTFeeddownGUI(QMainWindow):
                 knob,
                 log_func=self.log_error,
             )
-        except RuntimeError as e:
+        except (KeyError, AttributeError, TypeError) as e:
             self.log_error(f"Error plotting RDT shifts: {e}", e)
             self.plot_progress.hide()
             return
@@ -1296,9 +1309,9 @@ class RDTFeeddownGUI(QMainWindow):
         else:
             total = file_list.count()
             selected = len(file_list.selectedItems())
-        check_box.blockSignals(block=True)
+        check_box.blockSignals(True)  # noqa: FBT003
         check_box.setChecked(selected == total and total > 0)
-        check_box.blockSignals(block=False)
+        check_box.blockSignals(False)  # noqa: FBT003
 
     def select_beam1_folders(self):
         select_folders(
@@ -1364,11 +1377,11 @@ class RDTFeeddownGUI(QMainWindow):
         try:
             self.b1_response_meas = load_rdtdata(self.b1_match_entry.text())
             # self.b1_response_meas = load_RDTdata("/afs/cern.ch/work/s/sahorney/private/LHCoptics/2025_03_a4corr/Results_Apr_25/b1_IP1Hxingscan_f0030.json")
-        except RuntimeError as e:
+        except (KeyError, FileNotFoundError, AttributeError, TypeError) as e:
             self.log_error(f"Error loading LHCB1 response measurement: {e}", e)
         try:
             self.b2_response_meas = load_rdtdata(self.b2_match_entry.text())
-        except RuntimeError as e:
+        except (KeyError, FileNotFoundError, AttributeError, TypeError) as e:
             self.log_error(f"Error loading LHCB2 response measurement: {e}", e)
 
         QApplication.processEvents()
@@ -1428,7 +1441,7 @@ class RDTFeeddownGUI(QMainWindow):
                 for file, response in self.corr_responses.items()
                 if "LHCB1" in response.get("metadata", {}).get("beam")
             }
-        except RuntimeError as e:
+        except (KeyError, FileNotFoundError, AttributeError, TypeError) as e:
             self.log_error(f"Error extracting LHCB1 data: {e}", e)
         try:
             self.b2data = {
@@ -1436,7 +1449,7 @@ class RDTFeeddownGUI(QMainWindow):
                 for file, response in self.corr_responses.items()
                 if "LHCB2" in response.get("metadata", {}).get("beam", "")
             }
-        except RuntimeError as e:
+        except (KeyError, FileNotFoundError, AttributeError, TypeError) as e:
             self.log_error(f"Error extracting LHCB2 data: {e}", e)
 
         if self.b1andb2same_checkbox.isChecked() and (

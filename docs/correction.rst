@@ -34,10 +34,10 @@ Similar to the :ref:`Input` tab, this tab allows you to load measurement folders
 **Main Features:**
 
 - **Reference Folder**:  
-  Select the reference measurement folder containing the measurement data with no corrector strength applied.
+  Select the reference measurement folder containing the measurement data with the corrector strength applied and the reference crossing angle.
 
 - **Response Folder**:  
-  Select the measurement folder containing the data with the corrector strength applied.
+  Select the measurement folder containing the data with the same corrector strength as the reference measurement applied, and a different crossing angle to the reference (will need to input the difference in crossing angle).
 
 - **LHCB1 same as LHCB2 mode**:  
   If this option is selected, the response will be calculated assuming that the corrector name is the same for both LHC beams. This is useful when the corrector name is not beam-specific.

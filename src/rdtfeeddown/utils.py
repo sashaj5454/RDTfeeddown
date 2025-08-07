@@ -168,8 +168,8 @@ def load_defaults(log_func=None):
         "default_output_path": f"/user/slops/data/LHC_DATA/OP_DATA/Betabeat/{curr_time}/",
     }
     # Use current working directory to locate the configuration file
-    config_path = f"{Path.cwd()}/rdtfeeddown_defaults.json"
-    if Path.exists(config_path):
+    config_path = Path.cwd() / "rdtfeeddown_defaults.json"
+    if config_path.exists():
         try:
             with Path.open(config_path, "r") as cf:
                 user_defaults = json.load(cf)
@@ -206,7 +206,7 @@ class MyViewBox(ViewBox):
         self.setMouseMode(ViewBox.RectMode)
         self.unsetCursor()
 
-    def mouse_press_event(self, ev):
+    def mousePressEvent(self, ev):  # noqa: N802
         if ev.button() == Qt.LeftButton and (ev.modifiers() & Qt.ControlModifier):
             self._ctrl_pan_active = True
             self.setMouseMode(ViewBox.PanMode)
@@ -214,9 +214,9 @@ class MyViewBox(ViewBox):
         else:
             self.setMouseMode(ViewBox.RectMode)
             QApplication.restoreOverrideCursor()
-        super().mouse_press_event(ev)
+        super().mousePressEvent(ev)
 
-    def mouse_release_event(self, ev):
+    def mouseReleaseEvent(self, ev):  # noqa: N802
         if self._ctrl_pan_active:
             self.setMouseMode(ViewBox.RectMode)
             self._ctrl_pan_active = False
@@ -224,9 +224,9 @@ class MyViewBox(ViewBox):
         else:
             self.setMouseMode(ViewBox.RectMode)
             QApplication.restoreOverrideCursor()
-        super().mouse_release_event(ev)
+        super().mouseReleaseEvent(ev)
 
-    def leave_event(self, ev):
+    def leaveEvent(self, ev):  # noqa: N802
         if self._ctrl_pan_active:
             self.setMouseMode(ViewBox.RectMode)
             self._ctrl_pan_active = False
@@ -234,20 +234,16 @@ class MyViewBox(ViewBox):
         else:
             self.setMouseMode(ViewBox.RectMode)
             QApplication.restoreOverrideCursor()
-        super().leave_event(ev)
+        super().leaveEvent(ev)
 
-    def mouse_move_event(self, ev):
+    def mouseMoveEvent(self, ev):  # noqa: N802
         # No need to set the cursor here when using override
-        super().mouse_move_event(ev)
+        super().mouseMoveEvent(ev)
 
-    def mouse_click_event(self, ev):
+    def mouseClickEvent(self, ev):  # noqa: N802
         if ev.button() == Qt.RightButton:
             self.autoRange()
             ev.accept()
             QTimer.singleShot(50, lambda: None)
         else:
-            super().mouse_click_event(ev)
-
-    # For backward compatibility, alias the old method name to the new one
-    # mouseMoveEvent = mouse_move_event
-    # mouseClickEvent = mouse_click_event
+            super().mouseClickEvent(ev)

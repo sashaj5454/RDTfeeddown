@@ -1,8 +1,12 @@
 GUI usage
 =========
 
+.. image:: figures/ScreenshotGUI.png
+   :width: 600
+
 To run the RDTfeeddown GUI, use the following command:
-.. code-block:: bash
+
+.. code-block:: shell
 
    python -m rdtfeeddown
 

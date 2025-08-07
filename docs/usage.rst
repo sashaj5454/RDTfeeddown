@@ -6,7 +6,7 @@ It should be noted that all measurement files should be in the format outputted 
 This can be generalised but for now that is the only accepted format.
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 3
    
    installation
    gui

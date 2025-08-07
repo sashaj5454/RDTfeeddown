@@ -465,6 +465,8 @@ def get_save_filenames(
     beam1_measfolder=None,
     beam2_measfolder=None,
 ):
+    filenameb1 = None
+    filenameb2 = None
     default_output_path = parent.default_output_path
     if beam1_reffolder and beam1_measfolder:
         filenameb1, _ = QFileDialog.getSaveFileName(
@@ -612,7 +614,6 @@ def run_response_logic(
 ):
     filenameb1, filenameb2 = get_save_filenames(
         parent,
-        default_output_path,
         beam1_reffolder,
         beam2_reffolder,
         beam1_measfolder,
