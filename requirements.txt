@@ -1,6 +1,6 @@
 matplotlib
 pytest
-tfs
+tfs-pandas
 QtPy
 pyqtgraph
 numpy
