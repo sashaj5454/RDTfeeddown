@@ -18,12 +18,13 @@ Or, to install from source:
 Dependencies
 ------------
 
-- Python >= 3.11
+- matplotlib
 - numpy
 - pyqtgraph
-- matplotlib
 - pytest
-- tfs-pandas
-- scipy
-- PyQt5/6
+- pytimber
+- Python >= 3.11
 - QtPy
+- scipy
+- tfs-pandas
+- PyQt5/6

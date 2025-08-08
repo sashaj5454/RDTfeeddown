@@ -1,5 +1,6 @@
 matplotlib
 pytest
+pytimber
 tfs-pandas
 QtPy
 pyqtgraph
