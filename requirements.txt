@@ -1,6 +1,5 @@
 matplotlib
 pytest
-pytimber # Install from https://acc-py-repo.cern.ch/repository/vr-py-releases/simple
 tfs-pandas
 QtPy
 pyqtgraph
