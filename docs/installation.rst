@@ -23,5 +23,7 @@ Dependencies
 - pyqtgraph
 - matplotlib
 - pytest
-- tfs
+- tfs-pandas
+- scipy
+- PyQt5/6
 - QtPy

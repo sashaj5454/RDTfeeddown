@@ -3,8 +3,8 @@ from qtpy.QtWidgets import QApplication
 
 import rdtfeeddown.resources_rc  # noqa: F401 - needed for resource loading
 
-from .gui import RDTFeeddownGUI
-from .style import dark_stylesheet
+from rdtfeeddown.gui import RDTFeeddownGUI
+from rdtfeeddown.style import dark_stylesheet
 
 
 class CursorResetFilter(QObject):

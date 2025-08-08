@@ -8,8 +8,8 @@ from qtpy.QtWidgets import (
     QTreeWidgetItem,
 )
 
-from .data_handler import load_rdtdata
-from .validation_utils import validate_file_structure
+from rdtfeeddown.data_handler import load_rdtdata
+from rdtfeeddown.validation_utils import validate_file_structure
 
 
 def select_singleitem(

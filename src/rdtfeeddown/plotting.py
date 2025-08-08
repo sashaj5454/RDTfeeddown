@@ -4,13 +4,13 @@ from qtpy.QtCore import Qt
 from qtpy.QtGui import QCursor, QPainterPathStroker, QPen
 from qtpy.QtWidgets import QToolTip
 
-from .analysis import (
+from rdtfeeddown.analysis import (
     arc_bpm_check,
     bad_bpm_check,
     calculate_avg_rdt_shift,
     polyfunction,
 )
-from .style import DARK_BACKGROUND_COLOR
+from rdtfeeddown.style import DARK_BACKGROUND_COLOR
 
 COLOR_LIST = [
     "#FFA500",

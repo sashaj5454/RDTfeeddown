@@ -3,8 +3,8 @@ from pathlib import Path
 
 from qtpy.QtWidgets import QApplication, QFileDialog, QMessageBox, QTreeWidgetItem
 
-from .analysis import group_datasets
-from .validation_utils import validate_file_structure
+from rdtfeeddown.analysis import group_datasets
+from rdtfeeddown.validation_utils import validate_file_structure
 
 
 def load_selected_files(parent):

@@ -4,3 +4,5 @@ tfs-pandas
 QtPy
 pyqtgraph
 numpy
+scipy
+PyQt5

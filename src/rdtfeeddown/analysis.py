@@ -6,7 +6,7 @@ import tfs
 from scipy.optimize import curve_fit
 from scipy.stats import zscore
 
-from .utils import csv_to_dict, get_analysis_knobsetting
+from rdtfeeddown.utils import csv_to_dict, get_analysis_knobsetting
 
 
 def filter_outliers(data, threshold=3):
