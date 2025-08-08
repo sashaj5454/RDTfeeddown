@@ -13,7 +13,10 @@ dependencies = [
     "numpy",
     "matplotlib",
     "scipy",
-    "pytimber"
+    "pytimber",
+    "tfs-pandas",
+    "pyqtgraph",
+    "QtPy",
 ]
 
 [project.scripts]

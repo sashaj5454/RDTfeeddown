@@ -33,4 +33,4 @@ jobs:
       # Run tests
       - name: Run tests
         run: |
-          pytest /tests/test_analysis.py
+          pytest tests/test_analysis.py
