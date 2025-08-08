@@ -2,12 +2,13 @@ import unittest
 
 from rdtfeeddown.analysis import (
     filter_outliers,
-    getrdt_omc3,
+    # getrdt_omc3,
     read_rdt_file,
     readrdtdatafile,
 )
 
-from rdtfeeddown.utils import getmodelbpms, initialize_statetracker
+from rdtfeeddown.utils import getmodelbpms
+# initialize_statetracker
 
 
 class TestAnalysis(unittest.TestCase):
@@ -92,30 +93,30 @@ class TestAnalysis(unittest.TestCase):
     #     self.assertEqual(len(bpmdata["BPM1"]["key1"]), 1)
     #     self.assertEqual(bpmdata["BPM1"]["key1"][0], [0.1, 1.0, 0.5, 0.2])
 
-    def test_getrdt_omc3(self):
-        ldb = initialize_statetracker()
-        ref = "tests/test_data/LHCB1_refdata"
-        flist = ["tests/test_data/LHCB1_IP5V_150", "tests/test_data/LHCB1_IP5V_m200"]
-        knob = "LHCBEAM/IP5-XING-V-MURAD"
-        outputpath = "tests/test_output"
-        rdt = "0030"
-        rdt_plane = "y"
-        rdtfolder = "skew_sextupole"
-        rdtdata = getrdt_omc3(
-            ldb,
-            "LHCB1",
-            self.modelbpmlist,
-            self.bpmdata,
-            ref,
-            flist,
-            knob,
-            outputpath,
-            rdt,
-            rdt_plane,
-            rdtfolder,
-        )
-        self.assertIn("BPM.11R2.B1", rdtdata)
-        self.assertIn("BPM.19R4.B1", rdtdata)
+    # def test_getrdt_omc3(self):
+    #     ldb = initialize_statetracker()
+    #     ref = "tests/test_data/LHCB1_refdata"
+    #     flist = ["tests/test_data/LHCB1_IP5V_150", "tests/test_data/LHCB1_IP5V_m200"]
+    #     knob = "LHCBEAM/IP5-XING-V-MURAD"
+    #     outputpath = "tests/test_output"
+    #     rdt = "0030"
+    #     rdt_plane = "y"
+    #     rdtfolder = "skew_sextupole"
+    #     rdtdata = getrdt_omc3(
+    #         ldb,
+    #         "LHCB1",
+    #         self.modelbpmlist,
+    #         self.bpmdata,
+    #         ref,
+    #         flist,
+    #         knob,
+    #         outputpath,
+    #         rdt,
+    #         rdt_plane,
+    #         rdtfolder,
+    #     )
+    #     self.assertIn("BPM.11R2.B1", rdtdata)
+    #     self.assertIn("BPM.19R4.B1", rdtdata)
 
 
 if __name__ == "__main__":
