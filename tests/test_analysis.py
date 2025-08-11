@@ -1,4 +1,5 @@
 import unittest
+from pathlib import Path
 
 from rdtfeeddown.analysis import (
     filter_outliers,
@@ -14,12 +15,14 @@ from rdtfeeddown.utils import getmodelbpms
 class TestAnalysis(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        filepath = "tests/test_data/LHCB1_refdata/rdt/skew_sextupole/f0030_y.tfs"
-        filepath2 = "tests/test_data/LHCB2_refdata/rdt/skew_sextupole/f0030_y.tfs"
+        test_dir = Path(__file__).resolve().parent
+        print(test_dir)
+        filepath = test_dir / "test_data/LHCB1_refdata/rdt/skew_sextupole/f0030_y.tfs"
+        filepath2 = test_dir / "test_data/LHCB2_refdata/rdt/skew_sextupole/f0030_y.tfs"
         cls.b1_raw_data, cls.b1_beam_no = read_rdt_file(filepath)
         cls.b2_raw_data, cls.b2_beam_no = read_rdt_file(filepath2)
-        model_path = "tests/test_data/LHCB1_model/"
-        model2_path = "tests/test_data/LHCB2_model/"
+        model_path = test_dir / "test_data/LHCB1_model/"
+        model2_path = test_dir / "test_data/LHCB2_model/"
         cls.modelbpmlist, cls.bpmdata = getmodelbpms(model_path)
         cls.model2bpmlist, cls.bpmdata2 = getmodelbpms(model2_path)
 
@@ -43,7 +46,8 @@ class TestAnalysis(unittest.TestCase):
         )
 
     def test_read_rdt_file(self):
-        filepath = "tests/test_data/LHCB1_refdata/rdt/skew_sextupole/f0030_y.tfs"
+        test_dir = Path(__file__).resolve().parent
+        filepath = test_dir / "test_data/LHCB1_refdata/rdt/skew_sextupole/f0030_y.tfs"
         raw_data = read_rdt_file(filepath)
         self.assertEqual(len(raw_data), 525)
         self.assertEqual(
@@ -62,11 +66,12 @@ class TestAnalysis(unittest.TestCase):
         )
 
     def test_readrdtdatafile(self):
-        cfile = "tests/test_data/LHCB1_refdata/"
+        test_dir = Path(__file__).resolve().parent
+        cfile = test_dir / "test_data/LHCB1_refdata/"
         rdt = "0030"
         rdt_plane = "y"
         rdtfolder = "skew_sextupole"
-        filtered_data = readrdtdatafile(cfile, rdt, rdt_plane, rdtfolder)
+        filtered_data = readrdtdatafile(str(cfile), rdt, rdt_plane, rdtfolder)
         self.assertEqual(len(filtered_data), 525)
         self.assertNotIn(
             [
@@ -84,7 +89,8 @@ class TestAnalysis(unittest.TestCase):
         )
 
     def test_getmodelbpmlist(self):
-        model_path = "tests/test_data/LHCB1_model/"
+        test_dir = Path(__file__).resolve().parent
+        model_path = test_dir / "test_data/LHCB1_model/"
         modelbpmlist, bpmdata = getmodelbpms(model_path)
         self.assertIn("BPMWI.4L2.B1", modelbpmlist)
 
