@@ -151,7 +151,7 @@ def convert_from_kickfilename(kickfilename):
 def getmodelbpms(modelpath):
     modelbpmlist = []
     bpmdata = {}
-    twissfile = modelpath + "/twiss.dat"
+    twissfile = modelpath / "twiss.dat"
     rt = tfs.read(twissfile)
     rt_filtered = rt[rt["NAME"].str.contains("BPM")]
     for _, row in rt_filtered.iterrows():

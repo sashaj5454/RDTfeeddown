@@ -1,0 +1,34 @@
+# Python cache and artifacts
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Sphinx build output
+docs/_build/
+docs/doctrees/
+docs/html/
+
+
+# Environment and IDE files
+.env
+*.env
+*.venv
+venv/
+ENV/
+env/
+*.egg-info/
+dist/
+build/
+*.log
+
+# VSCode settings
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Misc
+*.bak
+*.tmp

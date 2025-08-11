@@ -108,7 +108,7 @@ def readrdtdatafile(
                         0,
                     ]
                 )
-        except FileNotFoundError:
+        except (FileNotFoundError, IsADirectoryError):
             raw_data, beam_no = read_rdt_file(filepath, log_func)
     else:
         raw_data, beam_no = read_rdt_file(filepath, log_func)

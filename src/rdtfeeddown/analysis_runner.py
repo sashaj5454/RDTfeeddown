@@ -230,7 +230,6 @@ def finalize_grouped_results(parent=None, loaded_output_data=None, log_func=None
 
 def run_analysis(parent=None, **kwargs):
     if parent:
-        print("hello")
         parent.input_progress.show()
         QApplication.processEvents()
         ldb = None
@@ -266,6 +265,9 @@ def run_analysis(parent=None, **kwargs):
                 rdt_plane,
                 rdt_folder,
                 "LHCB1",
+                parent.simulation_checkbox.isChecked(),
+                parent.simulation_file_entry.text(),
+                parent.log_error,
             )
             QApplication.processEvents()
             parent.b2rdtdata = handle_beam_analysis(
@@ -279,6 +281,9 @@ def run_analysis(parent=None, **kwargs):
                 rdt_plane,
                 rdt_folder,
                 "LHCB2",
+                parent.simulation_checkbox.isChecked(),
+                parent.simulation_file_entry.text(),
+                parent.log_error,
             )
             QApplication.processEvents()
             save_analysis_outputs(

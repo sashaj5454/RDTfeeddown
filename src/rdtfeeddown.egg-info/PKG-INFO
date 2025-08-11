@@ -8,6 +8,7 @@ Requires-Dist: numpy
 Requires-Dist: matplotlib
 Requires-Dist: scipy
 Requires-Dist: pytimber
+Requires-Dist: tfs-pandas
 Provides-Extra: dev
 Requires-Dist: pytest; extra == "dev"
 Requires-Dist: sphinx; extra == "dev"
