@@ -22,10 +22,18 @@ def load_selected_files(parent):
     for file in selected_files:
         data = load_rdtdata(file)
         valid = validate_file_structure(
-            data, ["beam", "ref", "rdt", "rdt_plane", "knob"], parent.log_error
+            data,
+            ["beam", "ref", "file_list", "rdt", "rdt_plane", "knob"],
+            parent.log_error,
         )
         if not valid:
-            continue
+            valid = validate_file_structure(
+                data,
+                ["beam", "ref", "rdt", "rdt_plane", "knob"],  # legacy compatibility
+                parent.log_error,
+            )
+            if not valid:
+                continue
         loaded_output_data.append(data)
         # Extract metadata for columns
         metadata = data.get("metadata", {})

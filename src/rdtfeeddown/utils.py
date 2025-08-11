@@ -1,13 +1,17 @@
 import csv
 import datetime as dt
 import json
+import os
 import re
 import sys
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-import pytimber
+if not (
+    any("PYTEST_CURRENT_TEST" in k for k in os.environ) or "unittest" in sys.modules
+):
+    import pytimber
 import tfs
 from pyqtgraph import ViewBox
 from qtpy.QtCore import Qt, QTimer

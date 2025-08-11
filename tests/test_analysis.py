@@ -1,5 +1,4 @@
 import unittest
-import pytest
 
 from rdtfeeddown.analysis import (
     filter_outliers,
@@ -7,11 +6,9 @@ from rdtfeeddown.analysis import (
     read_rdt_file,
     readrdtdatafile,
 )
-
 from rdtfeeddown.utils import getmodelbpms
 
 # initialize_statetracker
-pytest.importorskip("pytimber")
 
 
 class TestAnalysis(unittest.TestCase):

@@ -161,12 +161,24 @@ def select_multiple_treefiles(
                 saved_data[file] = load_rdtdata(file)
                 valid = validate_file_structure(
                     saved_data[file],
-                    ["beam", "ref", "rdt", "rdt_plane", "knob_name"],
+                    ["beam", "ref", "file", "rdt", "rdt_plane", "knob_name"],
                     parent.log_error,
                 )
                 if not valid:
-                    del saved_data[file]
-                    continue
+                    valid = validate_file_structure(
+                        saved_data[file],
+                        [
+                            "beam",
+                            "ref",
+                            "rdt",
+                            "rdt_plane",
+                            "knob_name",
+                        ],  # legacy compatibility
+                        parent.log_error,
+                    )
+                    if not valid:
+                        del saved_data[file]
+                        continue
                 parent.rdt = (
                     saved_data[file].get("metadata", {}).get("rdt", "Unknown RDT")
                 )

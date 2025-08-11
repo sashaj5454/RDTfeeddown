@@ -263,6 +263,7 @@ def getrdt_omc3(
         "metadata": {
             "beam": beam,
             "ref": ref,
+            "file_list": flist,
             "rdt": rdt,
             "rdt_plane": rdt_plane,
             "knob": knob,
@@ -590,6 +591,7 @@ def getrdt_sim(
         "metadata": {
             "beam": beam,
             "ref": ref,
+            "file": file,
             "rdt": rdt,
             "rdt_plane": rdt_plane,
             "knob_name": knob_name,
