@@ -3,6 +3,5 @@ sphinx_rtd_theme
 numpy
 pyqtgraph
 qtpy
-pytimber 
 pyqt5 
 pyqt6 
