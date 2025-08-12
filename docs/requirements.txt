@@ -5,3 +5,4 @@ pyqtgraph
 qtpy
 pyqt5 
 pyqt6 
+tfs-pandas

@@ -15,7 +15,9 @@ if TYPE_CHECKING:
     from qtpy.QtGui import QMouseEvent
 
 if not (
-    any("PYTEST_CURRENT_TEST" in k for k in os.environ) or "unittest" in sys.modules
+    any("PYTEST_CURRENT_TEST" in k for k in os.environ)
+    or "unittest" in sys.modules
+    or os.environ.get("READTHEDOCS") == "True"
 ):
     import pytimber
 import tfs

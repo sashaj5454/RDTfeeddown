@@ -6,10 +6,9 @@ from typing import Callable
 
 import numpy as np
 import tfs
+from rdtfeeddown.utils import csv_to_dict, get_analysis_knobsetting
 from scipy.optimize import curve_fit
 from scipy.stats import zscore
-
-from rdtfeeddown.utils import csv_to_dict, get_analysis_knobsetting
 
 
 def filter_outliers(data: list[list[float]], threshold: float = 3):
