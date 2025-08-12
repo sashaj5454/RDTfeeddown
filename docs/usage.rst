@@ -10,6 +10,7 @@ This can be generalised, but, for now, it is the only accepted format.
    
    installation
    gui
+   coding
 
 
 

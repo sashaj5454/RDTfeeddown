@@ -2,7 +2,7 @@ Input
 =====
 
 .. image:: figures/ScreenshotGUI.png
-   :width: 400
+   :width: 500
 
 The **Input tab** of the GUI provides a user-friendly interface to input data for the RDTfeeddown analysis. 
 

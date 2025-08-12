@@ -2,7 +2,7 @@ Validation
 ===========
 
 .. image:: figures/ValidationScreenshot.png
-   :width: 400
+   :width: 500
 
 The **Validation tab** of the GUI provides a user-friendly interface to validate and correct the RDT feeddown data.
 
