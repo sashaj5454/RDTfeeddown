@@ -7,8 +7,8 @@ from rdtfeeddown.analysis import (
     read_rdt_file,
     readrdtdatafile,
 )
-from rdtfeeddown.utils import getmodelbpms
 from rdtfeeddown.data_handler import save_rdtdata
+from rdtfeeddown.utils import getmodelbpms
 from rdtfeeddown.validation_utils import validate_file_structure
 
 

@@ -9,6 +9,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
+
 from qtpy.QtGui import QMouseEvent
 
 if not (
