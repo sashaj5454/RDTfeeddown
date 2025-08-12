@@ -8,9 +8,11 @@ import re
 import sys
 from datetime import datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 from zoneinfo import ZoneInfo
 
-from qtpy.QtGui import QMouseEvent
+if TYPE_CHECKING:
+    from qtpy.QtGui import QMouseEvent
 
 if not (
     any("PYTEST_CURRENT_TEST" in k for k in os.environ) or "unittest" in sys.modules
