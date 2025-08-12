@@ -35,7 +35,9 @@ You can provide input to the RDTfeeddown GUI using the following methods:
 2. **Manual Input**:  
    Manually enter input parameters in the provided fields within the GUI (except for measurement folders).
 
-**Note:** All folder inputs should be in the form used for reuslts of measurements in the OMC analysis tools.
+.. note:: 
+  
+  All folder inputs should be in the form used for reuslts of measurements in the OMC analysis tools.
 
 Input Fields Explained
 ----------------------
@@ -69,8 +71,8 @@ Where ``MATCH`` is the name of the crossing angle knob used in the model and ``K
 Other Features
 --------------
 
-- **Validate Knob**:  
+- :guilabel:`Validate Knob`:  
   Not required unless you want to check that the crossing angle knob name exists in the measurement.
 
-- **Run Analysis**:  
+- :guilabel:`Run Analysis`:  
   Runs the analysis on the provided data and displays the output files in the GUI under

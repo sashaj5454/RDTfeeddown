@@ -28,6 +28,7 @@ extensions = [
     "sphinx.ext.githubpages",
     "sphinx.ext.napoleon",
     "sphinx.ext.autosectionlabel",
+    "sphinx.ext.gui",
 ]
 
 templates_path = ["source/_templates"]
