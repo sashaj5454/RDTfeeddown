@@ -6,6 +6,7 @@ from qtpy.QtWidgets import (
     QListWidgetItem,
     QTreeView,
     QTreeWidgetItem,
+    QWidget,
 )
 
 from rdtfeeddown.data_handler import load_rdtdata
@@ -13,14 +14,14 @@ from rdtfeeddown.validation_utils import validate_file_structure
 
 
 def select_singleitem(
-    parent,
+    parent: type,
     beam: str,
     title_text: str,
-    b1entry,
-    b2entry,
+    b1entry: QWidget,
+    b2entry: QWidget,
     input_path: str = "",
     filter_text: str = "All Files (*)",
-    folder=False,
+    folder: bool = False,
 ):
     """
     Open a file dialog to select a single item (a file or folder).
@@ -57,11 +58,11 @@ def select_singleitem(
 
 
 def select_multiple_files(
-    parent,
-    default_dir,
-    list_widget,
-    title="Select Files",
-    file_filter="JSON Files (*.json)",
+    parent: type,
+    default_dir: str,
+    list_widget: QWidget,
+    title: str = "Select Files",
+    file_filter: str = "JSON Files (*.json)",
 ):
     """
     Open a file dialog to select multiple files.
@@ -95,7 +96,9 @@ def select_multiple_files(
     return []
 
 
-def select_folders(parent, default_dir, name_filter, list_widget):
+def select_folders(
+    parent: type, default_dir: str, name_filter: str, list_widget: QWidget
+):
     """
     Open a file dialog to select one or more directories.
 
@@ -126,11 +129,11 @@ def select_folders(parent, default_dir, name_filter, list_widget):
 
 
 def select_multiple_treefiles(
-    parent,
-    tree_widget,
-    title="Select Files",
-    file_filter="JSON Files (*.json)",
-    saved_data=None,
+    parent: type,
+    tree_widget: QWidget,
+    title: str = "Select Files",
+    file_filter: str = "JSON Files (*.json)",
+    saved_data: dict = None,
 ):
     """
     Allow the user to select multiple files and add them to the file tree widget.

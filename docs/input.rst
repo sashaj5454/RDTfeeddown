@@ -1,6 +1,9 @@
 Input
 =====
 
+.. image:: figures/ScreenshotGUI.png
+   :width: 400
+
 The **Input tab** of the GUI provides a user-friendly interface to input data for the RDTfeeddown analysis. 
 
 You can load measurement folders, reference data, and crossing angle knobs directly through the GUI.

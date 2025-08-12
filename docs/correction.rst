@@ -1,6 +1,9 @@
 Correction
 ==========
 
+.. image:: figures/CorrectionScreenshot.png
+   :width: 400
+
 The GUI allows you to quantify the RDT correction predicted from a specific corrector and can interactively correct the RDT feeddown data using this prediction.
 
 The Tabs Explained
@@ -28,6 +31,9 @@ Graph Tab
 
 Response Tab
 ------------
+
+.. image:: figures/CorrectionResponseScreenshot.png
+   :width: 400
 
 Similar to the :ref:`Input` tab, this tab allows you to load measurement folders and reference data in the format outputted by the OMC analysis tools for results of measurements.
 

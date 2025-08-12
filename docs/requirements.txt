@@ -3,3 +3,6 @@ sphinx_rtd_theme
 numpy
 pyqtgraph
 qtpy
+pytimber (optional - only if you want to use the `Load from Timber` feature)
+pyqt5 (optional - only if you want to use the GUI)
+pyqt6 (optional - only if you want to use the GUI with PyQt6)

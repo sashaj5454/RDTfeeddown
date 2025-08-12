@@ -8,15 +8,14 @@ from rdtfeeddown.analysis import (
     readrdtdatafile,
 )
 from rdtfeeddown.utils import getmodelbpms
-
-# initialize_statetracker
+from rdtfeeddown.data_handler import save_rdtdata
+from rdtfeeddown.validation_utils import validate_file_structure
 
 
 class TestAnalysis(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         test_dir = Path(__file__).resolve().parent
-        # print(test_dir)
         filepath = test_dir / "test_data/LHCB1_refdata/rdt/skew_sextupole/f0030_y.tfs"
         filepath2 = test_dir / "test_data/LHCB2_refdata/rdt/skew_sextupole/f0030_y.tfs"
         cls.b1_raw_data, cls.b1_beam_no = read_rdt_file(filepath)
@@ -84,13 +83,13 @@ class TestAnalysis(unittest.TestCase):
             filtered_data,
         )
 
-    def test_getmodelbpmlist(self):
+    def test_getmodel1bpmlist(self):
         test_dir = Path(__file__).resolve().parent
         model_path = test_dir / "test_data/LHCB1_model/"
         modelbpmlist, bpmdata = getmodelbpms(model_path)
         self.assertIn("BPMWI.4L2.B1", modelbpmlist)
 
-    def test_getrdt_omc3(self):
+    def test_getrdt_omc3_lhcb1(self):
         ldb = None
         ref = "tests/test_data/LHCB1_refdata"
         flist = ["tests/test_data/LHCB1_IP5V_150", "tests/test_data/LHCB1_IP5V_m150"]
@@ -98,7 +97,7 @@ class TestAnalysis(unittest.TestCase):
         rdt = "0030"
         rdt_plane = "y"
         rdtfolder = "skew_sextupole"
-        rdtdata = getrdt_omc3(
+        b1_rdtdata = getrdt_omc3(
             ldb,
             "LHCB1",
             self.modelbpmlist,
@@ -113,8 +112,45 @@ class TestAnalysis(unittest.TestCase):
             propfile="tests/test_data/b1_knobs.csv",
             log_func=print,
         )
-        self.assertIn("BPM.11R2.B1", rdtdata["data"])
-        self.assertIn("BPM.19R4.B1", rdtdata["data"])
+        self.assertIn("BPM.11R2.B1", b1_rdtdata["data"])
+        self.assertIn("BPM.19R4.B1", b1_rdtdata["data"])
+        save_rdtdata(b1_rdtdata, "tests/test_output/LHCB1_rdtdata.json")
+
+        required_metas = ["beam", "ref", "file_list", "rdt", "rdt_plane", "knob"]
+        valid = validate_file_structure(b1_rdtdata, required_metas)
+        self.assertTrue(valid, "File structure validation failed for LHCB1 RDT data")
+
+    def test_getrdt_omc3_lhcb2(self):
+        ldb = None
+        ref = "tests/test_data/LHCB2_refdata"
+        flist = ["tests/test_data/LHCB2_IP5V_200", "tests/test_data/LHCB2_IP5V_m200"]
+        knob = ""
+        rdt = "0030"
+        rdt_plane = "y"
+        rdtfolder = "skew_sextupole"
+        b2_rdtdata = getrdt_omc3(
+            ldb,
+            "LHCB2",
+            self.model2bpmlist,
+            self.bpmdata2,
+            ref,
+            flist,
+            knob,
+            rdt,
+            rdt_plane,
+            rdtfolder,
+            sim=True,
+            propfile="tests/test_data/b2_knobs.csv",
+            log_func=print,
+        )
+        self.assertIn("BPM.11R2.B2", b2_rdtdata["data"])
+        self.assertIn("BPM.19R4.B2", b2_rdtdata["data"])
+
+        save_rdtdata(b2_rdtdata, "tests/test_output/LHCB2_rdtdata.json")
+
+        required_metas = ["beam", "ref", "file_list", "rdt", "rdt_plane", "knob"]
+        valid = validate_file_structure(b2_rdtdata, required_metas)
+        self.assertTrue(valid, "File structure validation failed for LHCB1 RDT data")
 
 
 if __name__ == "__main__":

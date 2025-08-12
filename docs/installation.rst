@@ -20,11 +20,11 @@ Dependencies
 
 - matplotlib
 - numpy
-- pyqtgraph
-- pytest
-- pytimber
 - Python >= 3.11
-- QtPy
 - scipy
 - tfs-pandas
-- PyQt5/6
+- pytimber
+- pyqtgraph (optional, for GUI)
+- PyQt5 or PyQt6 (optional, for GUI)
+- PyQt6 (optional, for GUI)
+- QtPy (optional, for GUI)

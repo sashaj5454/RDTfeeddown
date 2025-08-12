@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import re
 from pathlib import Path
+from typing import Callable
 
 import numpy as np
 import tfs
@@ -9,7 +12,7 @@ from scipy.stats import zscore
 from rdtfeeddown.utils import csv_to_dict, get_analysis_knobsetting
 
 
-def filter_outliers(data, threshold=3):
+def filter_outliers(data: list[list[float]], threshold: float = 3):
     """
     Filters outliers from data based on Z-scores.
 
@@ -38,7 +41,7 @@ def filter_outliers(data, threshold=3):
     ]
 
 
-def read_rdt_file(filepath, log_func=None):
+def read_rdt_file(filepath: Path, log_func: Callable[[str], None] = None):
     """
     Reads RDT data from a file and returns raw data.
     """
@@ -66,7 +69,7 @@ def read_rdt_file(filepath, log_func=None):
     return raw_data, beam_no
 
 
-def ensure_trailing_slash(path):
+def ensure_trailing_slash(path: Path):
     """
     Ensure the given folder path ends with a "/".
     """
@@ -74,7 +77,13 @@ def ensure_trailing_slash(path):
 
 
 def readrdtdatafile(
-    cfile, rdt, rdt_plane, rdtfolder, threshold=3, sim=False, log_func=None
+    cfile: Path,
+    rdt: str,
+    rdt_plane: str,
+    rdtfolder: str,
+    threshold: float = 3,
+    sim: bool = False,
+    log_func: Callable[[str], None] = None,
 ):
     """
     Reads RDT data from a file and removes outliers based on Z-scores.
@@ -115,7 +124,9 @@ def readrdtdatafile(
     return filter_outliers(raw_data, threshold), beam_no
 
 
-def update_bpm_data(bpmdata, data, key, knob_setting):
+def update_bpm_data(
+    bpmdata: dict, data: list[list[float]], key: str, knob_setting: float
+):
     """
     Updates BPM data dictionary with new data.
     """
@@ -125,20 +136,20 @@ def update_bpm_data(bpmdata, data, key, knob_setting):
 
 
 def getrdt_omc3(
-    ldb,
-    beam,
-    modelbpmlist,
-    bpmdata,
-    ref,
-    flist,
-    knob,
-    rdt,
-    rdt_plane,
-    rdtfolder,
-    sim,
-    propfile,
-    threshold=3,
-    log_func=None,
+    ldb: None | Callable[[str], None],
+    beam: str,
+    modelbpmlist: list[list[str]],
+    bpmdata: dict,
+    ref: str,
+    flist: list[str],
+    knob: str,
+    rdt: str,
+    rdt_plane: str,
+    rdtfolder: str,
+    sim: bool,
+    propfile: str,
+    threshold: float = 3,
+    log_func: Callable[[str], None] = None,
 ):
     beam_no = modelbpmlist[0][-1]
     if beam[-1] != beam_no:
@@ -257,8 +268,8 @@ def getrdt_omc3(
         if log_func:
             log_func(msg)
         raise RuntimeError(msg)
-        return None
-
+    ref = str(Path(ref).resolve())
+    flist = [str(Path(f).resolve()) for f in flist]
     return {
         "metadata": {
             "beam": beam,
@@ -272,11 +283,13 @@ def getrdt_omc3(
     }
 
 
-def polyfunction(x, c, m, n):
+def polyfunction(x: float, c: float, m: float, n: float) -> float:
     return c + m * x + n * x**2
 
 
-def fitdata(xdata, ydata, yerrdata, fitfunction):
+def fitdata(
+    xdata: np.ndarray, ydata: np.ndarray, yerrdata: np.ndarray, fitfunction: Callable
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     popt, pcov = curve_fit(
         fitfunction, xdata, ydata, sigma=yerrdata, absolute_sigma=True
     )
@@ -284,13 +297,15 @@ def fitdata(xdata, ydata, yerrdata, fitfunction):
     return popt, pcov, perr
 
 
-def fitdatanoerrors(xdata, ydata, fitfunction):
+def fitdatanoerrors(
+    xdata: np.ndarray, ydata: np.ndarray, fitfunction: Callable
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     popt, pcov = curve_fit(fitfunction, xdata, ydata)
     perr = np.sqrt(np.diag(pcov))
     return popt, pcov, perr
 
 
-def fit_bpm(fulldata):
+def fit_bpm(fulldata: dict) -> dict:
     data = fulldata["data"]
     for bpm in data:
         diffdata = data[bpm]["diffdata"]
@@ -310,7 +325,7 @@ def fit_bpm(fulldata):
     return fulldata
 
 
-def arc_bpm_check(bpm):
+def arc_bpm_check(bpm: str) -> bool:
     bpmtype = bpm.partition(".")[0]
     if bpmtype != "BPM":
         is_arc_bpm = False
@@ -319,11 +334,10 @@ def arc_bpm_check(bpm):
             bpm.partition(".")[2].rpartition(".")[0].partition("L")[0].partition("R")[0]
         )
         is_arc_bpm = int(bpmindex) >= 10
-    # print(f"{bpm} is arc BPM: {isARCbpm}")
     return is_arc_bpm
 
 
-def bad_bpm_check(bpm):
+def bad_bpm_check(bpm: str) -> bool:
     badbpmb1 = ["BPM.13L2.B1"]
     badbpmb2 = ["BPM.25R3.B2", "BPM.26R3.B2"]
     badbpm = False
@@ -335,11 +349,10 @@ def bad_bpm_check(bpm):
         if bpm == b:
             badbpm = True
             break
-    # print(f"{bpm} is bad BPM: {badbpm}")
     return badbpm
 
 
-def calculate_avg_rdt_shift(data):
+def calculate_avg_rdt_shift(data: dict) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Calculate the average RDT shift and standard deviation over BPMs for given data.
     """
@@ -372,7 +385,9 @@ def calculate_avg_rdt_shift(data):
     return np.array(xing), np.array(ampdat), np.array(stddat)
 
 
-def group_datasets(datasets, log_func=None):
+def group_datasets(
+    datasets: list[dict], log_func: Callable[[str], None] = None
+) -> tuple[dict, dict, str, str]:
     if not datasets:
         return None, None
     rdt, rdt_plane = None, None
@@ -480,16 +495,16 @@ def group_datasets(datasets, log_func=None):
 
 
 def getrdt_sim(
-    beam,
-    ref,
-    file,
-    xing,
-    knob_name,
-    knob_strength,
-    rdt,
-    rdt_plane,
-    rdtfolder,
-    log_func=None,
+    beam: str,
+    ref: str,
+    file: str,
+    xing: float,
+    knob_name: str,
+    knob_strength: float,
+    rdt: str,
+    rdt_plane: str,
+    rdtfolder: str,
+    log_func: Callable[[str], None] = None,
 ):
     bpmdata = {}
     bpmlist = []
@@ -506,7 +521,6 @@ def getrdt_sim(
         if log_func:
             log_func(msg)
         raise RuntimeError(msg)
-        return None
     if refdat is not None:
         for index, entry in refdat.iterrows():
             bpm = entry["NAME"]
@@ -525,7 +539,6 @@ def getrdt_sim(
         if log_func:
             log_func(msg)
         raise RuntimeError(msg)
-        return None
     # Read the measurement data
     try:
         file = file if file.endswith("/") else file + "/"
@@ -536,7 +549,6 @@ def getrdt_sim(
         if log_func:
             log_func(msg)
         raise RuntimeError(msg)
-        return None
     if cdat is not None:
         for index, entry in cdat.iterrows():
             bpm = entry["NAME"]
@@ -556,14 +568,12 @@ def getrdt_sim(
         if log_func:
             log_func(msg)
         raise RuntimeError(msg)
-        return None
     # Check if the reference and measurement data have the same number of entries
     if len(bpmdata) == 0:
         msg = "No BPM data found."
         if log_func:
             log_func(msg)
         raise RuntimeError(msg)
-        return None
     intersected_bpm_data = {}
     # Check if the reference and measurement data have the same number of entries
     for bpm in bpmlist:
@@ -586,12 +596,12 @@ def getrdt_sim(
         if log_func:
             log_func(msg)
         raise RuntimeError(msg)
-        return None
+
     return {
         "metadata": {
             "beam": beam,
-            "ref": ref,
-            "file": file,
+            "ref": str(Path(ref).resolve()),
+            "file": str(Path(file).resolve()),
             "rdt": rdt,
             "rdt_plane": rdt_plane,
             "knob_name": knob_name,

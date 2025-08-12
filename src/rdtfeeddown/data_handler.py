@@ -7,7 +7,7 @@ from rdtfeeddown.analysis import group_datasets
 from rdtfeeddown.validation_utils import validate_file_structure
 
 
-def load_selected_files(parent):
+def load_selected_files(parent: type):
     parent.plot_progress.show()
     QApplication.processEvents()
     selected_files = [
@@ -63,7 +63,7 @@ def load_selected_files(parent):
     parent.plot_progress.hide()
 
 
-def _convert_for_json(obj):
+def _convert_for_json(obj: type):
     import numpy as np
 
     if isinstance(obj, np.ndarray):
@@ -73,17 +73,17 @@ def _convert_for_json(obj):
     raise TypeError(f"Type {type(obj)} not JSON serializable")
 
 
-def save_rdtdata(data, filename):
+def save_rdtdata(data: type, filename: str):
     with Path.open(filename, "w") as fout:
         json.dump(data, fout, default=_convert_for_json)
 
 
-def load_rdtdata(filename):
+def load_rdtdata(filename: Path):
     with Path.open(filename, "r") as fin:
         return json.load(fin)
 
 
-def save_b1_rdtdata(parent):
+def save_b1_rdtdata(parent: type):
     filename, _ = QFileDialog.getSaveFileName(
         parent, "Save LHCB1 RDT Data", parent.default_output_path, "JSON Files (*.json)"
     )
@@ -94,7 +94,7 @@ def save_b1_rdtdata(parent):
         parent.analysis_output_files.append(filename)
 
 
-def save_b2_rdtdata(parent):
+def save_b2_rdtdata(parent: type):
     filename, _ = QFileDialog.getSaveFileName(
         parent, "Save LHCB2 RDT Data", parent.default_output_path, "JSON Files (*.json)"
     )

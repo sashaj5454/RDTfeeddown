@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import csv
 import datetime as dt
 import json
@@ -7,6 +9,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
+from qtpy.QtGui import QMouseEvent
 
 if not (
     any("PYTEST_CURRENT_TEST" in k for k in os.environ) or "unittest" in sys.modules
@@ -38,14 +41,21 @@ def initialize_statetracker():
     return pytimber.LoggingDB()
 
 
-def getknobsetting_statetracker(ldb, thistimestamp, requested_knob):
+def getknobsetting_statetracker(
+    ldb: None | pytimber.LoggingDB, thistimestamp, requested_knob
+):
     statetrackerknobname = (
         "LhcStateTracker:" + re.sub("/", ":", requested_knob) + ":value"
     )
     return ldb.get(statetrackerknobname, thistimestamp)[statetrackerknobname][1][0]
 
 
-def get_analysis_knobsetting(ldb, requested_knob, analyfile, log_func=None):
+def get_analysis_knobsetting(
+    ldb: None | pytimber.LoggingDB,
+    requested_knob: str,
+    analyfile: Path,
+    log_func: callable = None,
+):
     ############-> read the command.run file to generate a list of all the kicks used to produce this results folder
     fc = analyfile + "/command.run"
     try:
@@ -100,7 +110,7 @@ def get_analysis_knobsetting(ldb, requested_knob, analyfile, log_func=None):
     return knobsetting  ### --> in case results folder generated with single kick, or all kicks have the same knob setting, just take the last knobsetting as the value to use moving forward
 
 
-def parse_timestamp(thistime, log_func=None):
+def parse_timestamp(thistime: str, log_func: callable = None):
     accepted_time_input_format = [
         "%Y-%m-%d %H:%M:%S.%f",
         "%Y-%m-%d %H:%M:%S",
@@ -129,13 +139,13 @@ def parse_timestamp(thistime, log_func=None):
     return None
 
 
-def utctolocal(dtutctime, local_tz_str="Europe/Paris"):
+def utctolocal(dtutctime: datetime, local_tz_str: str = "Europe/Paris"):
     dtutctime = dtutctime.replace(tzinfo=dt.timezone.utc)
     local_tz = ZoneInfo(local_tz_str)
     return dtutctime.astimezone(local_tz)
 
 
-def convert_from_kickfilename(kickfilename):
+def convert_from_kickfilename(kickfilename: str):
     if re.search("Beam1@Turn@", kickfilename):
         ts = kickfilename.partition("Beam1@Turn@")[2]
     elif re.search("Beam2@Turn@", kickfilename):
@@ -148,7 +158,7 @@ def convert_from_kickfilename(kickfilename):
     return dt.datetime.strptime(ts, "%Y_%m_%d@%H_%M_%S_%f")
 
 
-def getmodelbpms(modelpath):
+def getmodelbpms(modelpath: Path):
     modelbpmlist = []
     bpmdata = {}
     twissfile = modelpath / "twiss.dat"
@@ -164,7 +174,7 @@ def getmodelbpms(modelpath):
     return modelbpmlist, bpmdata
 
 
-def load_defaults(log_func=None):
+def load_defaults(log_func: callable = None):
     # Set built-in defaults
     curr_time = datetime.now().strftime("%Y-%m-%d")
     defaults = {
@@ -187,7 +197,7 @@ def load_defaults(log_func=None):
     return defaults
 
 
-def csv_to_dict(file_path: str):
+def csv_to_dict(file_path: Path):
     """
     Converts a CSV file to a dictionary
 
@@ -210,7 +220,7 @@ class MyViewBox(ViewBox):
         self.setMouseMode(ViewBox.RectMode)
         self.unsetCursor()
 
-    def mousePressEvent(self, ev):  # noqa: N802
+    def mousePressEvent(self: type, ev: QMouseEvent):  # noqa: N802
         if ev.button() == Qt.LeftButton and (ev.modifiers() & Qt.ControlModifier):
             self._ctrl_pan_active = True
             self.setMouseMode(ViewBox.PanMode)
@@ -220,7 +230,7 @@ class MyViewBox(ViewBox):
             QApplication.restoreOverrideCursor()
         super().mousePressEvent(ev)
 
-    def mouseReleaseEvent(self, ev):  # noqa: N802
+    def mouseReleaseEvent(self: type, ev: QMouseEvent):  # noqa: N802
         if self._ctrl_pan_active:
             self.setMouseMode(ViewBox.RectMode)
             self._ctrl_pan_active = False
@@ -230,7 +240,7 @@ class MyViewBox(ViewBox):
             QApplication.restoreOverrideCursor()
         super().mouseReleaseEvent(ev)
 
-    def leaveEvent(self, ev):  # noqa: N802
+    def leaveEvent(self: type, ev: QMouseEvent):  # noqa: N802
         if self._ctrl_pan_active:
             self.setMouseMode(ViewBox.RectMode)
             self._ctrl_pan_active = False
@@ -240,11 +250,11 @@ class MyViewBox(ViewBox):
             QApplication.restoreOverrideCursor()
         super().leaveEvent(ev)
 
-    def mouseMoveEvent(self, ev):  # noqa: N802
+    def mouseMoveEvent(self: type, ev: QMouseEvent):  # noqa: N802
         # No need to set the cursor here when using override
         super().mouseMoveEvent(ev)
 
-    def mouseClickEvent(self, ev):  # noqa: N802
+    def mouseClickEvent(self: type, ev: QMouseEvent):  # noqa: N802
         if ev.button() == Qt.RightButton:
             self.autoRange()
             ev.accept()

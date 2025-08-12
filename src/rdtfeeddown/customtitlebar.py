@@ -1,4 +1,5 @@
-from qtpy.QtCore import QSize, Qt
+from qtpy.QtCore import QEvent, QObject, QPoint, QSize, Qt
+from qtpy.QtGui import QMouseEvent
 from qtpy.QtWidgets import (
     QDialog,
     QHBoxLayout,
@@ -20,7 +21,7 @@ from .style import (
 )
 
 
-def create_custom_title_bar(parent):
+def create_custom_title_bar(parent: type):
     # Create a custom title bar widget
     title_bar = QWidget()
     title_bar_layout = QHBoxLayout()
@@ -97,7 +98,7 @@ def create_custom_title_bar(parent):
     return title_bar
 
 
-def show_help(parent):
+def show_help(parent: type):
     help_text = """
 <html>
 <body>
@@ -154,7 +155,7 @@ def show_help(parent):
     QMessageBox.information(parent, "Help", help_text)
 
 
-def show_error_log_window(self):
+def show_error_log_window(self: type):
     """
     Open a pop-up window displaying all logged error messages.
     """
@@ -172,7 +173,7 @@ def show_error_log_window(self):
     dialog.exec_()
 
 
-def mousePressEvent(parent, event):  # noqa: N802
+def mousePressEvent(parent: type, event: QMouseEvent):  # noqa: N802
     if event.button() == Qt.LeftButton:
         # Convert global position to the widget's local coordinate system
         local_pos = parent.mapFromGlobal(event.globalPos())
@@ -188,7 +189,7 @@ def mousePressEvent(parent, event):  # noqa: N802
         event.accept()
 
 
-def mouseMoveEvent(parent, event):  # noqa: N802
+def mouseMoveEvent(parent: type, event: QMouseEvent):  # noqa: N802
     if parent._resizing:
         handle_resize(parent, event.globalPos())
         event.accept()
@@ -212,7 +213,7 @@ def mouseMoveEvent(parent, event):  # noqa: N802
             parent.setCursor(Qt.ArrowCursor)
 
 
-def mouseReleaseEvent(parent, event):  # noqa: N802
+def mouseReleaseEvent(parent: type, event: QMouseEvent):  # noqa: N802
     parent._resizing = False
     parent._resize_direction = None
     parent.setCursor(Qt.ArrowCursor)
@@ -229,7 +230,7 @@ def isNearEdge(parent, pos):  # noqa: N802
     )
 
 
-def get_resize_direction(parent, pos):
+def get_resize_direction(parent: type, pos: QPoint):  # noqa: N802
     rect = parent.rect()
     margin = parent._resize_margin
     left = pos.x() < margin
@@ -256,7 +257,7 @@ def get_resize_direction(parent, pos):
     return None
 
 
-def handle_resize(parent, global_pos):
+def handle_resize(parent: type, global_pos: QPoint):
     if not parent._resize_direction:
         return
     delta = global_pos - parent._resize_start_pos
@@ -299,7 +300,7 @@ def handle_resize(parent, global_pos):
         parent.setGeometry(geom.x(), geom.y(), new_width, new_height)
 
 
-def toggle_maximize_restore(parent):
+def toggle_maximize_restore(parent: type):
     style = parent.style().standardIcon(QStyle.SP_TitleBarMaxButton)
     cust_style = recolor_icon(style, "white")
     style2 = parent.style().standardIcon(QStyle.SP_TitleBarNormalButton)
@@ -312,20 +313,19 @@ def toggle_maximize_restore(parent):
         parent.maximize_button.setIcon(cust_style2)
 
 
-def eventFilter(parent, obj, event):  # noqa: N802
-    # If you receive a MouseMove even from a child, call the mouseMoveEvent method.
+def eventFilter(parent: type, obj: QObject, event: QEvent):  # noqa: N802
     if event.type() == event.MouseMove:
         parent.mouseMoveEvent(event)
     return super().eventFilter(obj, event)
 
 
-def install_event_filters(parent, widget):
+def install_event_filters(parent: type, widget: QWidget):
     widget.installEventFilter(parent)
     for child in widget.findChildren(QWidget):
         child.installEventFilter(parent)
 
 
-def enable_mouse_tracking(parent, widget):  # noqa: N802
+def enable_mouse_tracking(parent: type, widget: QWidget):
     widget.setMouseTracking(True)
     for child in widget.findChildren(QWidget):
         child.setMouseTracking(True)
