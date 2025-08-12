@@ -22,7 +22,6 @@ sphinx:
 python:
    install:
    - requirements: docs/requirements.txt
-   paths:
-   - src
+
         
 

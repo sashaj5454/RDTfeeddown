@@ -6,11 +6,15 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
+import os
+import sys
+
 project = "RDTfeeddown"
 copyright = "2025, Sasha Horney"  # noqa: A001
 author = "Sasha Horney"
 release = "0.0.0"
 
+sys.path.insert(0, os.path.abspath("../src"))
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
