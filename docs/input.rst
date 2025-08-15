@@ -4,14 +4,14 @@ Input
 .. image:: figures/ScreenshotGUI.png
    :width: 500
 
-The **Input tab** of the GUI provides a user-friendly interface to input data for the RDTfeeddown analysis. 
+The :tab:`Input` of the GUI provides an interface to input data for the RDTfeeddown analysis. 
 
-You can load measurement folders, reference data, and crossing angle knobs directly through the GUI.
+You can load measurement folders, reference data, and crossing angle knob data directly through the GUI.
 
-This outputs a file containing the RDT feeddown data, which can be used for further analysis or validation.
+When the analysis is run a file is outputted, containing the RDT values and the corresponding knob values in a format suitable for further analysis or validation.
 
 Default Input/Output Directories
--------------------------------
+--------------------------------
 
 To set up default input and output directories, create a configuration file named ``rdtfeeddown_default.json`` in your home directory with the following structure:
 
@@ -35,9 +35,9 @@ You can provide input to the RDTfeeddown GUI using the following methods:
 2. **Manual Input**:  
    Manually enter input parameters in the provided fields within the GUI (except for measurement folders).
 
-.. note:: 
+.. warning:: 
   
-  All folder inputs should be in the form used for reuslts of measurements in the OMC analysis tools.
+  All folder inputs should be in the form used for the results of measurements in the `OMC analysis tools <https://pylhc.github.io/packages/omc3/about.html>`_.
 
 Input Fields Explained
 ----------------------
@@ -54,7 +54,7 @@ Input Fields Explained
 Simulation Mode
 ---------------
 
-**Simulation Mode** allows you to use simulation data when no crossing angle knob data is available. In this case, the GUI will not attempt to load any crossing angle knob data from Timber and will only use the provided properties file.
+**Simulation Mode**: allows you to use simulation data when no crossing angle knob data is available. In this case, the GUI will not attempt to load any crossing angle knob data from Timber and will only use the provided properties file.
 
 Properties File
 ---------------
@@ -62,17 +62,20 @@ Properties File
 The **Properties File** is a CSV file that contains the crossing angles used in the model.  
 It should have the following structure:
 
-.. code-block:: csv
+.. raw:: html
 
-   MATCH, KNOB
-
-Where ``MATCH`` is the name of the crossing angle knob used in the model and ``KNOB`` is the value of that knob.
+   <div style="background: #f8f8f8; color: inherit; padding: 12px 8px; border-radius: 0px; font-family: monospace; font-size: 0.95em; border: 1px solid #e0e0e0; display: block; width: 100%;">
+     <span style="color: blue;">MATCH,</span> <span style="color: green;">KNOB</span>
+   </div>
+  <div style="height: 24px;"></div>
+  Where <span style="background: #fff; color: blue; font-family: monospace; font-size: 0.95em; border: 1px solid #e0e0e0; padding: 2px 6px; border-radius: 0px;">MATCH</span> is the name of the measurement folder, and <span style="background: #fff; color: green; font-family: monospace; font-size: 0.95em; border: 1px solid #e0e0e0; padding: 2px 6px; border-radius: 0px;">KNOB</span> is the value of the crossing angle knob for that measurement.
+  <div style="height: 24px;"></div>
 
 Other Features
 --------------
 
 - :guilabel:`Validate Knob`:  
-  Not required unless you want to check that the crossing angle knob name exists in the measurement.
+  Not required unless you want to check that the crossing angle knob name exists on ``pytimber`` for the measurement.
 
 - :guilabel:`Run Analysis`:  
-  Runs the analysis on the provided data and displays the output files in the GUI under
+  Runs the analysis on the provided data, and displays the output files in the GUI on the :tab:`Validation <validation.html>`.

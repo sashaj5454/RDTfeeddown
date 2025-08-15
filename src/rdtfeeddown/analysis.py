@@ -139,8 +139,8 @@ def getrdt_omc3(
     beam: str,
     modelbpmlist: list[list[str]],
     bpmdata: dict,
-    ref: str,
-    flist: list[str],
+    ref: Path,
+    flist: list[Path],
     knob: str,
     rdt: str,
     rdt_plane: str,
@@ -150,6 +150,41 @@ def getrdt_omc3(
     threshold: float = 3,
     log_func: Callable[[str], None] = None,
 ):
+    """
+    Reads RDT data for OMC3 analysis, updates BPM data, and returns processed data.
+
+    :param ldb: Timber statetracker or None.
+    :type ldb: None | Callable[[str], None]
+    :param beam: Beam identifier (i.e. "LHCB1" or "LHCB2").
+    :type beam: str
+    :param modelbpmlist: List of BPMs in the model.
+    :type modelbpmlist: list[list[str]]
+    :param bpmdata: Dictionary to store BPM data.
+    :type bpmdata: dict
+    :param ref: Path to the reference RDT file.
+    :type ref: Path
+    :param flist: List of measurement RDT files.
+    :type flist: list[Path]
+    :param knob: Knob name for analysis.
+    :type knob: str
+    :param rdt: RDT type (e.g. "1020").
+    :type rdt: str
+    :param rdt_plane: RDT plane (i.e. "x" or "y").
+    :type rdt_plane: str
+    :param rdtfolder: Name of which magnet folder to select in the RDT folder e.g. skew sextupole.
+    :type rdtfolder: str
+    :param sim: Boolean indicating if simulation data is used where the path is directly to the tfs-readable file.
+    :type sim: bool
+    :param propfile: Path to the property file for simulation.
+    :type propfile: str
+    :param threshold: Z-score threshold for filtering outliers.
+    :type threshold: float
+    :param log_func: Logging function to use for error messages.
+    :type log_func: Callable[[str], None]
+
+    :returns: Dictionary with metadata and processed BPM data.
+    :rtype: dict
+    """
     beam_no = modelbpmlist[0][-1]
     if beam[-1] != beam_no:
         msg = f"Beam number {beam} does not match the model BPM list."
@@ -495,8 +530,8 @@ def group_datasets(
 
 def getrdt_sim(
     beam: str,
-    ref: str,
-    file: str,
+    ref: Path,
+    file: Path,
     xing: float,
     knob_name: str,
     knob_strength: float,
@@ -504,7 +539,35 @@ def getrdt_sim(
     rdt_plane: str,
     rdtfolder: str,
     log_func: Callable[[str], None] = None,
-):
+) -> dict:
+    """
+    Reads RDT data for simulation analysis, calculates RDT shifts, and returns processed data.
+
+    :param beam: Beam identifier (i.e. "LHCB1" or "LHCB2").
+    :type beam: str
+    :param ref: Path to the reference RDT file.
+    :type ref: Path
+    :param file: Path to the measurement RDT file.
+    :type file: Path
+    :param xing: Crossing angle used in the analysis.
+    :type xing: float
+    :param knob_name: Name of the knob used in the analysis.
+    :type knob_name: str
+    :param knob_strength: Strength of the knob used in the analysis.
+    :type knob_strength: float
+    :param rdt: RDT type (e.g. "1020").
+    :type rdt: str
+    :param rdt_plane: RDT plane (i.e. "x" or "y").
+    :type rdt_plane: str
+    :param rdtfolder: Name of which magnet folder to select in the RDT folder e.g. skew sextupole.
+    :type rdtfolder: str
+    :param log_func: Logging function to use for error messages.
+    :type log_func: Callable[[str], None]
+
+    :returns: Dictionary with metadata and processed BPM data.
+    :rtype: dict
+    """
+
     bpmdata = {}
     bpmlist = []
     knob_strength = float(knob_strength)

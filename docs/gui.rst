@@ -12,6 +12,7 @@ To run the RDTfeeddown GUI, use the following command:
 
 This will launch the graphical user interface where you can interact with the RDTfeeddown functionalities.
 
+To pan in any of the plots, use :kbd:`Ctrl+LeftClick` and drag the mouse.
 
 .. toctree::
    :maxdepth: 1

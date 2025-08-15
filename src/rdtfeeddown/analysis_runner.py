@@ -1,5 +1,7 @@
-from qtpy.QtWidgets import QApplication, QFileDialog, QMessageBox, QTreeWidgetItem
+from pathlib import Path
+from typing import Self
 
+from qtpy.QtWidgets import QApplication, QFileDialog, QMessageBox, QTreeWidgetItem
 from rdtfeeddown.analysis import fit_bpm, getrdt_omc3, getrdt_sim, group_datasets
 from rdtfeeddown.data_handler import (
     load_rdtdata,
@@ -107,19 +109,19 @@ def validate_measurement_folders(
 
 
 def handle_beam_analysis(
-    parent=None,
-    ldb=None,
-    beam_model=None,
-    beam_folders=None,
-    beam_reffolder=None,
-    knob=None,
-    rdt=None,
-    rdt_plane=None,
-    rdt_folder=None,
-    beam_label=None,
-    simulation_checkbox=None,
-    simulation_file=None,
-    log_func=None,
+    parent: Self = None,
+    ldb: callable = None,
+    beam_model: Path = None,
+    beam_folders: list[Path] = None,
+    beam_reffolder: Path = None,
+    knob: str = None,
+    rdt: str = None,
+    rdt_plane: str = "x" | "y",
+    rdt_folder: str = None,
+    beam_label: str = None,
+    simulation_checkbox: bool = None,
+    simulation_file: Path = None,
+    log_func: callable = None,
 ):
     if parent:
         simulation_checkbox = parent.simulation_checkbox.isChecked()
@@ -229,6 +231,32 @@ def finalize_grouped_results(parent=None, loaded_output_data=None, log_func=None
 
 
 def run_analysis(parent=None, **kwargs):
+    """
+    Runs the RDT feeddown analysis.
+
+    :param parent: Parent GUI widget (optional).
+    :type parent: QWidget or None
+
+    Keyword Arguments:
+        beam1_model (str or Path): Path to the LHCB1 model file.
+        beam2_model (str or Path): Path to the LHCB2 model file.
+        beam1_reffolder (str or Path): Path to the LHCB1 reference folder.
+        beam2_reffolder (str or Path): Path to the LHCB2 reference folder.
+        beam1_folders (list[str] or list[Path]): List of LHCB1 measurement folders.
+        beam2_folders (list[str] or list[Path]): List of LHCB2 measurement folders.
+        knob (str): Knob name for analysis.
+        rdt (str): RDT type (in form of "1020" for example).
+        rdt_plane (str): RDT plane ("x" or "y").
+        rdt_folder (str): Magnet folder in RDT folder.
+        simulation_checkbox (bool): Whether simulation data is used.
+        simulation_file (str or Path): Path to file for knob values if not available on Timber.
+        log_func (callable): Logging function.
+        b1filename (str or Path): Output filename for LHCB1.
+        b2filename (str or Path): Output filename for LHCB2.
+
+    :returns: Analysis results for LHCB1 and LHCB2 in file usable for plotting and matching with response.
+    :rtype: tuple
+    """
     if parent:
         parent.input_progress.show()
         QApplication.processEvents()
@@ -331,9 +359,10 @@ def run_analysis(parent=None, **kwargs):
         b1rdtdata = handle_beam_analysis(
             None,
             ldb,
-            beam1_model,
-            beam1_folders,
-            beam1_reffolder,
+            Path(beam1_model) if beam1_model is not None else None,
+            [Path(f) for f in beam1_folders] if beam1_folders is not None else None,
+            Path(beam1_reffolder) if beam1_reffolder is not None else None,
+            knob,
             knob,
             rdt,
             rdt_plane,
