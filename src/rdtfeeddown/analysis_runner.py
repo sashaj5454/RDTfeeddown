@@ -1,7 +1,13 @@
 from pathlib import Path
-from typing import Self
+from typing import Literal
 
-from qtpy.QtWidgets import QApplication, QFileDialog, QMessageBox, QTreeWidgetItem
+from qtpy.QtWidgets import (
+    QApplication,
+    QFileDialog,
+    QMessageBox,
+    QTreeWidgetItem,
+    QWidget,
+)
 from rdtfeeddown.analysis import fit_bpm, getrdt_omc3, getrdt_sim, group_datasets
 from rdtfeeddown.data_handler import (
     load_rdtdata,
@@ -109,14 +115,14 @@ def validate_measurement_folders(
 
 
 def handle_beam_analysis(
-    parent: Self = None,
+    parent: QWidget = None,
     ldb: callable = None,
     beam_model: Path = None,
     beam_folders: list[Path] = None,
     beam_reffolder: Path = None,
     knob: str = None,
     rdt: str = None,
-    rdt_plane: str = "x" | "y",
+    rdt_plane: Literal["x", "y"] = "x",
     rdt_folder: str = None,
     beam_label: str = None,
     simulation_checkbox: bool = None,
@@ -208,7 +214,9 @@ def update_loaded_files_list(
     return loaded_output_data
 
 
-def finalize_grouped_results(parent=None, loaded_output_data=None, log_func=None):
+def finalize_grouped_results(
+    parent: QWidget = None, loaded_output_data=None, log_func=None
+):
     if parent:
         log_func = parent.log_error
     results = group_datasets(loaded_output_data, log_func)
