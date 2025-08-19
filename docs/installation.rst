@@ -18,13 +18,12 @@ Or, to install from source:
 Dependencies
 ------------
 
-- matplotlib
-- numpy
-- Python >= 3.11
-- scipy
-- tfs-pandas
-- pytimber
-- pyqtgraph (optional, for GUI)
-- PyQt5 or PyQt6 (optional, for GUI)
-- PyQt6 (optional, for GUI)
-- QtPy (optional, for GUI)
+- ``matplotlib``
+- ``numpy``
+- ``Python`` >= 3.11
+- ``scipy``
+- ``tfs-pandas``
+- ``pytimber`` (to allow for access to ``Timber`` database - requires acc-py)
+- ``pyqtgraph`` (optional, for GUI)
+- ``PyQt5`` or ``PyQt6`` (optional, for GUI)
+- ``QtPy`` (optional, for GUI)

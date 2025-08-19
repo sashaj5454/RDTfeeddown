@@ -154,7 +154,7 @@ def getrdt_omc3(
     Reads RDT data for OMC3 analysis, updates BPM data, and returns processed data.
 
     :param ldb: Timber statetracker or None.
-    :type ldb: None | Callable[[str], None]
+    :type ldb: None or Callable[[str], None]
     :param beam: Beam identifier (i.e. "LHCB1" or "LHCB2").
     :type beam: str
     :param modelbpmlist: List of BPMs in the model.

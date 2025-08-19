@@ -164,6 +164,16 @@ def convert_from_kickfilename(kickfilename: str):
 
 
 def getmodelbpms(modelpath: Path):
+    """
+    Reads the model BPMs from the twiss.dat file in the given model path.
+
+    Parameters:
+
+    :param modelpath: Path to the model directory containing the twiss.dat file.
+
+    :returns: a tuple containing a list of the model BPM names and a dictionary with the BPM names as keys, their corresponding 's' position, ready to be filled with data.
+    :rtype: (list, dict)
+    """
     modelbpmlist = []
     bpmdata = {}
     twissfile = modelpath / "twiss.dat"

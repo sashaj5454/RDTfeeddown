@@ -1,10 +1,29 @@
 .tab {
-    background: #e0e0f7;
+    background: var(--color-background-secondary);
     border-radius: 8px 8px 0 0;
-    padding: 2px 6px;  /* Reduced padding */
-    border: 1px solid #888;
+    padding: 2px 6px;
+    border: 1px solid var(--color-background-border);
     font-weight: bold;
     display: inline-block;
     margin-right: 4px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+    color: var(--color-text-primary);
+}
+
+.orange  { color: #E69F00; }  
+.skyblue { color: #56B4E9; }  
+.green   { color: #009E73; }
+.yellow  { color: #F0E442; } 
+.blue    { color: #0072B2; }  
+.vermilion { color: #D55E00; }
+.pink  { color: #CC79A7; } 
+.grey    { color: #999999; } 
+
+.guilabel {
+    white-space: nowrap;
+    padding: 0.5px 6px;
+    width: fit-content;
+    border-radius: 4px;
+    font-weight: bold;
+    display: inline-block;
 }

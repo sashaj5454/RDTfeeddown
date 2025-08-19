@@ -2,7 +2,6 @@ import json
 from pathlib import Path
 
 from qtpy.QtWidgets import QApplication, QFileDialog, QMessageBox, QTreeWidgetItem
-
 from rdtfeeddown.analysis import group_datasets
 from rdtfeeddown.validation_utils import validate_file_structure
 
@@ -74,11 +73,28 @@ def _convert_for_json(obj: type):
 
 
 def save_rdtdata(data: type, filename: str):
+    """
+    Save RDT data to a JSON file.
+
+    :param data: The RDT data to save.
+    :type data: dict
+    :param filename: The path to the file where the data will be saved.
+    :type filename: str or Path
+    """
     with Path.open(filename, "w") as fout:
         json.dump(data, fout, default=_convert_for_json)
 
 
 def load_rdtdata(filename: Path):
+    """
+    Load RDT data from a JSON file.
+
+    :param filename: The path to the file from which the data will be loaded.
+    :type filename: str or Path
+
+    :return: The loaded RDT data.
+    :rtype: dict
+    """
     with Path.open(filename, "r") as fin:
         return json.load(fin)
 

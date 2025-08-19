@@ -30,7 +30,7 @@ extensions = [
     "sphinx.ext.githubpages",
     "sphinx.ext.napoleon",
     "sphinx.ext.autosectionlabel",
-    "tab_role",
+    "role",
 ]
 
 templates_path = ["source/_templates"]
@@ -40,6 +40,25 @@ autosectionlabel_prefix_document = True
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = "sphinx_rtd_theme"
+html_theme = "furo"
 html_static_path = ["source/_static"]
 html_css_files = ["custom.css"]
+
+rst_prolog = """
+.. role:: orange
+   :class: orange
+.. role:: skyblue
+   :class: skyblue
+.. role:: green
+   :class: green
+.. role:: yellow
+   :class: yellow
+.. role:: blue
+   :class: blue
+.. role:: vermilion
+   :class: vermilion
+.. role:: pink 
+   :class: pink
+.. role:: grey
+   :class: grey
+"""
