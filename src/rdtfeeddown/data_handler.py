@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 from qtpy.QtWidgets import QApplication, QFileDialog, QMessageBox, QTreeWidgetItem
+
 from rdtfeeddown.analysis import group_datasets
 from rdtfeeddown.validation_utils import validate_file_structure
 

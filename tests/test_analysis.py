@@ -7,6 +7,7 @@ from rdtfeeddown.analysis import (
     read_rdt_file,
     readrdtdatafile,
 )
+from rdtfeeddown.analysis_runner import run_response
 from rdtfeeddown.data_handler import save_rdtdata
 from rdtfeeddown.utils import getmodelbpms
 from rdtfeeddown.validation_utils import validate_file_structure
@@ -151,6 +152,47 @@ class TestAnalysis(unittest.TestCase):
         required_metas = ["beam", "ref", "file_list", "rdt", "rdt_plane", "knob"]
         valid = validate_file_structure(b2_rdtdata, required_metas)
         self.assertTrue(valid, "File structure validation failed for LHCB1 RDT data")
+
+    def test_run_response(self):
+        rdt = "0030"
+        rdt_plane = "y"
+        rdtfolder = "skew_sextupole"
+        beam1_reffolder = "tests/test_data/LHCB1_IP5V_0_L5"
+        beam2_reffolder = "tests/test_data/LHCB2_IP5V_0_L5"
+        beam1_measfolder = "tests/test_data/LHCB1_IP5V_160_L5"
+        beam2_measfolder = "tests/test_data/LHCB2_IP5V_160_L5"
+        b1_knob_name = "L5"
+        b1_knob_value = 2
+        b1_xing = 160
+        b2_knob_name = "L5"
+        b2_knob_value = 2
+        b2_xing = 160
+        filenameb1 = "tests/test_output/LHCB1_response.json"
+        filenameb2 = "tests/test_output/LHCB2_response.json"
+        response = run_response(
+            None,
+            rdt=rdt,
+            rdt_plane=rdt_plane,
+            rdtfolder=rdtfolder,
+            beam1_reffolder=beam1_reffolder,
+            beam2_reffolder=beam2_reffolder,
+            beam1_measfolder=beam1_measfolder,
+            beam2_measfolder=beam2_measfolder,
+            b1_knob_name=b1_knob_name,
+            b1_knob_value=b1_knob_value,
+            b1_xing=b1_xing,
+            b2_knob_name=b2_knob_name,
+            b2_knob_value=b2_knob_value,
+            b2_xing=b2_xing,
+            filenameb1=filenameb1,
+            filenameb2=filenameb2,
+            log_func=print,
+        )
+        required_metas = ["beam", "ref", "file", "rdt", "rdt_plane", "knob_name"]
+        valid = validate_file_structure(response["LHCB1"], required_metas)
+        self.assertTrue(valid, "File structure validation failed for LHCB1 response")
+        valid = validate_file_structure(response["LHCB2"], required_metas)
+        self.assertTrue(valid, "File structure validation failed for LHCB2 response")
 
 
 if __name__ == "__main__":

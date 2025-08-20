@@ -6,9 +6,10 @@ from typing import Callable
 
 import numpy as np
 import tfs
-from rdtfeeddown.utils import csv_to_dict, get_analysis_knobsetting
 from scipy.optimize import curve_fit
 from scipy.stats import zscore
+
+from rdtfeeddown.utils import csv_to_dict, get_analysis_knobsetting
 
 
 def filter_outliers(data: list[list[float]], threshold: float = 3):
@@ -165,7 +166,7 @@ def getrdt_omc3(
     :type ref: Path
     :param flist: List of measurement RDT files.
     :type flist: list[Path]
-    :param knob: Knob name for analysis.
+    :param knob: Crossing angle knob name for analysis (needed only if accessing Timber).
     :type knob: str
     :param rdt: RDT type (e.g. "1020").
     :type rdt: str
@@ -175,7 +176,7 @@ def getrdt_omc3(
     :type rdtfolder: str
     :param sim: Boolean indicating if simulation data is used where the path is directly to the tfs-readable file.
     :type sim: bool
-    :param propfile: Path to the property file for simulation.
+    :param propfile: Path to the property file for simulation (i.e. no knob values).
     :type propfile: str
     :param threshold: Z-score threshold for filtering outliers.
     :type threshold: float

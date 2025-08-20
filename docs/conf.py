@@ -6,7 +6,6 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-import os
 import sys
 from pathlib import Path
 
@@ -14,8 +13,9 @@ project = "RDTfeeddown"
 copyright = "2025, Sasha Horney"  # noqa: A001
 author = "Sasha Horney"
 release = "0.0.0"
+html_title = f"{project} Documentation"
 
-sys.path.insert(0, os.path.abspath("../src"))
+sys.path.insert(0, Path("../src").resolve())
 sys.path.append(str(Path("source/_ext").resolve()))
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -57,7 +57,7 @@ rst_prolog = """
    :class: blue
 .. role:: vermilion
    :class: vermilion
-.. role:: pink 
+.. role:: pink
    :class: pink
 .. role:: grey
    :class: grey

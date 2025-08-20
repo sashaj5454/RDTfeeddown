@@ -64,18 +64,21 @@ It should have the following structure:
 
 .. raw:: html
 
-   <div style="background: #f8f8f8; color: inherit; padding: 12px 8px; border-radius: 0px; font-family: monospace; font-size: 0.95em; border: 1px solid #e0e0e0; display: block; width: 100%;">
-     <span style="color: blue;">MATCH,</span> <span style="color: green;">KNOB</span>
+   <div style="background: var(--color-code-background); color: inherit; padding: 12px 8px; font-family: monospace; font-size: 0.95em; border: 1px solid var(--color-background-border); border-radius: 6px; width: 100%;">
+     <span style="color: #339AF0;">MATCH,</span> <span style="color: green;">KNOB</span>
    </div>
   <div style="height: 24px;"></div>
-  Where <span style="background: #fff; color: blue; font-family: monospace; font-size: 0.95em; border: 1px solid #e0e0e0; padding: 2px 6px; border-radius: 0px;">MATCH</span> is the name of the measurement folder, and <span style="background: #fff; color: green; font-family: monospace; font-size: 0.95em; border: 1px solid #e0e0e0; padding: 2px 6px; border-radius: 0px;">KNOB</span> is the value of the crossing angle knob for that measurement.
+  Where <span style="background: var(--color-code-background); color: #339AF0; font-family: monospace; font-size: 0.95em; border: 1px solid var(--color-background-border); padding: 2px 6px; border-radius: 6px;">MATCH</span> is the name of the measurement folder, and <span style="background: var(--color-code-background); color: green; font-family: monospace; font-size: 0.95em; border: 1px solid var(--color-background-border); padding: 2px 6px; border-radius: 6px;">KNOB</span> is the value of the crossing angle knob for that measurement.
   <div style="height: 24px;"></div>
+
+Running the Analysis
+--------------------
+
+:guilabel:`Run Analysis`: Runs the analysis on the provided data (i.e. collating crossing angle knob values and the RDT values), and displays the output files in the GUI on the :tab:`Validation <validation.html>` tab.
+
 
 Other Features
 --------------
 
 - :guilabel:`Validate Knob`:  
   Not required unless you want to check that the crossing angle knob name exists in the ``Timber`` database for the measurement.
-
-- :guilabel:`Run Analysis`:  
-  Runs the analysis on the provided data, and displays the output files in the GUI on the :tab:`Validation <validation.html>` tab.

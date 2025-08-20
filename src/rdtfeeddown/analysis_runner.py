@@ -8,6 +8,7 @@ from qtpy.QtWidgets import (
     QTreeWidgetItem,
     QWidget,
 )
+
 from rdtfeeddown.analysis import fit_bpm, getrdt_omc3, getrdt_sim, group_datasets
 from rdtfeeddown.data_handler import (
     load_rdtdata,
@@ -534,6 +535,33 @@ def get_save_filenames(
 
 
 def run_response(parent=None, **kwargs):
+    """
+    Runs the RDT feeddown response analysis.
+
+    :param parent: Parent GUI widget (optional).
+    :type parent: QWidget or None
+
+    Keyword Arguments:
+        rdt (str): RDT type (in form of "1020" for example).
+        rdt_plane (str): RDT plane ("x" or "y").
+        rdt_folder (str): Magnet folder in RDT folder.
+        beam1_reffolder (str or Path): Path to the LHCB1 reference folder.
+        beam2_reffolder (str or Path): Path to the LHCB2 reference folder.
+        beam1_measfolder (str or Path): Path to the LHCB1 measurement folder.
+        beam2_measfolder (str or Path): Path to the LHCB2 measurement folder.
+        b1_knob_name (str): Corrector name for LHCB1.
+        b1_knob_value (str): Corrector value for LHCB1.
+        b1_xing (str): Difference in crossing angle value for LHCB1.
+        b2_knob_name (str): Corrector name for LHCB2.
+        b2_knob_value (str): Corrector value for LHCB2.
+        b2_xing (str): Difference in crossing angle value for LHCB2.
+        filenameb1 (str or Path): Output filename for LHCB1.
+        filenameb2 (str or Path): Output filename for LHCB2.
+        log_func (callable): Logging function.
+
+    :returns: Response results for LHCB1 and LHCB2 in file usable for plotting and matching the measurement.
+    :rtype: dict or None
+    """
     if parent:
         parent.simcorr_progress.show()
         QApplication.processEvents()
@@ -623,7 +651,7 @@ def run_response(parent=None, **kwargs):
                 log_func=log_func,
             )
             save_rdtdata(b1response, filenameb1)
-            results["LHCB1"] = filenameb1
+            results["LHCB1"] = b1response
         if filenameb2:
             if not filenameb2.lower().endswith(".json"):
                 filenameb2 += ".json"
@@ -640,7 +668,7 @@ def run_response(parent=None, **kwargs):
                 log_func=log_func,
             )
             save_rdtdata(b2response, filenameb2)
-            results["LHCB2"] = filenameb2
+            results["LHCB2"] = b2response
         return results
     return None
 
