@@ -11,6 +11,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 from zoneinfo import ZoneInfo
 
+import pytimber
+
 if TYPE_CHECKING:
     from qtpy.QtGui import QMouseEvent
 
@@ -176,7 +178,7 @@ def getmodelbpms(modelpath: Path):
     """
     modelbpmlist = []
     bpmdata = {}
-    twissfile = modelpath / "twiss.dat"
+    twissfile = Path(modelpath) / "twiss.dat"
     rt = tfs.read(twissfile)
     rt_filtered = rt[rt["NAME"].str.contains("BPM")]
     for _, row in rt_filtered.iterrows():

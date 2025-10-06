@@ -14,6 +14,7 @@ copyright = "2025, Sasha Horney"  # noqa: A001
 author = "Sasha Horney"
 release = "0.0.0"
 html_title = f"{project} Documentation"
+html_short_title = f"{project} documentation"
 
 sys.path.insert(0, Path("../src").resolve())
 sys.path.append(str(Path("source/_ext").resolve()))
