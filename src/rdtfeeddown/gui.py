@@ -374,6 +374,10 @@ class RDTFeeddownGUI(QMainWindow):
             "Only required if want to check if knob exists in Timber!!!"
         )
         param_layout.addWidget(self.validate_knob_button)
+        self.bpmfit_order_label = QLabel("BPM Fit Order:")
+        param_layout.addWidget(self.bpmfit_order_label)
+        self.bpmfit_order = QLineEdit()
+        param_layout.addWidget(self.bpmfit_order)
         param_group.setLayout(param_layout)
         self.input_layout.addWidget(param_group)
 
@@ -462,6 +466,12 @@ class RDTFeeddownGUI(QMainWindow):
         self.beam_selector.addItems(["LHCB1", "LHCB2"])
         self.beam_selector.currentIndexChanged.connect(self.update_bpm_search_entry)
         beam_selector_layout.addWidget(self.beam_selector)
+
+        bpmfit_order_label = QLabel("Choose Order of BPM Fit:")
+        beam_selector_layout.addWidget(bpmfit_order_label)
+        self.bpmfit_order = QLineEdit()
+        self.bpmfit_order.setFixedWidth(60)
+        beam_selector_layout.addWidget(self.bpmfit_order)
         bpm_tab_layout.addLayout(beam_selector_layout)
 
         self.bpm_search_entry = QLineEdit()
@@ -1134,10 +1144,18 @@ class RDTFeeddownGUI(QMainWindow):
                 self, "BPM Graph", f"BPM '{bpm}' not found in {beam}."
             )
             return
+        try:
+            bpmfit_order = int(self.bpmfit_order.text().strip())
+            if bpmfit_order < 1:
+                raise ValueError("Order must be at least 1")
+        except (ValueError, AttributeError):
+            bpmfit_order = 2  # Default to quadratic if invalid
+            self.log_error(f"Invalid BPM fit order; defaulting to {bpmfit_order}")
         (ax1, ax2), grid = self.setup_figure(self.bpmWidget, data, None, 2)
         plot_bpm(
             bpm,
             data,
+            bpmfit_order,
             self.rdt,
             self.rdt_plane,
             ax1=ax1,

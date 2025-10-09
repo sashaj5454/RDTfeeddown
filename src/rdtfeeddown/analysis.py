@@ -296,6 +296,9 @@ def getrdt_omc3(
             ]
             for k in range(len(dat))
         ]
+
+        zero_point = [0, 0, 0, bref[0][4]]
+        diffdat.insert(0, zero_point)
         diffdat.sort(key=lambda x: x[0])
         intersected_bpm_data[bpm] = {"s": s, "diffdata": diffdat}
     if not intersected_bpm_data:
@@ -318,8 +321,29 @@ def getrdt_omc3(
     }
 
 
-def polyfunction(x: float, c: float, m: float, n: float) -> float:
-    return c + m * x + n * x**2
+# def polyfunction(x: float, c: float, m: float, n: float) -> float:
+#     return c + m * x + n * x**2
+
+
+def make_polyfunction(order: int):
+    """
+    Factory function to create a polynomial function of the specified order.
+
+    Parameters:
+    - order: The degree of the polynomial (e.g., 1 for linear, 2 for quadratic).
+
+    Returns:
+    - A function that computes the polynomial: sum(coeff[i] * x**i for i in range(order+1)).
+    """
+
+    def polyfunction(x: float, *coeffs) -> float:
+        if len(coeffs) != order + 1:
+            raise ValueError(
+                f"Expected {order + 1} coefficients for order {order}, got {len(coeffs)}"
+            )
+        return sum(c * x**i for i, c in enumerate(coeffs))
+
+    return polyfunction
 
 
 def fitdata(
@@ -333,14 +357,15 @@ def fitdata(
 
 
 def fitdatanoerrors(
-    xdata: np.ndarray, ydata: np.ndarray, fitfunction: Callable
+    xdata: np.ndarray, ydata: np.ndarray, fitfunction: Callable, order: int = 2
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    popt, pcov = curve_fit(fitfunction, xdata, ydata)
+    popt, pcov = curve_fit(fitfunction, xdata, ydata, p0=[0] * (order + 1))
     perr = np.sqrt(np.diag(pcov))
     return popt, pcov, perr
 
 
-def fit_bpm(fulldata: dict) -> dict:
+def fit_bpm(fulldata: dict, order: int = 2) -> dict:
+    polyfunction = make_polyfunction(order)
     data = fulldata["data"]
     for bpm in data:
         diffdata = data[bpm]["diffdata"]
@@ -353,8 +378,8 @@ def fit_bpm(fulldata: dict) -> dict:
             xing.append(diffdata[x][0])
             re.append(diffdata[x][1])
             im.append(diffdata[x][2])
-        re_opt, re_cov, re_err = fitdatanoerrors(xing, re, polyfunction)
-        im_opt, im_cov, im_err = fitdatanoerrors(xing, im, polyfunction)
+        re_opt, re_cov, re_err = fitdatanoerrors(xing, re, polyfunction, order)
+        im_opt, im_cov, im_err = fitdatanoerrors(xing, im, polyfunction, order)
         data[bpm]["fitdata"] = [re_opt, re_cov, re_err, im_opt, im_cov, im_err]
     fulldata["data"] = data
     return fulldata

@@ -136,7 +136,7 @@ def handle_beam_analysis(
         log_func = parent.log_error
     if beam_model and beam_folders:
         modelbpmlist, bpmdata = getmodelbpms(beam_model)
-        rdtdata = getrdt_omc3(
+        return getrdt_omc3(
             ldb,
             beam_label,
             modelbpmlist,
@@ -151,7 +151,6 @@ def handle_beam_analysis(
             simulation_file,
             log_func=log_func,
         )
-        return fit_bpm(rdtdata)
     return None
 
 

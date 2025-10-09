@@ -8,7 +8,8 @@ from rdtfeeddown.analysis import (
     arc_bpm_check,
     bad_bpm_check,
     calculate_avg_rdt_shift,
-    polyfunction,
+    fit_bpm,
+    make_polyfunction,
 )
 from rdtfeeddown.style import DARK_BACKGROUND_COLOR
 
@@ -98,11 +99,15 @@ def plot_ips(axes, label):
                 ax._ips_drawn.add(ip_str)
 
 
-def plot_bpm(bpm, fulldata, rdt, rdt_plane, ax1=None, ax2=None, log_func=None):
+def plot_bpm(
+    bpm, fulldata, fitbpm_order, rdt, rdt_plane, ax1=None, ax2=None, log_func=None
+):
     try:
+        data = fit_bpm(fulldata, fitbpm_order)
         data = fulldata["data"]
         diffdata = data[bpm]["diffdata"]
         fitdata = data[bpm]["fitdata"]
+        polyfunction = make_polyfunction(order=fitbpm_order)
         knob = fulldata["metadata"]["knob"]
         xing, re, im, amp_err = [], [], [], []
         for x in range(len(diffdata)):
@@ -122,8 +127,8 @@ def plot_bpm(bpm, fulldata, rdt, rdt_plane, ax1=None, ax2=None, log_func=None):
         xing_max = np.max(xing)
         xing_ran = xing_max - xing_min
         xfit = np.arange(xing_min, xing_max, xing_ran / 100.0)
-        refit = polyfunction(xfit, fitdata[0][0], fitdata[0][1], fitdata[0][2])
-        imfit = polyfunction(xfit, fitdata[3][0], fitdata[3][1], fitdata[3][2])
+        refit = polyfunction(xfit, *fitdata[0])
+        imfit = polyfunction(xfit, *fitdata[3])
 
         if fulldata["metadata"]["beam"][-1] == "1":
             line_color = b1_line_color
