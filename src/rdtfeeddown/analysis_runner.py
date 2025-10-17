@@ -9,7 +9,7 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
-from rdtfeeddown.analysis import fit_bpm, getrdt_omc3, getrdt_sim, group_datasets
+from rdtfeeddown.analysis import getrdt_omc3, getrdt_sim, group_datasets
 from rdtfeeddown.data_handler import (
     load_rdtdata,
     save_b1_rdtdata,

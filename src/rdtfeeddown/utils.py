@@ -11,8 +11,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 from zoneinfo import ZoneInfo
 
-import pytimber
-
 if TYPE_CHECKING:
     from qtpy.QtGui import QMouseEvent
 
