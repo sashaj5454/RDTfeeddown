@@ -165,14 +165,22 @@ def convert_from_kickfilename(kickfilename: str):
 
 def getmodelbpms(modelpath: Path):
     """
-    Reads the model BPMs from the twiss.dat file in the given model path.
+    Read the model BPMs from the twiss.dat file in the given model path.
 
-    Parameters:
+    Parameters
+    ----------
+    modelpath : Path
+        Path to the model directory containing the twiss.dat file.
 
-    :param modelpath: Path to the model directory containing the twiss.dat file.
-
-    :returns: a tuple containing a list of the model BPM names and a dictionary with the BPM names as keys, their corresponding 's' position, ready to be filled with data.
-    :rtype: (list, dict)
+    Returns
+    -------
+    tuple
+        (modelbpmlist, bpmdata)
+        modelbpmlist : list
+            List of the model BPM names.
+        bpmdata : dict
+            Dictionary with BPM names as keys, their corresponding 's' position,
+            and ready to be filled with data.
     """
     modelbpmlist = []
     bpmdata = {}
@@ -190,6 +198,19 @@ def getmodelbpms(modelpath: Path):
 
 
 def load_defaults(log_func: callable = None):
+    """
+    Load default input and output paths from configuration file if present.
+
+    Parameters
+    ----------
+    log_func : callable, optional
+        Optional logging function for error messages.
+
+    Returns
+    -------
+    dict
+        Dictionary with keys "default_input_path" and "default_output_path".
+    """
     # Set built-in defaults
     curr_time = datetime.now().strftime("%Y-%m-%d")
     defaults = {
@@ -214,14 +235,17 @@ def load_defaults(log_func: callable = None):
 
 def csv_to_dict(file_path: Path):
     """
-    Converts a CSV file to a dictionary
+    Convert a CSV file to a list of dictionaries.
 
-    Parameters:
-    - file_path: The file path of the CSV file.
+    Parameters
+    ----------
+    file_path : Path
+        The file path of the CSV file.
 
-    Returns:
-    - data: The dictionary of the CSV file.
-
+    Returns
+    -------
+    list
+        List of dictionaries, one per row in the CSV file.
     """
     with Path.open(file_path, mode="r") as infile:
         reader = csv.DictReader(infile, skipinitialspace=True)

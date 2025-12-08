@@ -99,6 +99,18 @@ def create_custom_title_bar(parent: type):
 
 
 def show_help(parent: type):
+    """
+    Show the help dialog for RDT Feeddown Analysis.
+
+    Parameters
+    ----------
+    parent : QWidget
+        Parent widget for the help dialog.
+
+    Returns
+    -------
+    None
+    """
     help_text = """
 <html>
 <body>
@@ -158,6 +170,15 @@ def show_help(parent: type):
 def show_error_log_window(self: type):
     """
     Open a pop-up window displaying all logged error messages.
+
+    Parameters
+    ----------
+    self : QWidget
+        The parent widget containing the error log.
+
+    Returns
+    -------
+    None
     """
     dialog = QDialog(self)
     dialog.setWindowTitle("Error Log")
@@ -173,7 +194,21 @@ def show_error_log_window(self: type):
     dialog.exec_()
 
 
-def mousePressEvent(parent: type, event: QMouseEvent):  # noqa: N802
+def mousePressEvent(parent: type, event: QMouseEvent):
+    """
+    Handle mouse press events for custom window dragging and resizing.
+
+    Parameters
+    ----------
+    parent : QWidget
+        The parent window.
+    event : QMouseEvent
+        The mouse event.
+
+    Returns
+    -------
+    None
+    """
     if event.button() == Qt.LeftButton:
         # Convert global position to the widget's local coordinate system
         local_pos = parent.mapFromGlobal(event.globalPos())
@@ -189,7 +224,21 @@ def mousePressEvent(parent: type, event: QMouseEvent):  # noqa: N802
         event.accept()
 
 
-def mouseMoveEvent(parent: type, event: QMouseEvent):  # noqa: N802
+def mouseMoveEvent(parent: type, event: QMouseEvent):
+    """
+    Handle mouse move events for custom window dragging and resizing.
+
+    Parameters
+    ----------
+    parent : QWidget
+        The parent window.
+    event : QMouseEvent
+        The mouse event.
+
+    Returns
+    -------
+    None
+    """
     if parent._resizing:
         handle_resize(parent, event.globalPos())
         event.accept()
@@ -213,13 +262,42 @@ def mouseMoveEvent(parent: type, event: QMouseEvent):  # noqa: N802
             parent.setCursor(Qt.ArrowCursor)
 
 
-def mouseReleaseEvent(parent: type, event: QMouseEvent):  # noqa: N802
+def mouseReleaseEvent(parent: type, event: QMouseEvent):
+    """
+    Handle mouse release events for custom window resizing.
+
+    Parameters
+    ----------
+    parent : QWidget
+        The parent window.
+    event : QMouseEvent
+        The mouse event.
+
+    Returns
+    -------
+    None
+    """
     parent._resizing = False
     parent._resize_direction = None
     parent.setCursor(Qt.ArrowCursor)
 
 
-def isNearEdge(parent, pos):  # noqa: N802
+def isNearEdge(parent, pos):
+    """
+    Check if a position is near the edge of the parent widget for resizing.
+
+    Parameters
+    ----------
+    parent : QWidget
+        The parent window.
+    pos : QPoint
+        Position to check.
+
+    Returns
+    -------
+    bool
+        True if near edge, False otherwise.
+    """
     rect = parent.rect()
     margin = parent._resize_margin
     return (
@@ -230,7 +308,22 @@ def isNearEdge(parent, pos):  # noqa: N802
     )
 
 
-def get_resize_direction(parent: type, pos: QPoint):  # noqa: N802
+def get_resize_direction(parent: type, pos: QPoint):
+    """
+    Determine the resize direction based on position near the window edge.
+
+    Parameters
+    ----------
+    parent : QWidget
+        The parent window.
+    pos : QPoint
+        Position to check.
+
+    Returns
+    -------
+    str or None
+        Direction string (e.g., "left", "top-right") or None if not near edge.
+    """
     rect = parent.rect()
     margin = parent._resize_margin
     left = pos.x() < margin
@@ -258,6 +351,20 @@ def get_resize_direction(parent: type, pos: QPoint):  # noqa: N802
 
 
 def handle_resize(parent: type, global_pos: QPoint):
+    """
+    Resize the parent window based on mouse movement and direction.
+
+    Parameters
+    ----------
+    parent : QWidget
+        The parent window.
+    global_pos : QPoint
+        Current global mouse position.
+
+    Returns
+    -------
+    None
+    """
     if not parent._resize_direction:
         return
     delta = global_pos - parent._resize_start_pos
@@ -301,6 +408,18 @@ def handle_resize(parent: type, global_pos: QPoint):
 
 
 def toggle_maximize_restore(parent: type):
+    """
+    Toggle between maximized and normal window states.
+
+    Parameters
+    ----------
+    parent : QWidget
+        The parent window.
+
+    Returns
+    -------
+    None
+    """
     style = parent.style().standardIcon(QStyle.SP_TitleBarMaxButton)
     cust_style = recolor_icon(style, "white")
     style2 = parent.style().standardIcon(QStyle.SP_TitleBarNormalButton)
@@ -313,19 +432,64 @@ def toggle_maximize_restore(parent: type):
         parent.maximize_button.setIcon(cust_style2)
 
 
-def eventFilter(parent: type, obj: QObject, event: QEvent):  # noqa: N802
+def eventFilter(parent: type, obj: QObject, event: QEvent):
+    """
+    Event filter for mouse move events to enable custom window behavior.
+
+    Parameters
+    ----------
+    parent : QWidget
+        The parent window.
+    obj : QObject
+        The object receiving the event.
+    event : QEvent
+        The event to filter.
+
+    Returns
+    -------
+    bool
+        True if event handled, else result of super().
+    """
     if event.type() == event.MouseMove:
         parent.mouseMoveEvent(event)
     return super().eventFilter(obj, event)
 
 
 def install_event_filters(parent: type, widget: QWidget):
+    """
+    Install event filters recursively on a widget and its children.
+
+    Parameters
+    ----------
+    parent : QWidget
+        The parent window.
+    widget : QWidget
+        The widget to install event filters on.
+
+    Returns
+    -------
+    None
+    """
     widget.installEventFilter(parent)
     for child in widget.findChildren(QWidget):
         child.installEventFilter(parent)
 
 
 def enable_mouse_tracking(parent: type, widget: QWidget):
+    """
+    Enable mouse tracking recursively on a widget and its children.
+
+    Parameters
+    ----------
+    parent : QWidget
+        The parent window.
+    widget : QWidget
+        The widget to enable mouse tracking on.
+
+    Returns
+    -------
+    None
+    """
     widget.setMouseTracking(True)
     for child in widget.findChildren(QWidget):
         child.setMouseTracking(True)

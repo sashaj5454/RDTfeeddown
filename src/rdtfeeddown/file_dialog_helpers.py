@@ -24,17 +24,30 @@ def select_singleitem(
     folder: bool = False,
 ):
     """
-    Open a file dialog to select a single item (a file or folder).
+    Open a file dialog to select a single item (file or folder).
 
-    Parameters:
-            parent (QWidget): The parent widget.
-            default_dir (str): Directory where the dialog should start.
-            title_text (str): The window title.
-            filter_text (str): The filter string (e.g. "JSON Files (*.json);;All Files (*)").
-            folder (bool): If True, dialog is configured to select directories.
+    Parameters
+    ----------
+    parent : QWidget
+        The parent widget.
+    beam : str
+        Beam identifier ("LHCB1" or "LHCB2").
+    title_text : str
+        The window title.
+    b1entry : QWidget
+        Entry widget for LHCB1.
+    b2entry : QWidget
+        Entry widget for LHCB2.
+    input_path : str, optional
+        Directory where the dialog should start (default: "").
+    filter_text : str, optional
+        The filter string (default: "All Files (*)").
+    folder : bool, optional
+        If True, dialog is configured to select directories (default: False).
 
-    Returns:
-            str or None: The selected file/folder path, or None if cancelled.
+    Returns
+    -------
+    None
     """
     dialog = QFileDialog(parent)
     dialog.setWindowTitle(title_text)
@@ -67,14 +80,23 @@ def select_multiple_files(
     """
     Open a file dialog to select multiple files.
 
-    Parameters:
-            parent (QWidget): The parent widget.
-            default_dir (str): Directory where the dialog should start.
-            title (str): The window title.
-            file_filter (str): The filter string.
+    Parameters
+    ----------
+    parent : QWidget
+        The parent widget.
+    default_dir : str
+        Directory where the dialog should start.
+    list_widget : QWidget
+        Widget to which selected files will be added.
+    title : str, optional
+        The window title (default: "Select Files").
+    file_filter : str, optional
+        The filter string (default: "JSON Files (*.json)").
 
-    Returns:
-            list: List of selected file paths.
+    Returns
+    -------
+    list
+        List of selected file paths.
     """
     dialog = QFileDialog(parent)
     dialog.setWindowTitle(title)
@@ -102,13 +124,20 @@ def select_folders(
     """
     Open a file dialog to select one or more directories.
 
-    Parameters:
-            parent (QWidget): The parent widget.
-            default_dir (str): Directory where the dialog should start.
-            name_filter (str): The filter for folder names.
+    Parameters
+    ----------
+    parent : QWidget
+        The parent widget.
+    default_dir : str
+        Directory where the dialog should start.
+    name_filter : str
+        The filter for folder names.
+    list_widget : QWidget
+        Widget to which selected directories will be added.
 
-    Returns:
-            list: List of selected directory paths.
+    Returns
+    -------
+    None
     """
     dialog = QFileDialog(parent)
     dialog.setOption(QFileDialog.DontUseNativeDialog, on=True)
@@ -137,6 +166,24 @@ def select_multiple_treefiles(
 ):
     """
     Allow the user to select multiple files and add them to the file tree widget.
+
+    Parameters
+    ----------
+    parent : QWidget
+        The parent widget.
+    tree_widget : QWidget
+        The tree widget to add selected files to.
+    title : str, optional
+        The window title (default: "Select Files").
+    file_filter : str, optional
+        The filter string (default: "JSON Files (*.json)").
+    saved_data : dict, optional
+        Dictionary to store loaded data (default: None).
+
+    Returns
+    -------
+    list
+        List of selected file paths.
     """
     dialog = QFileDialog(parent)
     dialog.setWindowTitle(title)

@@ -374,10 +374,6 @@ class RDTFeeddownGUI(QMainWindow):
             "Only required if want to check if knob exists in Timber!!!"
         )
         param_layout.addWidget(self.validate_knob_button)
-        self.bpmfit_order_label = QLabel("BPM Fit Order:")
-        param_layout.addWidget(self.bpmfit_order_label)
-        self.bpmfit_order = QLineEdit()
-        param_layout.addWidget(self.bpmfit_order)
         param_group.setLayout(param_layout)
         self.input_layout.addWidget(param_group)
 
@@ -989,6 +985,19 @@ class RDTFeeddownGUI(QMainWindow):
     def remove_singlefolder(self, beam, b1entry, b2entry):
         """
         Clear the reference folder entry for the specified beam.
+
+        Parameters
+        ----------
+        beam : str
+            Beam identifier ("LHCB1" or "LHCB2").
+        b1entry : QLineEdit
+            Entry widget for LHCB1.
+        b2entry : QLineEdit
+            Entry widget for LHCB2.
+
+        Returns
+        -------
+        None
         """
         if beam == "LHCB1":
             b1entry.clear()
@@ -998,6 +1007,10 @@ class RDTFeeddownGUI(QMainWindow):
     def validate_knob_button_clicked(self):
         """
         Validate the knob when the "Validate Knob" button is clicked.
+
+        Returns
+        -------
+        None
         """
         self.input_progress.show()
         QApplication.processEvents()
@@ -1017,6 +1030,13 @@ class RDTFeeddownGUI(QMainWindow):
         self.input_progress.hide()
 
     def update_validation_files_widget(self):
+        """
+        Update the validation_files_list widget with analysis_output_files.
+
+        Returns
+        -------
+        None
+        """
         # Update the validation_files_list widget with analysis_output_files
         for f in self.analysis_output_files:
             if f not in [
@@ -1026,6 +1046,20 @@ class RDTFeeddownGUI(QMainWindow):
                 self.validation_files_list.addItem(f)
 
     def log_error(self, error_msg, exc=None):
+        """
+        Log an error message and show a message box.
+
+        Parameters
+        ----------
+        error_msg : str
+            The error message to log.
+        exc : Exception, optional
+            Exception object for traceback (default: None).
+
+        Returns
+        -------
+        None
+        """
         if exc is not None:
             tb = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
         else:
@@ -1041,11 +1075,27 @@ class RDTFeeddownGUI(QMainWindow):
     def toggle_select_all_validation_files(self, state):
         """
         Toggle selection for all items in the validation files list based on the checkbox state.
+
+        Parameters
+        ----------
+        state : int
+            Checkbox state (Qt.Checked or Qt.Unchecked).
+
+        Returns
+        -------
+        None
         """
         for i in range(self.validation_files_list.count()):
             self.validation_files_list.item(i).setSelected(state == Qt.Checked)
 
     def select_analysis_files(self):
+        """
+        Open a dialog to select analysis files and load them for plotting.
+
+        Returns
+        -------
+        None
+        """
         selected_files = select_multiple_files(
             self,
             self.default_output_path,
@@ -1101,6 +1151,13 @@ class RDTFeeddownGUI(QMainWindow):
                     return
 
     def search_bpm(self):
+        """
+        Search for a BPM in the loaded data and show a message box with the result.
+
+        Returns
+        -------
+        None
+        """
         search_term = self.bpm_search_entry.text().strip()
         if not search_term:
             QMessageBox.information(self, "BPM Search", "No BPM specified.")
@@ -1125,6 +1182,13 @@ class RDTFeeddownGUI(QMainWindow):
             )
 
     def graph_bpm(self):
+        """
+        Plot the BPM data for the selected BPM and beam.
+
+        Returns
+        -------
+        None
+        """
         bpm = self.bpm_search_entry.text().strip()
         if not bpm:
             QMessageBox.information(self, "BPM Graph", "No BPM specified.")
@@ -1165,6 +1229,13 @@ class RDTFeeddownGUI(QMainWindow):
         self.plot_progress.hide()
 
     def update_bpm_search_entry(self):
+        """
+        Set default BPM value based on the selected beam.
+
+        Returns
+        -------
+        None
+        """
         # Set default BPM value based on the selected beam.
         if self.beam_selector.currentText() == "LHCB1":
             self.bpm_search_entry.setText("BPM.30L2.B1")
@@ -1172,6 +1243,14 @@ class RDTFeeddownGUI(QMainWindow):
             self.bpm_search_entry.setText("BPM.30L1.B2")
 
     def get_selected_validation_files(self):
+        """
+        Get the list of selected validation files.
+
+        Returns
+        -------
+        list
+            List of selected file paths.
+        """
         return [
             self.validation_files_list.item(i).text()
             for i in range(self.validation_files_list.count())
@@ -1179,6 +1258,13 @@ class RDTFeeddownGUI(QMainWindow):
         ]
 
     def plot_gui_rdt(self):
+        """
+        Plot the RDT data for LHCB1 and LHCB2.
+
+        Returns
+        -------
+        None
+        """
         self.plot_progress.show()
         QApplication.processEvents()
         datab1, datab2 = None, None
@@ -1211,6 +1297,13 @@ class RDTFeeddownGUI(QMainWindow):
         self.plot_progress.hide()
 
     def plot_rdt_shifts(self):
+        """
+        Plot the RDT shifts for LHCB1 and LHCB2.
+
+        Returns
+        -------
+        None
+        """
         self.plot_progress.show()
         QApplication.processEvents()
         datab1, datab2, knob = None, None, None
@@ -1247,6 +1340,18 @@ class RDTFeeddownGUI(QMainWindow):
 
     # New method to toggle simulation mode UI changes
     def toggle_simulation_mode(self, state):
+        """
+        Toggle simulation mode UI elements.
+
+        Parameters
+        ----------
+        state : int
+            Checkbox state (Qt.Checked or Qt.Unchecked).
+
+        Returns
+        -------
+        None
+        """
         if state == Qt.Checked:
             self.validate_knob_button.hide()
             self.simulation_file_entry.show()
@@ -1258,6 +1363,13 @@ class RDTFeeddownGUI(QMainWindow):
 
     # New method to select a properties file
     def select_properties_file(self):
+        """
+        Open a dialog to select a properties file for simulation mode.
+
+        Returns
+        -------
+        None
+        """
         filename, _ = QFileDialog.getOpenFileName(
             self,
             "Select Properties File",
@@ -1271,6 +1383,24 @@ class RDTFeeddownGUI(QMainWindow):
         """
         Remove selected items from either a QListWidget or QTreeWidget.
         Optionally delete corresponding entries in corr_responses.
+
+        Parameters
+        ----------
+        widget : QListWidget or QTreeWidget
+            The widget to remove items from.
+        saved_data : dict, optional
+            Dictionary to remove file entries from (default: None).
+        corr_responses : bool, optional
+            Whether to update the knob manager after removal (default: False).
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        TypeError
+            If widget is not a supported type.
         """
         if isinstance(widget, QListWidget):
             # Handle QListWidget
@@ -1301,6 +1431,22 @@ class RDTFeeddownGUI(QMainWindow):
     def _toggle_select_all(self, widget, state):
         """
         Toggle selection for all items in either a QTreeWidget or QListWidget based on the checkbox state.
+
+        Parameters
+        ----------
+        widget : QTreeWidget or QListWidget
+            The widget to select/deselect all items in.
+        state : int
+            Checkbox state (Qt.Checked or Qt.Unchecked).
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        TypeError
+            If widget is not a supported type.
         """
         if isinstance(widget, QTreeWidget):
             # Handle QTreeWidget
@@ -1320,6 +1466,17 @@ class RDTFeeddownGUI(QMainWindow):
         """
         Update the 'Select All' checkbox.
         Uncheck it if not all items are selected.
+
+        Parameters
+        ----------
+        file_list : QTreeWidget or QListWidget
+            The widget containing the items.
+        check_box : QCheckBox
+            The checkbox to update.
+
+        Returns
+        -------
+        None
         """
         if isinstance(file_list, QTreeWidget):
             total = file_list.topLevelItemCount()
@@ -1332,6 +1489,13 @@ class RDTFeeddownGUI(QMainWindow):
         check_box.blockSignals(False)  # noqa: FBT003
 
     def select_beam1_folders(self):
+        """
+        Open a dialog to select LHCB1 measurement folders.
+
+        Returns
+        -------
+        None
+        """
         select_folders(
             self,
             self.default_input_path,
@@ -1340,6 +1504,13 @@ class RDTFeeddownGUI(QMainWindow):
         )
 
     def select_beam2_folders(self):
+        """
+        Open a dialog to select LHCB2 measurement folders.
+
+        Returns
+        -------
+        None
+        """
         select_folders(
             self,
             self.default_input_path,
@@ -1348,21 +1519,78 @@ class RDTFeeddownGUI(QMainWindow):
         )
 
     def remove_selected_beam1_folders(self):
+        """
+        Remove selected LHCB1 measurement folders.
+
+        Returns
+        -------
+        None
+        """
         self.remove_selected_items(self.beam1_folders_list)
 
     def remove_selected_beam2_folders(self):
+        """
+        Remove selected LHCB2 measurement folders.
+
+        Returns
+        -------
+        None
+        """
         self.remove_selected_items(self.beam2_folders_list)
 
     def toggle_select_all_beam1_folders(self, state):
+        """
+        Toggle selection for all LHCB1 measurement folders.
+
+        Parameters
+        ----------
+        state : int
+            Checkbox state.
+
+        Returns
+        -------
+        None
+        """
         self._toggle_select_all(self.beam1_folders_list, state)
 
     def toggle_select_all_beam2_folders(self, state):
+        """
+        Toggle selection for all LHCB2 measurement folders.
+
+        Parameters
+        ----------
+        state : int
+            Checkbox state.
+
+        Returns
+        -------
+        None
+        """
         self._toggle_select_all(self.beam2_folders_list, state)
 
     def run_response(self):
+        """
+        Run the response analysis.
+
+        Returns
+        -------
+        None
+        """
         run_response(self)
 
     def toggle_b1andb2same_mode(self, state):
+        """
+        Toggle between unified and separate knob fields for LHCB1 and LHCB2.
+
+        Parameters
+        ----------
+        state : int
+            Checkbox state.
+
+        Returns
+        -------
+        None
+        """
         is_checked = state == Qt.Checked
         # For sections with separate knob fields, only toggle if they exist.
 
@@ -1388,6 +1616,13 @@ class RDTFeeddownGUI(QMainWindow):
 
     # NEW: New method to plot loaded correction files into the unified graph widget
     def plot_loaded_correction_files(self):
+        """
+        Plot loaded correction files into the unified graph widget.
+
+        Returns
+        -------
+        None
+        """
         self.simcorr_progress.show()
         QApplication.processEvents()
         self.b1_response_meas = None
@@ -1506,6 +1741,13 @@ class RDTFeeddownGUI(QMainWindow):
         self.simcorr_progress.hide()
 
     def load_selected_correction_files(self):
+        """
+        Load selected correction files and update the UI.
+
+        Returns
+        -------
+        None
+        """
         self.simcorr_progress.show()
         if not hasattr(self, "corr_responses") or self.corr_responses is None:
             self.corr_responses = {}
@@ -1541,6 +1783,10 @@ class RDTFeeddownGUI(QMainWindow):
     def populate_knob_manager(self):
         """
         Extract knobnames from metadata and create fields for the user to edit knob values.
+
+        Returns
+        -------
+        None
         """
         layout = self.knob_manager_group.layout()
         # Clear old input fields
@@ -1572,6 +1818,10 @@ class RDTFeeddownGUI(QMainWindow):
     def update_knobs_and_replot(self):
         """
         Read knob edits, apply them, and replot using these values.
+
+        Returns
+        -------
+        None
         """
         self.simcorr_progress.show()
         QApplication.processEvents()
@@ -1606,6 +1856,22 @@ class RDTFeeddownGUI(QMainWindow):
         """
         Set up the container with subplots using pyqtgraph.
         Safely removes any previous layout before setting up a new one.
+
+        Parameters
+        ----------
+        container : QWidget
+            The container widget for the plots.
+        b1data : dict or None
+            Data for LHCB1.
+        b2data : dict or None
+            Data for LHCB2.
+        rows : int
+            Number of subplot rows.
+
+        Returns
+        -------
+        tuple
+            (axes, grid) where axes is a list of PlotWidgets and grid is the QGridLayout.
         """
         # Create a new QGridLayout for subplots.
         grid = QGridLayout()
@@ -1652,6 +1918,17 @@ class RDTFeeddownGUI(QMainWindow):
     def reset_zoom_on_right_click(self, event, axes):
         """
         Reset zoom when the right mouse button is clicked.
+
+        Parameters
+        ----------
+        event : QMouseEvent
+            The mouse event.
+        axes : list
+            List of PlotWidgets.
+
+        Returns
+        -------
+        None
         """
         if event.button() == Qt.RightButton:
             for plot_widget in axes:
@@ -1660,6 +1937,15 @@ class RDTFeeddownGUI(QMainWindow):
     def ensure_graph_tab_open(self, index):
         """
         Ensure the "Graph" sub-tab is opened when the "Correction" tab is selected.
+
+        Parameters
+        ----------
+        index : int
+            Index of the selected tab.
+
+        Returns
+        -------
+        None
         """
         # Check if the current tab is the "Correction" tab
         if self.tabs.tabText(index) == "Correction":

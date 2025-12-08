@@ -67,11 +67,40 @@ def find_min_max_y(axes):
 def set_axis_label(axis, position, text, color="white"):
     """
     Set the axis label with consistent color for math text.
+
+    Parameters
+    ----------
+    axis : AxisItem
+        The axis to set the label for.
+    position : str
+        Position of the label ("left", "bottom", etc.).
+    text : str
+        The label text (can include HTML).
+    color : str, optional
+        Color for the label text (default: "white").
+
+    Returns
+    -------
+    None
     """
     axis.setLabel(position, f"<span style='color:{color};'>{text}</span>")
 
 
 def plot_ips(axes, label):
+    """
+    Plot IP (Interaction Point) vertical lines and labels on the given axes.
+
+    Parameters
+    ----------
+    axes : iterable
+        List or tuple of axes to plot IPs on.
+    label : str
+        Beam label ("LHCB1" or "LHCB2").
+
+    Returns
+    -------
+    None
+    """
     for ax in axes:
         # Track which IP lines have been drawn on this axis
         if not hasattr(ax, "_ips_drawn"):
@@ -102,6 +131,32 @@ def plot_ips(axes, label):
 def plot_bpm(
     bpm, fulldata, fitbpm_order, rdt, rdt_plane, ax1=None, ax2=None, log_func=None
 ):
+    """
+    Plot the BPM fit for a given BPM.
+
+    Parameters
+    ----------
+    bpm : str
+        BPM name.
+    fulldata : dict
+        Full data dictionary containing BPM data.
+    fitbpm_order : int
+        Polynomial order for fitting.
+    rdt : str
+        RDT identifier.
+    rdt_plane : str
+        RDT plane ("x" or "y").
+    ax1 : PlotWidget, optional
+        Axis for real part plot.
+    ax2 : PlotWidget, optional
+        Axis for imaginary part plot.
+    log_func : callable, optional
+        Logging function.
+
+    Returns
+    -------
+    None
+    """
     try:
         data = fit_bpm(fulldata, fitbpm_order)
         data = fulldata["data"]
@@ -181,6 +236,25 @@ def plot_bpm(
 def plot_avg_rdt_shift(ax, data, line_color, rdt, rdt_plane, knob):
     """
     Plot the average RDT shift and standard deviation for given data on the provided axis.
+
+    Parameters
+    ----------
+    ax : PlotWidget
+        Axis to plot on.
+    data : dict
+        BPM data dictionary.
+    line_color : str
+        Color for the plot line.
+    rdt : str
+        RDT identifier.
+    rdt_plane : str
+        RDT plane ("x" or "y").
+    knob : str
+        Knob name.
+
+    Returns
+    -------
+    None
     """
     xing, ampdat, stddat = calculate_avg_rdt_shift(data)
     xing = np.insert(xing, 0, 0)
@@ -207,10 +281,28 @@ def plot_avg_rdt_shift(ax, data, line_color, rdt, rdt_plane, knob):
 
 def plot_rdtshifts(b1data, b2data, rdt, rdt_plane, axes, knob, log_func=None):
     """
-    Plots RDT shifts. Handles three layouts:
-    1) Only b1data provided: 3x1 figure (Beam 1 only).
-    2) Only b2data provided: 3x1 figure (Beam 2 only).
-    3) Both b1data and b2data: 3x2 figure (b1 on left, b2 on right).
+    Plot RDT shifts for LHCB1, LHCB2, or both.
+
+    Parameters
+    ----------
+    b1data : dict or None
+        Data for LHCB1.
+    b2data : dict or None
+        Data for LHCB2.
+    rdt : str
+        RDT identifier.
+    rdt_plane : str
+        RDT plane ("x" or "y").
+    axes : list
+        List of PlotWidgets for plotting.
+    knob : str
+        Knob name.
+    log_func : callable, optional
+        Logging function.
+
+    Returns
+    -------
+    None
     """
     try:
         if b1data and b2data:
@@ -324,9 +416,26 @@ def plot_rdtshifts(b1data, b2data, rdt, rdt_plane, axes, knob, log_func=None):
 
 def plot_rdt(b1data, b2data, rdt, rdt_plane, axes, log_func=None):
     """
-    Plots RDT data for LHCB1, LHCB2, or both.
-    - If both are provided, uses a 3x2 layout (B1 on the left, B2 on the right).
-    - If only one is provided, uses a 3x1 layout.
+    Plot RDT data for LHCB1, LHCB2, or both.
+
+    Parameters
+    ----------
+    b1data : dict or None
+        Data for LHCB1.
+    b2data : dict or None
+        Data for LHCB2.
+    rdt : str
+        RDT identifier.
+    rdt_plane : str
+        RDT plane ("x" or "y").
+    axes : list
+        List of PlotWidgets for plotting.
+    log_func : callable, optional
+        Logging function.
+
+    Returns
+    -------
+    None
     """
     try:
         # Decide figure layout
@@ -464,8 +573,28 @@ def plot_rdt(b1data, b2data, rdt, rdt_plane, axes, log_func=None):
 
 def plot_drdt_dknob(b1data, b2data, rdt, rdt_plane, axes, knoblist=None, log_func=None):
     """
-    Updated: Plots RDT shifts on provided axes.
-    Handles data with or without a "file" key structure.
+    Plot dRDT/dknob for LHCB1, LHCB2, or both.
+
+    Parameters
+    ----------
+    b1data : dict or None
+        Data for LHCB1.
+    b2data : dict or None
+        Data for LHCB2.
+    rdt : str
+        RDT identifier.
+    rdt_plane : str
+        RDT plane ("x" or "y").
+    axes : list
+        List of PlotWidgets for plotting.
+    knoblist : dict, optional
+        Dictionary of knob values (default: None).
+    log_func : callable, optional
+        Logging function.
+
+    Returns
+    -------
+    None
     """
     try:
         # When both beams are given, expecting 2x? layout.
@@ -654,6 +783,18 @@ def plot_drdt_dknob(b1data, b2data, rdt, rdt_plane, axes, knoblist=None, log_fun
 
 
 def setup_blankcanvas(plot_widget):
+    """
+    Set up a blank canvas for a plot widget.
+
+    Parameters
+    ----------
+    plot_widget : PlotWidget
+        The plot widget to set up.
+
+    Returns
+    -------
+    None
+    """
     # default_bg = QApplication.palette().color(QPalette.Window)
 
     plot_widget.setBackground(
@@ -667,6 +808,23 @@ def setup_blankcanvas(plot_widget):
 
 
 class HoverLine(PlotDataItem):
+    """
+    PlotDataItem subclass for hoverable lines with labels.
+
+    Parameters
+    ----------
+    x : array-like
+        X data.
+    y : array-like
+        Y data.
+    label : str
+        Label for the line.
+    pen : str or QPen, optional
+        Pen color/style (default: "w").
+    **kwargs
+        Additional keyword arguments for PlotDataItem.
+    """
+
     def __init__(self, x, y, label, pen="w", **kwargs):
         self._plainLabel = label
         self._x = np.array(x)
@@ -692,6 +850,20 @@ class HoverLine(PlotDataItem):
 
 
 def install_closest_y_hover(ax, hover_lines):
+    """
+    Install a hover event handler to show tooltips for the closest line to the mouse.
+
+    Parameters
+    ----------
+    ax : PlotWidget
+        The axis to install the hover handler on.
+    hover_lines : list
+        List of HoverLine objects.
+
+    Returns
+    -------
+    None
+    """
     vb = ax.getViewBox()
 
     def mouse_moved(evt):

@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Callable
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 from pathlib import Path
 
 import numpy as np
@@ -14,14 +17,20 @@ from rdtfeeddown.utils import csv_to_dict, get_analysis_knobsetting
 
 def filter_outliers(data: list[list[float]], threshold: float = 3):
     """
-    Filters outliers from data based on Z-scores.
+    Filter outliers from RDT data using Z-scores.
 
     Parameters
-    -  data: list of lists for RDT data
-    -  threshold: Z-score threshold for filtering outliers
+    ----------
+    data : list[list[float]]
+        List of RDT rows. Each row is expected to be
+        [NAME, AMP, REAL, IMAG, ERRAMP].
+    threshold : float, optional
+        Z-score threshold used to reject outliers (default: 3).
 
     Returns
-    -  filtered_data: list of lists for RDT data with outliers removed
+    -------
+    list[list[float]]
+        Filtered list of rows with outliers removed.
     """
     data_np = np.array(data, dtype=object)
     amp_values = data_np[:, 1].astype(float)
@@ -43,7 +52,21 @@ def filter_outliers(data: list[list[float]], threshold: float = 3):
 
 def read_rdt_file(filepath: Path, log_func: Callable[[str], None] = None):
     """
-    Reads RDT data from a file and returns raw data.
+    Read RDT data from a TFS file and return BPM entries and beam number.
+
+    Parameters
+    ----------
+    filepath : Path
+        Path to the TFS file to read.
+    log_func : Callable[[str], None], optional
+        Optional logging function to report issues (default: None).
+
+    Returns
+    -------
+    tuple[list[list[float]], str] or None
+        If BPM data found: (raw_data, beam_no), where raw_data is a list of
+        [NAME, AMP, REAL, IMAG, ERRAMP] rows and beam_no is the beam identifier.
+        If no BPM data found, returns None.
     """
     raw_data = []
     rt = tfs.read(filepath)
@@ -71,7 +94,17 @@ def read_rdt_file(filepath: Path, log_func: Callable[[str], None] = None):
 
 def ensure_trailing_slash(path: Path):
     """
-    Ensure the given folder path ends with a "/".
+    Ensure a folder path string ends with a trailing slash.
+
+    Parameters
+    ----------
+    path : Path
+        Path or string representing a folder.
+
+    Returns
+    -------
+    Path or str
+        The input path with a trailing '/' appended if it was missing.
     """
     return path if path.endswith("/") else path + "/"
 
@@ -86,7 +119,29 @@ def readrdtdatafile(
     log_func: Callable[[str], None] = None,
 ):
     """
-    Reads RDT data from a file and removes outliers based on Z-scores.
+    Read RDT data file(s), optionally in simulation mode, and filter outliers.
+
+    Parameters
+    ----------
+    cfile : Path
+        Base folder or file path depending on sim flag.
+    rdt : str
+        RDT identifier (e.g., "1020").
+    rdt_plane : str
+        RDT plane ("x" or "y").
+    rdtfolder : str
+        Subfolder name inside the rdt folder.
+    threshold : float, optional
+        Z-score threshold for outlier filtering (default: 3).
+    sim : bool, optional
+        If True, treat cfile as the direct path to a tfs-readable file (default: False).
+    log_func : Callable[[str], None], optional
+        Optional logging function for error messages.
+
+    Returns
+    -------
+    tuple[list[list[float]], str]
+        Filtered RDT data and beam number.
     """
     # Ensure cfile and rdtfolder have trailing slashes
     cfile2 = ensure_trailing_slash(cfile)
@@ -128,7 +183,22 @@ def update_bpm_data(
     bpmdata: dict, data: list[list[float]], key: str, knob_setting: float
 ):
     """
-    Updates BPM data dictionary with new data.
+    Update bpmdata dictionary with new measurements.
+
+    Parameters
+    ----------
+    bpmdata : dict
+        Dictionary keyed by BPM name holding measurement lists.
+    data : list[list[float]]
+        List of BPM rows: [NAME, AMP, REAL, IMAG, ERRAMP].
+    key : str
+        Key under which to append the new entries (e.g., "ref" or "data").
+    knob_setting : float
+        Knob setting corresponding to these measurements.
+
+    Returns
+    -------
+    None
     """
     for entry in data:
         name, amp, re, im, amp_err = entry
@@ -152,39 +222,56 @@ def getrdt_omc3(
     log_func: Callable[[str], None] = None,
 ):
     """
-    Reads RDT data for OMC3 analysis, updates BPM data, and returns processed data.
+    Read, validate and assemble RDT measurement data for OMC3 analysis.
 
-    :param ldb: Timber statetracker or None.
-    :type ldb: None or Callable[[str], None]
-    :param beam: Beam identifier (i.e. "LHCB1" or "LHCB2").
-    :type beam: str
-    :param modelbpmlist: List of BPMs in the model.
-    :type modelbpmlist: list[list[str]]
-    :param bpmdata: Dictionary to store BPM data.
-    :type bpmdata: dict
-    :param ref: Path to the reference RDT file.
-    :type ref: Path
-    :param flist: List of measurement RDT files.
-    :type flist: list[Path]
-    :param knob: Crossing angle knob name for analysis (needed only if accessing Timber).
-    :type knob: str
-    :param rdt: RDT type (e.g. "1020").
-    :type rdt: str
-    :param rdt_plane: RDT plane (i.e. "x" or "y").
-    :type rdt_plane: str
-    :param rdtfolder: Name of which magnet folder to select in the RDT folder e.g. skew sextupole.
-    :type rdtfolder: str
-    :param sim: Boolean indicating if simulation data is used where the path is directly to the tfs-readable file.
-    :type sim: bool
-    :param propfile: Path to the property file for simulation (i.e. no knob values).
-    :type propfile: str
-    :param threshold: Z-score threshold for filtering outliers.
-    :type threshold: float
-    :param log_func: Logging function to use for error messages.
-    :type log_func: Callable[[str], None]
+    This function reads a reference RDT and a list of measurement RDT files,
+    applies outlier filtering, checks beam consistency, and returns a unified
+    dataset for further processing.
 
-    :returns: Dictionary with metadata and processed BPM data.
-    :rtype: dict
+    Parameters
+    ----------
+    ldb : None or Callable[[str], None]
+        Timber statetracker or None (used by get_analysis_knobsetting).
+    beam : str
+        Beam identifier (e.g., "LHCB1" or "LHCB2").
+    modelbpmlist : list[list[str]]
+        List of BPM identifiers from the model (used for intersection).
+    bpmdata : dict
+        Mutable dictionary to be populated with BPM reference and measurement data.
+    ref : Path
+        Path to the reference RDT file or folder.
+    flist : list[Path]
+        List of measurement files/folders to process.
+    knob : str
+        Knob name used for analysis.
+    rdt : str
+        RDT identifier.
+    rdt_plane : str
+        RDT plane ("x" or "y").
+    rdtfolder : str
+        RDT subfolder name.
+    sim : bool
+        True if simulation mode (use mapping from propfile).
+    propfile : str
+        Path to simulation property mapping file (used when sim is True).
+    threshold : float, optional
+        Z-score threshold for outlier filtering (default: 3).
+    log_func : Callable[[str], None], optional
+        Optional logging function.
+
+    Returns
+    -------
+    dict
+        Dictionary containing metadata and processed BPM data:
+        {
+            "metadata": {...},
+            "data": {bpm: {"s": s_value, "diffdata": [...]}, ...}
+        }
+
+    Raises
+    ------
+    RuntimeError
+        On missing files, inconsistent beams, or if no BPM data could be assembled.
     """
     beam_no = modelbpmlist[0][-1]
     if beam[-1] != beam_no:
@@ -327,13 +414,18 @@ def getrdt_omc3(
 
 def make_polyfunction(order: int):
     """
-    Factory function to create a polynomial function of the specified order.
+    Factory that creates a polynomial function of the requested order.
 
-    Parameters:
-    - order: The degree of the polynomial (e.g., 1 for linear, 2 for quadratic).
+    Parameters
+    ----------
+    order : int
+        Polynomial degree (e.g., 1 -> linear, 2 -> quadratic).
 
-    Returns:
-    - A function that computes the polynomial: sum(coeff[i] * x**i for i in range(order+1)).
+    Returns
+    -------
+    Callable
+        Function f(x, *coeffs) that evaluates the polynomial:
+        sum(coeffs[i] * x**i for i in range(order+1)).
     """
 
     def polyfunction(x: float, *coeffs) -> float:
@@ -349,6 +441,26 @@ def make_polyfunction(order: int):
 def fitdata(
     xdata: np.ndarray, ydata: np.ndarray, yerrdata: np.ndarray, fitfunction: Callable
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Fit data to a function using weighted least squares.
+
+    Parameters
+    ----------
+    xdata : np.ndarray
+        Independent variable samples.
+    ydata : np.ndarray
+        Dependent variable samples.
+    yerrdata : np.ndarray
+        Errors on ydata to be used as sigma in curve_fit.
+    fitfunction : Callable
+        Model function to fit, signature fitfunction(x, *params).
+
+    Returns
+    -------
+    tuple
+        (popt, pcov, perr) where popt are fitted parameters, pcov is covariance
+        and perr are parameter uncertainties (sqrt of diagonal of pcov).
+    """
     popt, pcov = curve_fit(
         fitfunction, xdata, ydata, sigma=yerrdata, absolute_sigma=True
     )
@@ -359,12 +471,46 @@ def fitdata(
 def fitdatanoerrors(
     xdata: np.ndarray, ydata: np.ndarray, fitfunction: Callable, order: int = 2
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Fit data to a function without providing explicit y errors.
+
+    Parameters
+    ----------
+    xdata : np.ndarray
+        Independent variable samples.
+    ydata : np.ndarray
+        Dependent variable samples.
+    fitfunction : Callable
+        Model function to fit, signature fitfunction(x, *params).
+    order : int, optional
+        Polynomial order used for initial p0 length (default: 2).
+
+    Returns
+    -------
+    tuple
+        (popt, pcov, perr) as in fitdata.
+    """
     popt, pcov = curve_fit(fitfunction, xdata, ydata, p0=[0] * (order + 1))
     perr = np.sqrt(np.diag(pcov))
     return popt, pcov, perr
 
 
 def fit_bpm(fulldata: dict, order: int = 2) -> dict:
+    """
+    Fit real and imaginary components of BPM RDT differences to a polynomial.
+
+    Parameters
+    ----------
+    fulldata : dict
+        Dictionary with 'data' key containing BPM diffdata arrays.
+    order : int, optional
+        Polynomial order for fitting (default: 2).
+
+    Returns
+    -------
+    dict
+        Input fulldata updated with 'fitdata' entries per BPM and returned.
+    """
     polyfunction = make_polyfunction(order)
     data = fulldata["data"]
     for bpm in data:
@@ -386,6 +532,19 @@ def fit_bpm(fulldata: dict, order: int = 2) -> dict:
 
 
 def arc_bpm_check(bpm: str) -> bool:
+    """
+    Check whether a BPM name corresponds to an arc BPM.
+
+    Parameters
+    ----------
+    bpm : str
+        BPM name string.
+
+    Returns
+    -------
+    bool
+        True if BPM is an arc BPM, False otherwise.
+    """
     bpmtype = bpm.partition(".")[0]
     if bpmtype != "BPM":
         is_arc_bpm = False
@@ -398,6 +557,19 @@ def arc_bpm_check(bpm: str) -> bool:
 
 
 def bad_bpm_check(bpm: str) -> bool:
+    """
+    Check whether a BPM is known to be bad / excluded.
+
+    Parameters
+    ----------
+    bpm : str
+        BPM name string.
+
+    Returns
+    -------
+    bool
+        True if the BPM is in the exclude list, False otherwise.
+    """
     badbpmb1 = ["BPM.13L2.B1"]
     badbpmb2 = ["BPM.25R3.B2", "BPM.26R3.B2"]
     badbpm = False
@@ -415,6 +587,16 @@ def bad_bpm_check(bpm: str) -> bool:
 def calculate_avg_rdt_shift(data: dict) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Calculate the average RDT shift and standard deviation over BPMs for given data.
+
+    Parameters
+    ----------
+    data : dict
+        Dictionary of BPM entries with 'diffdata' arrays.
+
+    Returns
+    -------
+    tuple[np.ndarray, np.ndarray, np.ndarray]
+        (xing, avg_amplitudes, std_deviations) arrays for the measured crossing angles.
     """
     xing = []  # Get the list of crossing angles measured
     for b in data:
@@ -448,6 +630,27 @@ def calculate_avg_rdt_shift(data: dict) -> tuple[np.ndarray, np.ndarray, np.ndar
 def group_datasets(
     datasets: list[dict], log_func: Callable[[str], None] = None
 ) -> tuple[dict, dict, str, str]:
+    """
+    Group datasets by beam (LHCB1/LHCB2) and validate compatible metadata.
+
+    Parameters
+    ----------
+    datasets : list[dict]
+        List of dataset dicts produced by getrdt_omc3/getrdt_sim.
+    log_func : Callable[[str], None], optional
+        Optional logging function for warnings/errors.
+
+    Returns
+    -------
+    tuple
+        (grouped_b1, grouped_b2, rdt, rdt_plane) where grouped_b1/grouped_b2 are
+        either dicts or None depending on presence.
+
+    Raises
+    ------
+    ValueError
+        If metadata is missing or incompatible across datasets.
+    """
     if not datasets:
         return None, None
     rdt, rdt_plane = None, None
@@ -567,31 +770,40 @@ def getrdt_sim(
     log_func: Callable[[str], None] = None,
 ) -> dict:
     """
-    Reads RDT data for simulation analysis, calculates RDT shifts, and returns processed data.
+    Read simulation RDT reference and measurement, compute normalised shifts.
 
-    :param beam: Beam identifier (i.e. "LHCB1" or "LHCB2").
-    :type beam: str
-    :param ref: Path to the reference RDT file.
-    :type ref: Path
-    :param file: Path to the measurement RDT file.
-    :type file: Path
-    :param xing: Crossing angle used in the analysis.
-    :type xing: float
-    :param knob_name: Name of the knob used in the analysis.
-    :type knob_name: str
-    :param knob_strength: Strength of the knob used in the analysis.
-    :type knob_strength: float
-    :param rdt: RDT type (e.g. "1020").
-    :type rdt: str
-    :param rdt_plane: RDT plane (i.e. "x" or "y").
-    :type rdt_plane: str
-    :param rdtfolder: Name of which magnet folder to select in the RDT folder e.g. skew sextupole.
-    :type rdtfolder: str
-    :param log_func: Logging function to use for error messages.
-    :type log_func: Callable[[str], None]
+    Parameters
+    ----------
+    beam : str
+        Beam identifier (e.g., "LHCB1" or "LHCB2").
+    ref : Path
+        Reference folder path (string or Path) containing the reference TFS.
+    file : Path
+        Measurement folder path containing the measurement TFS.
+    xing : float
+        Crossing angle used in the simulation.
+    knob_name : str
+        Knob name used in the simulation.
+    knob_strength : float
+        Strength of the knob used in the simulation (will be cast to float).
+    rdt : str
+        RDT identifier.
+    rdt_plane : str
+        RDT plane ("x" or "y").
+    rdtfolder : str
+        Subfolder inside the rdt folder.
+    log_func : Callable[[str], None], optional
+        Optional logging function.
 
-    :returns: Dictionary with metadata and processed BPM data.
-    :rtype: dict
+    Returns
+    -------
+    dict
+        Dictionary with metadata and per-BPM normalised diffdata suitable for analysis.
+
+    Raises
+    ------
+    RuntimeError
+        If required TFS files are missing or no BPM data is found.
     """
 
     bpmdata = {}

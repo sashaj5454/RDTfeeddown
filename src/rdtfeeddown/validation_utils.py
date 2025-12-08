@@ -29,6 +29,18 @@ def check_rdt(rdt: str, rdtplane: str):
 def validate_rdt_and_plane(rdt, rdt_plane):
     """
     Validate the RDT and RDT Plane combination.
+
+    Parameters
+    ----------
+    rdt : str
+        RDT identifier (e.g., "1020").
+    rdt_plane : str
+        RDT plane ("x" or "y").
+
+    Returns
+    -------
+    tuple
+        (valid, message) where valid is True if valid, False otherwise, and message is a string.
     """
     try:
         valid, message = check_rdt(rdt, rdt_plane)
@@ -40,7 +52,18 @@ def validate_rdt_and_plane(rdt, rdt_plane):
 def validate_knob(ldb, knob):
     """
     Validate the knob by checking its existence in the state tracker.
-    Returns a tuple: (True, knob_setting) if valid, otherwise (False, error_message).
+
+    Parameters
+    ----------
+    ldb : object
+        State tracker object (e.g., pytimber.LoggingDB).
+    knob : str
+        Knob name to validate.
+
+    Returns
+    -------
+    tuple
+        (True, knob_setting) if valid, otherwise (False, error_message).
     """
     try:
         current_timestamp = time.time()  # Get the current timestamp
@@ -56,6 +79,19 @@ def validate_knob(ldb, knob):
 
 
 def validate_metas(data):
+    """
+    Validate that all metadata (except for beam, ref, knob_name) are consistent across responses.
+
+    Parameters
+    ----------
+    data : dict
+        Dictionary of response data.
+
+    Returns
+    -------
+    tuple
+        (True, metadata) if all metadata are consistent, otherwise (False, first_metadata).
+    """
     metadatas = [
         {
             k: v
@@ -73,6 +109,23 @@ def validate_metas(data):
 
 
 def validate_file_structure(data, required_metadata, log_func=None):
+    """
+    Validate the structure of a data file and its metadata.
+
+    Parameters
+    ----------
+    data : dict
+        Data dictionary to validate.
+    required_metadata : list
+        List of required metadata keys.
+    log_func : callable, optional
+        Logging function for error messages.
+
+    Returns
+    -------
+    bool
+        True if structure is valid, False otherwise.
+    """
     required_keys = ["metadata", "data"]
     if not isinstance(data, dict):
         if log_func:

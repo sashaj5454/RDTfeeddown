@@ -77,10 +77,16 @@ def save_rdtdata(data: type, filename: str):
     """
     Save RDT data to a JSON file.
 
-    :param data: The RDT data to save.
-    :type data: dict
-    :param filename: The path to the file where the data will be saved.
-    :type filename: str or Path
+    Parameters
+    ----------
+    data : dict
+        The RDT data to save.
+    filename : str or Path
+        The path to the file where the data will be saved.
+
+    Returns
+    -------
+    None
     """
     with Path.open(filename, "w") as fout:
         json.dump(data, fout, default=_convert_for_json)
@@ -90,11 +96,15 @@ def load_rdtdata(filename: Path):
     """
     Load RDT data from a JSON file.
 
-    :param filename: The path to the file from which the data will be loaded.
-    :type filename: str or Path
+    Parameters
+    ----------
+    filename : str or Path
+        The path to the file from which the data will be loaded.
 
-    :return: The loaded RDT data.
-    :rtype: dict
+    Returns
+    -------
+    dict
+        The loaded RDT data.
     """
     with Path.open(filename, "r") as fin:
         return json.load(fin)

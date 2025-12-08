@@ -240,30 +240,50 @@ def finalize_grouped_results(
 
 def run_analysis(parent=None, **kwargs):
     """
-    Runs the RDT feeddown analysis.
+    Run the RDT feeddown analysis.
 
-    :param parent: Parent GUI widget (optional).
-    :type parent: QWidget or None
+    Parameters
+    ----------
+    parent : QWidget or None, optional
+        Parent GUI widget (default: None).
 
-    Keyword Arguments:
-        beam1_model (str or Path): Path to the LHCB1 model file.
-        beam2_model (str or Path): Path to the LHCB2 model file.
-        beam1_reffolder (str or Path): Path to the LHCB1 reference folder.
-        beam2_reffolder (str or Path): Path to the LHCB2 reference folder.
-        beam1_folders (list[str] or list[Path]): List of LHCB1 measurement folders.
-        beam2_folders (list[str] or list[Path]): List of LHCB2 measurement folders.
-        knob (str): Knob name for analysis.
-        rdt (str): RDT type (in form of "1020" for example).
-        rdt_plane (str): RDT plane ("x" or "y").
-        rdt_folder (str): Magnet folder in RDT folder.
-        simulation_checkbox (bool): Whether simulation data is used.
-        simulation_file (str or Path): Path to file for knob values if not available on Timber.
-        log_func (callable): Logging function.
-        b1filename (str or Path): Output filename for LHCB1.
-        b2filename (str or Path): Output filename for LHCB2.
+    Other Parameters
+    ----------------
+    beam1_model : str or Path
+        Path to the LHCB1 model file.
+    beam2_model : str or Path
+        Path to the LHCB2 model file.
+    beam1_reffolder : str or Path
+        Path to the LHCB1 reference folder.
+    beam2_reffolder : str or Path
+        Path to the LHCB2 reference folder.
+    beam1_folders : list[str] or list[Path]
+        List of LHCB1 measurement folders.
+    beam2_folders : list[str] or list[Path]
+        List of LHCB2 measurement folders.
+    knob : str
+        Knob name for analysis.
+    rdt : str
+        RDT type (e.g., "1020").
+    rdt_plane : str
+        RDT plane ("x" or "y").
+    rdt_folder : str
+        Magnet folder in RDT folder.
+    simulation_checkbox : bool
+        Whether simulation data is used.
+    simulation_file : str or Path
+        Path to file for knob values if not available on Timber.
+    log_func : callable
+        Logging function.
+    b1filename : str or Path
+        Output filename for LHCB1.
+    b2filename : str or Path
+        Output filename for LHCB2.
 
-    :returns: Analysis results for LHCB1 and LHCB2 in file usable for plotting and matching with response.
-    :rtype: tuple
+    Returns
+    -------
+    tuple
+        Analysis results for LHCB1 and LHCB2 in file usable for plotting and matching with response.
     """
     if parent:
         parent.input_progress.show()
@@ -535,31 +555,52 @@ def get_save_filenames(
 
 def run_response(parent=None, **kwargs):
     """
-    Runs the RDT feeddown response analysis.
+    Run the RDT feeddown response analysis.
 
-    :param parent: Parent GUI widget (optional).
-    :type parent: QWidget or None
+    Parameters
+    ----------
+    parent : QWidget or None, optional
+        Parent GUI widget (default: None).
 
-    Keyword Arguments:
-        rdt (str): RDT type (in form of "1020" for example).
-        rdt_plane (str): RDT plane ("x" or "y").
-        rdt_folder (str): Magnet folder in RDT folder.
-        beam1_reffolder (str or Path): Path to the LHCB1 reference folder.
-        beam2_reffolder (str or Path): Path to the LHCB2 reference folder.
-        beam1_measfolder (str or Path): Path to the LHCB1 measurement folder.
-        beam2_measfolder (str or Path): Path to the LHCB2 measurement folder.
-        b1_knob_name (str): Corrector name for LHCB1.
-        b1_knob_value (str): Corrector value for LHCB1.
-        b1_xing (str): Difference in crossing angle value for LHCB1.
-        b2_knob_name (str): Corrector name for LHCB2.
-        b2_knob_value (str): Corrector value for LHCB2.
-        b2_xing (str): Difference in crossing angle value for LHCB2.
-        filenameb1 (str or Path): Output filename for LHCB1.
-        filenameb2 (str or Path): Output filename for LHCB2.
-        log_func (callable): Logging function.
+    Other Parameters
+    ----------------
+    rdt : str
+        RDT type (e.g., "1020").
+    rdt_plane : str
+        RDT plane ("x" or "y").
+    rdt_folder : str
+        Magnet folder in RDT folder.
+    beam1_reffolder : str or Path
+        Path to the LHCB1 reference folder.
+    beam2_reffolder : str or Path
+        Path to the LHCB2 reference folder.
+    beam1_measfolder : str or Path
+        Path to the LHCB1 measurement folder.
+    beam2_measfolder : str or Path
+        Path to the LHCB2 measurement folder.
+    b1_knob_name : str
+        Corrector name for LHCB1.
+    b1_knob_value : str
+        Corrector value for LHCB1.
+    b1_xing : str
+        Difference in crossing angle value for LHCB1.
+    b2_knob_name : str
+        Corrector name for LHCB2.
+    b2_knob_value : str
+        Corrector value for LHCB2.
+    b2_xing : str
+        Difference in crossing angle value for LHCB2.
+    filenameb1 : str or Path
+        Output filename for LHCB1.
+    filenameb2 : str or Path
+        Output filename for LHCB2.
+    log_func : callable
+        Logging function.
 
-    :returns: Response results for LHCB1 and LHCB2 in file usable for plotting and matching the measurement.
-    :rtype: dict or None
+    Returns
+    -------
+    dict or None
+        Response results for LHCB1 and LHCB2 in file usable for plotting and matching the measurement.
     """
     if parent:
         parent.simcorr_progress.show()
@@ -690,6 +731,48 @@ def run_response_logic(
     b2_xing,
     log_func,
 ):
+    """
+    Run the logic for RDT feeddown response analysis and handle file saving.
+
+    Parameters
+    ----------
+    parent : QWidget or None
+        Parent GUI widget.
+    default_output_path : str or Path
+        Default output directory.
+    beam1_reffolder : str or Path
+        Path to the LHCB1 reference folder.
+    beam2_reffolder : str or Path
+        Path to the LHCB2 reference folder.
+    beam1_measfolder : str or Path
+        Path to the LHCB1 measurement folder.
+    beam2_measfolder : str or Path
+        Path to the LHCB2 measurement folder.
+    rdt : str
+        RDT type (e.g., "1020").
+    rdt_plane : str
+        RDT plane ("x" or "y").
+    rdt_folder : str
+        Magnet folder in RDT folder.
+    b1_knob_name : str
+        Corrector name for LHCB1.
+    b1_knob_value : str
+        Corrector value for LHCB1.
+    b1_xing : str
+        Difference in crossing angle value for LHCB1.
+    b2_knob_name : str
+        Corrector name for LHCB2.
+    b2_knob_value : str
+        Corrector value for LHCB2.
+    b2_xing : str
+        Difference in crossing angle value for LHCB2.
+    log_func : callable
+        Logging function.
+
+    Returns
+    -------
+    None
+    """
     filenameb1, filenameb2 = get_save_filenames(
         parent,
         beam1_reffolder,
