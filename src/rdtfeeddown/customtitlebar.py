@@ -194,7 +194,7 @@ def show_error_log_window(self: type):
     dialog.exec_()
 
 
-def mousePressEvent(parent: type, event: QMouseEvent):
+def mousePressEvent(parent: type, event: QMouseEvent):  # noqa: N802
     """
     Handle mouse press events for custom window dragging and resizing.
 
@@ -224,7 +224,7 @@ def mousePressEvent(parent: type, event: QMouseEvent):
         event.accept()
 
 
-def mouseMoveEvent(parent: type, event: QMouseEvent):
+def mouseMoveEvent(parent: type, event: QMouseEvent):  # noqa: N802
     """
     Handle mouse move events for custom window dragging and resizing.
 
@@ -262,7 +262,7 @@ def mouseMoveEvent(parent: type, event: QMouseEvent):
             parent.setCursor(Qt.ArrowCursor)
 
 
-def mouseReleaseEvent(parent: type, event: QMouseEvent):
+def mouseReleaseEvent(parent: type, event: QMouseEvent):  # noqa: N802
     """
     Handle mouse release events for custom window resizing.
 
@@ -282,7 +282,7 @@ def mouseReleaseEvent(parent: type, event: QMouseEvent):
     parent.setCursor(Qt.ArrowCursor)
 
 
-def isNearEdge(parent, pos):
+def isNearEdge(parent, pos):  # noqa: N802
     """
     Check if a position is near the edge of the parent widget for resizing.
 
@@ -432,7 +432,7 @@ def toggle_maximize_restore(parent: type):
         parent.maximize_button.setIcon(cust_style2)
 
 
-def eventFilter(parent: type, obj: QObject, event: QEvent):
+def eventFilter(parent: type, obj: QObject, event: QEvent):  # noqa: N802
     """
     Event filter for mouse move events to enable custom window behavior.
 
