@@ -297,6 +297,9 @@ def run_analysis(parent=None, **kwargs):
         if not parent.simulation_checkbox.isChecked():
             ldb = initialize_statetracker()
             knob, ok = validate_knob_field(parent, ldb)
+        else:
+            knob = parent.knob_entry.text().strip()
+            ok = True
         if not ok:
             parent.input_progress.hide()
             return None
@@ -390,7 +393,6 @@ def run_analysis(parent=None, **kwargs):
             Path(beam1_model) if beam1_model is not None else None,
             [Path(f) for f in beam1_folders] if beam1_folders is not None else None,
             Path(beam1_reffolder) if beam1_reffolder is not None else None,
-            knob,
             knob,
             rdt,
             rdt_plane,

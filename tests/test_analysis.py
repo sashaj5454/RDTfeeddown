@@ -151,7 +151,7 @@ class TestAnalysis(unittest.TestCase):
 
         required_metas = ["beam", "ref", "file_list", "rdt", "rdt_plane", "knob"]
         valid = validate_file_structure(b2_rdtdata, required_metas)
-        self.assertTrue(valid, "File structure validation failed for LHCB1 RDT data")
+        self.assertTrue(valid, "File structure validation failed for LHCB2 RDT data")
 
     def test_run_response(self):
         rdt = "0030"

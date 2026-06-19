@@ -9,6 +9,7 @@ from rdtfeeddown.analysis import (
     bad_bpm_check,
     calculate_avg_rdt_shift,
     fit_bpm,
+    fitdatanoerrors,
     make_polyfunction,
 )
 from rdtfeeddown.style import DARK_BACKGROUND_COLOR
@@ -351,7 +352,30 @@ def plot_rdtshifts(b1data, b2data, rdt, rdt_plane, axes, knob, log_func=None):
                     continue
                 s = data[bpm]["s"] / 1000
                 # [re_opt, re_cov, re_err, im_opt, im_cov, im_err]
-                re_opt, _, re_err, im_opt, _, im_err = data[bpm]["fitdata"]
+                try:
+                    re_opt, _, re_err, im_opt, _, im_err = data[bpm]["fitdata"]
+                except KeyError:
+                    diffdata = data["data"][bpm]["diffdata"]
+                    xing = []
+                    re = []
+                    im = []
+                    for x in range(len(diffdata)):
+                        xing.append(diffdata[x][0])
+                        re.append(diffdata[x][1])
+                        im.append(diffdata[x][2])
+
+                    polyfunction = make_polyfunction(order=1)
+                    re_opt, re_cov, re_err = fitdatanoerrors(xing, re, polyfunction, 1)
+                    im_opt, im_cov, im_err = fitdatanoerrors(xing, im, polyfunction, 1)
+                    data["data"][bpm]["fitdata"] = [
+                        re_opt,
+                        re_cov,
+                        re_err,
+                        im_opt,
+                        im_cov,
+                        im_err,
+                    ]
+
                 # re_opt[1] => slope in re polynomial fit, re_err[1] => error in that slope
                 sdat.append(s)
                 dredkdat.append(re_opt[1])
@@ -673,7 +697,33 @@ def plot_drdt_dknob(b1data, b2data, rdt, rdt_plane, axes, knoblist=None, log_fun
                     if not arc_bpm_check(bpm) or bad_bpm_check(bpm):
                         continue
                     s = float(data["data"][bpm]["s"]) / 1000
-                    re_opt, _, re_err, im_opt, _, im_err = data["data"][bpm]["fitdata"]
+                    try:
+                        re_opt, _, re_err, im_opt, _, im_err = data[bpm]["fitdata"]
+                    except KeyError:
+                        diffdata = data["data"][bpm]["diffdata"]
+                        xing = []
+                        re = []
+                        im = []
+                        for x in range(len(diffdata)):
+                            xing.append(diffdata[x][0])
+                            re.append(diffdata[x][1])
+                            im.append(diffdata[x][2])
+
+                        polyfunction = make_polyfunction(order=1)
+                        re_opt, re_cov, re_err = fitdatanoerrors(
+                            xing, re, polyfunction, 1
+                        )
+                        im_opt, im_cov, im_err = fitdatanoerrors(
+                            xing, im, polyfunction, 1
+                        )
+                        data["data"][bpm]["fitdata"] = [
+                            re_opt,
+                            re_cov,
+                            re_err,
+                            im_opt,
+                            im_cov,
+                            im_err,
+                        ]
                     sdat.append(s)
                     dredkdat.append(float(re_opt[1]))
                     dredkerr.append(float(re_err[1]))

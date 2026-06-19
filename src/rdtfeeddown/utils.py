@@ -14,12 +14,12 @@ from zoneinfo import ZoneInfo
 if TYPE_CHECKING:
     from qtpy.QtGui import QMouseEvent
 
-if not (
-    any("PYTEST_CURRENT_TEST" in k for k in os.environ)
-    or "unittest" in sys.modules
-    or os.environ.get("READTHEDOCS") == "True"
-):
-    import pytimber
+# if not (
+#     any("PYTEST_CURRENT_TEST" in k for k in os.environ)
+#     or "unittest" in sys.modules
+#     or os.environ.get("READTHEDOCS") == "True"
+# ):
+#     import pytimber
 import tfs
 from pyqtgraph import ViewBox
 from qtpy.QtCore import Qt, QTimer
@@ -43,6 +43,8 @@ def rdt_to_order_and_type(rdt: str):
 
 
 def initialize_statetracker():
+    import pytimber
+
     return pytimber.LoggingDB()
 
 
@@ -70,14 +72,23 @@ def get_analysis_knobsetting(
             log_func("No command.run file found in the results folder")
         else:
             print("No command.run file found in the results folder")
+    flist = []
     for line in rc.readlines():
         if re.search(
-            "/afs/cern.ch/eng/sl/lintrack/omc_python3/bin/python -m omc3.hole_in_one --optics",
+            "bin/python -m omc3.hole_in_one --optics",
             line,
         ):
             flist = line.partition("--files")[2].partition("--")[0].split(",")
             break
     rc.close()
+    if not flist:
+        if log_func:
+            log_func(
+                "No file list found in command.run; cannot determine knob settings."
+            )
+        else:
+            print("No file list found in command.run; cannot determine knob settings.")
+        return None
     knobsettings = []
     try:
         for f in flist:

@@ -290,7 +290,7 @@ def getrdt_omc3(
     if sim and mapping_dict:
         for entry in mapping_dict:
             regex_str = entry.get("MATCH", "")
-            if re.fullmatch(rf"^{regex_str}$", Path(ref).name):
+            if re.fullmatch(rf"^{regex_str}$", str(Path(ref).name)):
                 refk = float(entry.get("KNOB", 0))  # Default to 0 if "KNOB" is missing
                 if refk is None:
                     msg = f"Reference knob for {ref} not found in mapping dictionary."
@@ -328,8 +328,7 @@ def getrdt_omc3(
                 (
                     e
                     for e in mapping_dict
-                    if re.fullmatch(rf"^{e.get('MATCH', '')}$", Path(f).name)
-                    if re.fullmatch(rf"^{e.get('MATCH', '')}$", Path(f).name)
+                    if re.search(rf"^{e.get('MATCH', '')}$", str(Path(f).name))
                 ),
                 None,
             )
@@ -696,7 +695,11 @@ def group_datasets(
             if grouped_b1["metadata"] is None:
                 grouped_b1["metadata"] = data["metadata"]
             # Check for consistency with already grouped metadata:
-            elif data["metadata"] != grouped_b1["metadata"]:
+            elif data["metadata"].get("rdt") != grouped_b1["metadata"].get(
+                "rdt"
+            ) or data["metadata"].get("rdt_plane") != grouped_b1["metadata"].get(
+                "rdt_plane"
+            ):
                 if log_func:
                     log_func(
                         "Datasets for beam LHCB1 have differing metadata; cannot group them together."
@@ -711,7 +714,11 @@ def group_datasets(
         elif beam_no == "2":
             if grouped_b2["metadata"] is None:
                 grouped_b2["metadata"] = data["metadata"]
-            elif data["metadata"] != grouped_b2["metadata"]:
+            elif data["metadata"].get("rdt") != grouped_b2["metadata"].get(
+                "rdt"
+            ) or data["metadata"].get("rdt_plane") != grouped_b2["metadata"].get(
+                "rdt_plane"
+            ):
                 if log_func:
                     log_func(
                         "Datasets for LHCB2 have differing metadata; cannot group them together."
@@ -727,11 +734,11 @@ def group_datasets(
                 log_func(f"Unexpected beam value: LHCB{beam_no}")
             else:
                 raise ValueError(f"Unexpected beam value: LHCB{beam_no}")
-    if {
-        k: v for k, v in grouped_b1["metadata"].items() if k != "beam" and k != "ref"
-    } != {
-        k: v for k, v in grouped_b2["metadata"].items() if k != "beam" and k != "ref"
-    }:
+    if grouped_b1["metadata"].get("rdt") != grouped_b2["metadata"].get(
+        "rdt"
+    ) or grouped_b1["metadata"].get("rdt_plane") != grouped_b2["metadata"].get(
+        "rdt_plane"
+    ):
         if log_func:
             log_func(
                 "Datasets for beam 1 and beam 2 have differing metadata; cannot group them together."

@@ -96,7 +96,7 @@ def validate_metas(data):
         {
             k: v
             for k, v in response.get("metadata", {}).items()
-            if k not in ["beam", "ref", "knob_name"]
+            if k not in ["beam", "ref", "knob_name", "knob", "file", "file_list"]
         }
         for response in data.values()
     ]
