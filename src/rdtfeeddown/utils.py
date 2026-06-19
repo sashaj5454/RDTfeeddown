@@ -3,7 +3,6 @@ from __future__ import annotations
 import csv
 import datetime as dt
 import json
-import os
 import re
 import sys
 from datetime import datetime
@@ -49,7 +48,9 @@ def initialize_statetracker():
 
 
 def getknobsetting_statetracker(
-    ldb: None | pytimber.LoggingDB, thistimestamp, requested_knob
+    ldb: None | pytimber.LoggingDB,  # noqa: N821
+    thistimestamp,
+    requested_knob,
 ):
     statetrackerknobname = (
         "LhcStateTracker:" + re.sub("/", ":", requested_knob) + ":value"
@@ -58,7 +59,7 @@ def getknobsetting_statetracker(
 
 
 def get_analysis_knobsetting(
-    ldb: None | pytimber.LoggingDB,
+    ldb: None | pytimber.LoggingDB,  # noqa: N821
     requested_knob: str,
     analyfile: Path,
     log_func: callable = None,
