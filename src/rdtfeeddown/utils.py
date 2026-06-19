@@ -48,7 +48,7 @@ def initialize_statetracker():
 
 
 def getknobsetting_statetracker(
-    ldb: None | pytimber.LoggingDB,  # noqa: N821
+    ldb: None | pytimber.LoggingDB,  # noqa: F821
     thistimestamp,
     requested_knob,
 ):
@@ -59,7 +59,7 @@ def getknobsetting_statetracker(
 
 
 def get_analysis_knobsetting(
-    ldb: None | pytimber.LoggingDB,  # noqa: N821
+    ldb: None | pytimber.LoggingDB,  # noqa: F821
     requested_knob: str,
     analyfile: Path,
     log_func: callable = None,
